@@ -1,6 +1,6 @@
 
-import React from 'react';
-import { WorkoutLog, TrainingProgram } from '../types';
+import React, { useMemo } from 'react';
+import { WorkoutLog, TrainingProgram, ReadinessData, WorkoutCompletion } from '../types';
 import { 
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
     AreaChart, Area, Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis 
@@ -9,34 +9,105 @@ import {
     calculateStreaks, calculateTotalVolume, calculateWeeklyVolume, 
     calculatePersonalRecords, calculateReadinessHistory, calculateMovementPatterns, getHeatmapData 
 } from '../utils/progressUtils';
-import { Dumbbell, Flame, TrendingUp, Trophy, Activity, Battery, PieChart, Calendar } from 'lucide-react';
+import { Dumbbell, Flame, TrendingUp, Trophy, Battery, PieChart, Calendar, Eye } from 'lucide-react';
 
 interface ProgressViewProps {
   logs: WorkoutLog[];
   program: TrainingProgram;
 }
 
-const ProgressView: React.FC<ProgressViewProps> = ({ logs, program }) => {
-    if (logs.length === 0) {
-        return (
-             <div className="space-y-8 animate-fade-in text-center pt-10">
-                <h2 className="text-3xl font-bold text-white">Ваша Статистика</h2>
-                <div className="bg-neutral-900 border border-white/10 rounded-3xl p-10 max-w-xs mx-auto">
-                    <Dumbbell size={48} className="mx-auto text-gray-600 mb-4"/>
-                    <p className="text-gray-400 font-medium">Нет данных.</p>
-                    <p className="text-xs text-gray-600 mt-2">Завершите тренировку, чтобы увидеть статистику.</p>
-                </div>
-            </div>
-        )
-    }
+// --- Mock Data Generator ---
+const generateMockLogs = (): WorkoutLog[] => {
+    const logs: WorkoutLog[] = [];
+    const today = new Date();
+    
+    // Create 12 workouts over the last 4 weeks (3 per week)
+    for (let i = 11; i >= 0; i--) {
+        const date = new Date(today);
+        date.setDate(date.getDate() - (i * 2.5)); // Every 2-3 days
 
-  const { currentStreak, bestStreak } = calculateStreaks(logs);
-  const totalVolume = calculateTotalVolume(logs);
-  const weeklyVolumeData = calculateWeeklyVolume(logs);
-  const personalRecords = calculatePersonalRecords(logs);
-  const readinessData = calculateReadinessHistory(logs);
-  const movementData = calculateMovementPatterns(logs);
-  const heatmapData = getHeatmapData(logs);
+        // Fluctuate volume and readiness for realistic charts
+        const isStrongDay = i % 3 !== 0; 
+        const volumeMultiplier = isStrongDay ? 1.1 : 0.9;
+        
+        const readinessScore = isStrongDay ? 18 : 10; // Mix of Green and Red days
+
+        logs.push({
+            sessionId: `Mock Session ${i}`,
+            date: date.toISOString(),
+            feedback: {
+                completion: WorkoutCompletion.Yes,
+                pain: { hasPain: false },
+                readiness: {
+                    sleep: isStrongDay ? 5 : 2,
+                    food: 4,
+                    stress: isStrongDay ? 4 : 2,
+                    soreness: 5,
+                    score: readinessScore,
+                    status: readinessScore > 15 ? 'Green' : 'Red'
+                }
+            },
+            completedExercises: [
+                {
+                    name: "Barbell Squat",
+                    sets: 3,
+                    reps: "5",
+                    rest: 120,
+                    completedSets: [
+                        { reps: 5, weight: 100 * volumeMultiplier + (12 - i) * 2.5 },
+                        { reps: 5, weight: 100 * volumeMultiplier + (12 - i) * 2.5 },
+                        { reps: 5, weight: 100 * volumeMultiplier + (12 - i) * 2.5 }
+                    ]
+                },
+                {
+                    name: "Bench Press",
+                    sets: 3,
+                    reps: "8-10",
+                    rest: 90,
+                    completedSets: [
+                        { reps: 10, weight: 60 * volumeMultiplier + (12 - i) },
+                        { reps: 9, weight: 60 * volumeMultiplier + (12 - i) },
+                        { reps: 8, weight: 60 * volumeMultiplier + (12 - i) }
+                    ]
+                },
+                {
+                    name: "Deadlift",
+                    sets: 1,
+                    reps: "5",
+                    rest: 180,
+                    completedSets: [
+                        { reps: 5, weight: 120 * volumeMultiplier + (12 - i) * 5 }
+                    ]
+                },
+                // Add variety for radar chart
+                ...(i % 2 === 0 ? [{
+                    name: "Pull Up",
+                    sets: 3,
+                    reps: "10",
+                    rest: 60,
+                    completedSets: [{reps: 10, weight: 0}, {reps: 10, weight: 0}, {reps: 8, weight: 0}]
+                }] : [])
+            ]
+        });
+    }
+    return logs;
+};
+
+const ProgressView: React.FC<ProgressViewProps> = ({ logs, program }) => {
+  const isDemoMode = logs.length === 0;
+  
+  // Use Memo to prevent regenerating mock data on every render
+  const displayLogs = useMemo(() => {
+      return isDemoMode ? generateMockLogs() : logs;
+  }, [logs, isDemoMode]);
+
+  const { currentStreak, bestStreak } = calculateStreaks(displayLogs);
+  const totalVolume = calculateTotalVolume(displayLogs);
+  const weeklyVolumeData = calculateWeeklyVolume(displayLogs);
+  const personalRecords = calculatePersonalRecords(displayLogs);
+  const readinessData = calculateReadinessHistory(displayLogs);
+  const movementData = calculateMovementPatterns(displayLogs);
+  const heatmapData = getHeatmapData(displayLogs);
 
   const chartTheme = {
       grid: "#404040", 
@@ -44,7 +115,23 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program }) => {
   };
 
   return (
-    <div className="pb-40 space-y-6 animate-fade-in px-1">
+    <div className="pb-40 space-y-6 animate-fade-in px-1 relative">
+      
+      {/* Demo Mode Banner */}
+      {isDemoMode && (
+          <div className="bg-indigo-500/10 border border-indigo-500/50 rounded-2xl p-4 flex items-start gap-3 animate-slide-up">
+              <div className="p-2 bg-indigo-500 text-white rounded-lg mt-0.5">
+                  <Eye size={20} />
+              </div>
+              <div>
+                  <h3 className="font-bold text-white">Демонстрационный режим</h3>
+                  <p className="text-xs text-gray-400 mt-1 leading-relaxed">
+                      У вас пока нет завершенных тренировок. Мы показываем пример данных, чтобы вы увидели, как будут выглядеть ваши графики прогресса.
+                  </p>
+              </div>
+          </div>
+      )}
+
       <div className="flex justify-between items-end">
           <h2 className="text-3xl font-black text-white tracking-tight">Статистика</h2>
           <span className="text-xs font-bold text-gray-500 uppercase tracking-wider bg-neutral-900 px-2 py-1 rounded-lg border border-white/5">
@@ -99,54 +186,45 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program }) => {
       </div>
 
       {/* Readiness Trends (Juggernaut Logic) */}
-      {readinessData.length > 0 ? (
-          <div className="bg-neutral-900 border border-white/5 rounded-3xl p-5 shadow-lg overflow-hidden relative">
-            <div className="flex items-center gap-2 mb-4 text-gray-300 font-bold text-sm z-10 relative">
-                <Battery size={16} className="text-blue-400"/>
-                Тенденция Восстановления
-            </div>
-            <div className="h-48 -ml-2">
-                <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={readinessData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                    <defs>
-                        <linearGradient id="colorScore" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#60a5fa" stopOpacity={0.3}/>
-                        <stop offset="95%" stopColor="#60a5fa" stopOpacity={0}/>
-                        </linearGradient>
-                    </defs>
-                    <CartesianGrid stroke={chartTheme.grid} vertical={false} strokeDasharray="3 3" />
-                    <XAxis 
-                        dataKey="date" 
-                        stroke={chartTheme.text} 
-                        fontSize={10} 
-                        tickLine={false} 
-                        axisLine={false} 
-                        dy={10}
-                    />
-                    <YAxis 
-                        stroke={chartTheme.text} 
-                        fontSize={10} 
-                        tickLine={false} 
-                        axisLine={false}
-                        domain={[0, 20]} 
-                    />
-                    <Tooltip 
-                        contentStyle={{ backgroundColor: '#171717', border: '1px solid #333', borderRadius: '8px', color: '#fff' }}
-                        itemStyle={{ color: '#fff' }}
-                    />
-                    <Area type="monotone" dataKey="score" stroke="#60a5fa" fillOpacity={1} fill="url(#colorScore)" strokeWidth={3} />
-                    </AreaChart>
-                </ResponsiveContainer>
-            </div>
-          </div>
-      ) : (
-        <div className="bg-neutral-900 border border-white/5 rounded-3xl p-5 shadow-lg flex items-center justify-center min-h-[200px]">
-             <div className="text-center text-gray-600">
-                 <Battery className="mx-auto mb-2 opacity-50" size={32}/>
-                 <p className="text-sm">Заполните "Чек-ин" перед тренировкой,<br/>чтобы увидеть график.</p>
-             </div>
+      <div className="bg-neutral-900 border border-white/5 rounded-3xl p-5 shadow-lg overflow-hidden relative">
+        <div className="flex items-center gap-2 mb-4 text-gray-300 font-bold text-sm z-10 relative">
+            <Battery size={16} className="text-blue-400"/>
+            Тенденция Восстановления
         </div>
-      )}
+        <div className="h-48 -ml-2">
+            <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={readinessData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <defs>
+                    <linearGradient id="colorScore" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#60a5fa" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="#60a5fa" stopOpacity={0}/>
+                    </linearGradient>
+                </defs>
+                <CartesianGrid stroke={chartTheme.grid} vertical={false} strokeDasharray="3 3" />
+                <XAxis 
+                    dataKey="date" 
+                    stroke={chartTheme.text} 
+                    fontSize={10} 
+                    tickLine={false} 
+                    axisLine={false} 
+                    dy={10}
+                />
+                <YAxis 
+                    stroke={chartTheme.text} 
+                    fontSize={10} 
+                    tickLine={false} 
+                    axisLine={false}
+                    domain={[0, 25]} 
+                />
+                <Tooltip 
+                    contentStyle={{ backgroundColor: '#171717', border: '1px solid #333', borderRadius: '8px', color: '#fff' }}
+                    itemStyle={{ color: '#fff' }}
+                />
+                <Area type="monotone" dataKey="score" stroke="#60a5fa" fillOpacity={1} fill="url(#colorScore)" strokeWidth={3} />
+                </AreaChart>
+            </ResponsiveContainer>
+        </div>
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Volume Bar Chart */}
