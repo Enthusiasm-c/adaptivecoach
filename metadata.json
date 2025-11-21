@@ -1,0 +1,5 @@
+{
+  "name": "Adaptive Fitness Coach",
+  "description": "A smart, adaptive fitness coach that generates personalized workout plans, collects feedback after each session, and uses AI to adjust your program for optimal progress. Features an AI chatbot for fitness questions.",
+  "requestFramePermissions": []
+}
