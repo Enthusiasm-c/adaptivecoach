@@ -86,29 +86,34 @@ const App: React.FC = () => {
 
           if (isKeyMissing) {
              // SCENARIO 1: Key is genuinely missing or default UNUSED
-             setError('Ключ не настроен (UNUSED)');
+             setError('API Ключ не найден');
              setErrorDetails(`
-                Cloud Run > Edit & Deploy > Variables
-                
-                Добавьте переменную:
-                Name: VITE_API_KEY
+                Платформа не видит ключ (VITE_API_KEY).
+
+                VERCEL:
+                Settings > Environment Variables
+                Key: VITE_API_KEY
                 Value: (Ваш AIza... ключ)
+                > Нажмите "Redeploy"
                 
-                Затем нажмите Deploy.
+                GOOGLE CLOUD RUN:
+                Edit & Deploy > Variables > Add Variable
+                Key: VITE_API_KEY
              `);
           } else {
              // SCENARIO 2: Key exists (works in Chrome) but blocked in Telegram
              setError('Google блокирует Telegram');
              setErrorDetails(`
-                Ваш ключ (${key.substring(0,6)}...) работает в браузере, но блокирует Telegram WebApp.
+                Ваш ключ (${key.substring(0,6)}...) работает, но блокирует этот источник (Telegram).
                 
-                РЕШЕНИЕ (В Google Cloud Console):
-                1. Нажмите "EDIT API KEY" (или иконку карандаша).
-                2. Найдите "Application restrictions".
-                3. Переключите на "None".
-                4. Нажмите "Save".
+                РЕШЕНИЕ (Google Cloud Console):
+                1. Перейдите в Credentials / API Keys.
+                2. Нажмите "EDIT API KEY" (карандаш).
+                3. Найдите "Application restrictions".
+                4. Выберите "None".
+                5. Нажмите "Save".
                 
-                Telegram скрывает источник запроса, поэтому ограничение "Websites" блокирует его.
+                Telegram скрывает веб-адрес, поэтому ограничение "Websites" блокирует его.
              `);
           }
       } else {

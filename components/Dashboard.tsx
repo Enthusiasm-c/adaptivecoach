@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { OnboardingProfile, TrainingProgram, WorkoutLog, WorkoutSession, ReadinessData } from '../types';
 import WorkoutView from './WorkoutView';
@@ -100,8 +101,10 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, program, logs, onWorkout
       
       if (activeView === 'plan') {
           return (
-            <div className="space-y-4 pb-48 animate-fade-in">
-                <h2 className="text-2xl font-bold text-white px-1">Тренировочный цикл</h2>
+            <div className="space-y-4 pb-32 animate-fade-in">
+                <div className="flex items-center justify-between px-1 pt-[env(safe-area-inset-top)]">
+                    <h2 className="text-2xl font-bold text-white">Тренировочный цикл</h2>
+                </div>
                 <div className="grid gap-4">
                     {program.sessions.map((session, index) => {
                         const isNext = index === todaysWorkoutIndex;
@@ -129,7 +132,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, program, logs, onWorkout
       }
 
       return (
-        <div className="grid grid-cols-2 gap-4 pb-48 animate-fade-in">
+        <div className="grid grid-cols-2 gap-4 pb-32 animate-fade-in">
             {/* Header */}
             <div className="col-span-2 flex justify-between items-end py-2 px-1 pt-[env(safe-area-inset-top)]">
                 <div>
@@ -228,27 +231,27 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, program, logs, onWorkout
   };
 
   return (
-    <div className="w-full max-w-md mx-auto min-h-[100dvh] p-4 font-sans">
-      <main className="py-4">
+    <div className="w-full max-w-md mx-auto min-h-[100dvh] p-4 font-sans text-gray-100 relative">
+      <main className="py-2">
         {renderBentoContent()}
       </main>
 
-      {/* Floating Island Navigation */}
-      <nav className="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-neutral-900/90 backdrop-blur-xl border border-white/10 rounded-full px-6 py-3 flex items-center gap-8 shadow-2xl shadow-black z-40 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-3">
+      {/* Bottom Navigation Bar */}
+      <nav className="fixed bottom-0 left-0 w-full bg-neutral-950/90 backdrop-blur-md border-t border-white/5 pb-[calc(0.5rem+env(safe-area-inset-bottom))] pt-3 flex justify-around items-center z-50 shadow-[0_-10px_30px_rgba(0,0,0,0.5)]">
         <NavButton 
-            icon={<LayoutGrid size={20} />} 
+            icon={<LayoutGrid size={24} strokeWidth={activeView === 'today' ? 2.5 : 2} />} 
             label="Главная" 
             isActive={activeView === 'today'} 
             onClick={() => setActiveView('today')} 
         />
         <NavButton 
-            icon={<Dumbbell size={20} />} 
+            icon={<Dumbbell size={24} strokeWidth={activeView === 'plan' ? 2.5 : 2} />} 
             label="План" 
             isActive={activeView === 'plan'} 
             onClick={() => setActiveView('plan')} 
         />
         <NavButton 
-            icon={<BarChart2 size={20} />} 
+            icon={<BarChart2 size={24} strokeWidth={activeView === 'progress' ? 2.5 : 2} />} 
             label="Стат" 
             isActive={activeView === 'progress'} 
             onClick={() => setActiveView('progress')} 
@@ -273,14 +276,24 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, program, logs, onWorkout
   );
 };
 
-const NavButton = ({ icon, isActive, onClick }: any) => (
+const NavButton = ({ icon, label, isActive, onClick }: any) => (
     <button 
         onClick={onClick} 
-        className={`relative p-2 transition-colors duration-300 ${isActive ? 'text-white' : 'text-gray-500 hover:text-gray-300'}`}
+        className={`relative flex flex-col items-center justify-center gap-1 w-20 py-1 transition-all duration-300 group ${isActive ? 'text-white' : 'text-gray-500 hover:text-gray-300'}`}
     >
-        {icon}
+        <div className={`relative p-1 transition-transform duration-300 ${isActive ? '-translate-y-1' : ''}`}>
+            {icon}
+            {isActive && (
+                <div className="absolute inset-0 bg-indigo-500/30 blur-lg rounded-full opacity-60"></div>
+            )}
+        </div>
+        <span className={`text-[10px] font-medium tracking-wider transition-opacity duration-300 ${isActive ? 'opacity-100 text-indigo-300' : 'opacity-70'}`}>
+            {label}
+        </span>
+        
+        {/* Top indicator line for active state */}
         {isActive && (
-            <span className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-white rounded-full"></span>
+            <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 w-8 h-1 bg-indigo-500 rounded-b-full shadow-[0_0_10px_rgba(99,102,241,0.8)]"></div>
         )}
     </button>
 )
