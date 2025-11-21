@@ -269,7 +269,7 @@ export const getLastPerformance = (exerciseName: string, logs: WorkoutLog[]): st
     return null;
 };
 
-// --- NEW: Statistics Utils ---
+// --- Statistics Utils ---
 
 export const calculateReadinessHistory = (logs: WorkoutLog[]) => {
     return logs
@@ -298,7 +298,6 @@ export const calculateMovementPatterns = (logs: WorkoutLog[]) => {
         log.completedExercises.forEach(ex => {
             const n = ex.name.toLowerCase();
             
-            // Specific checks to prevent overlap
             if (n.includes('leg curl')) { 
                 patterns.Hinge++; 
                 return; 
@@ -308,13 +307,11 @@ export const calculateMovementPatterns = (logs: WorkoutLog[]) => {
                 return; 
             }
 
-            // Prioritized categorization
             if (n.includes('squat') || n.includes('leg press') || n.includes('lunge') || n.includes('step up') || n.includes('bulgarian') || n.includes('hack') || n.includes('goblet')) {
                 patterns.Squat++;
             } else if (n.includes('deadlift') || n.includes('rdl') || n.includes('clean') || n.includes('snatch') || n.includes('swing') || n.includes('good morning') || n.includes('hip thrust') || n.includes('glute')) {
                 patterns.Hinge++;
             } else if (n.includes('bench') || n.includes('press') || n.includes('push') || n.includes('dip') || n.includes('fly') || n.includes('raise') || n.includes('tricep') || n.includes('skullcrusher') || n.includes('extension')) {
-                // Note: 'extension' for triceps falls here if not caught by leg extension above, or general overrides
                 patterns.Push++;
             } else if (n.includes('row') || n.includes('pull') || n.includes('chin') || n.includes('lat') || n.includes('curl') || n.includes('shrug') || n.includes('bicep')) {
                 patterns.Pull++;
@@ -333,7 +330,6 @@ export const calculateMovementPatterns = (logs: WorkoutLog[]) => {
 };
 
 export const getHeatmapData = (logs: WorkoutLog[]) => {
-    // Generate last 4 weeks of days
     const today = new Date();
     const days = [];
     for(let i=27; i>=0; i--) {
@@ -349,4 +345,90 @@ export const getHeatmapData = (logs: WorkoutLog[]) => {
         });
     }
     return days;
+};
+
+// --- GAMIFICATION & ADVANCED CHARTS ---
+
+export const calculateLevel = (logs: WorkoutLog[]) => {
+    const totalVol = calculateTotalVolume(logs);
+    const workoutCount = logs.length;
+    
+    // Base XP formula: volume matters, but consistency matters too
+    const xp = Math.floor((totalVol / 500) + (workoutCount * 100));
+    
+    // Level formula: progressive difficulty
+    // Level 1 = 0 XP
+    // Level 2 = 200 XP
+    // Level 5 = ~3200 XP
+    const level = Math.floor(Math.sqrt(xp / 50)) + 1;
+    
+    const currentLevelBaseXp = 50 * Math.pow(level - 1, 2);
+    const nextLevelBaseXp = 50 * Math.pow(level, 2);
+    const levelProgress = Math.min(100, Math.max(0, ((xp - currentLevelBaseXp) / (nextLevelBaseXp - currentLevelBaseXp)) * 100));
+
+    let title = "Новичок";
+    if (level >= 3) title = "Любитель";
+    if (level >= 6) title = "Атлет";
+    if (level >= 10) title = "Профи";
+    if (level >= 15) title = "Машина";
+    if (level >= 25) title = "Легенда";
+
+    return { level, title, xp, levelProgress, nextLevelBaseXp: Math.floor(nextLevelBaseXp) };
+};
+
+export const getStrengthProgression = (logs: WorkoutLog[]) => {
+    const result: any[] = [];
+    
+    // Only track main lifts
+    const lifts = ['squat', 'bench', 'deadlift'];
+    
+    logs.sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime()).forEach(log => {
+        const entry: any = { date: new Date(log.date).toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) };
+        let hasData = false;
+
+        lifts.forEach(lift => {
+            // Find the best set for this lift in this log
+            const exercise = log.completedExercises.find(ex => ex.name.toLowerCase().includes(lift));
+            if (exercise) {
+                const bestSet = exercise.completedSets.reduce((best, curr) => 
+                    (curr.weight > best.weight) ? curr : best
+                , { weight: 0, reps: 0 });
+                
+                if (bestSet.weight > 0) {
+                    entry[lift] = calculateE1RM(bestSet.weight, bestSet.reps).toFixed(0);
+                    hasData = true;
+                }
+            }
+        });
+
+        if (hasData) result.push(entry);
+    });
+
+    return result;
+};
+
+export const getVolumeDistribution = (logs: WorkoutLog[]) => {
+    const distribution = { Push: 0, Pull: 0, Legs: 0, Core: 0 };
+
+    logs.forEach(log => {
+        log.completedExercises.forEach(ex => {
+            const vol = ex.completedSets.reduce((s, c) => s + (c.weight * c.reps), 0);
+            const n = ex.name.toLowerCase();
+
+            if (n.includes('squat') || n.includes('leg') || n.includes('deadlift') || n.includes('calf') || n.includes('glute')) {
+                distribution.Legs += vol;
+            } else if (n.includes('bench') || n.includes('press') || n.includes('push') || n.includes('tricep') || n.includes('dip')) {
+                distribution.Push += vol;
+            } else if (n.includes('row') || n.includes('pull') || n.includes('curl') || n.includes('lat') || n.includes('shrug')) {
+                distribution.Pull += vol;
+            } else {
+                distribution.Core += vol; // Catch-all/Core
+            }
+        });
+    });
+    
+    // Format for Recharts Pie
+    return Object.keys(distribution)
+        .filter(k => (distribution as any)[k] > 0)
+        .map(k => ({ name: k, value: (distribution as any)[k] }));
 };
