@@ -1,11 +1,11 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
-import { OnboardingProfile, TrainingProgram, WorkoutLog, ChatMessage } from './types';
+import { OnboardingProfile, TrainingProgram, WorkoutLog, ChatMessage, TelegramUser } from './types';
 import Onboarding from './components/Onboarding';
 import Dashboard from './components/Dashboard';
-import SettingsView from './components/SettingsView';
 import { generateInitialPlan, adaptPlan, getChatbotResponse, currentApiKey } from './services/geminiService';
 import Chatbot from './components/Chatbot';
-import { AlertTriangle, RefreshCw, Globe, Copy, Settings } from 'lucide-react';
+import { AlertTriangle, RefreshCw, Copy, Settings } from 'lucide-react';
 
 declare global {
   interface Window {
@@ -20,12 +20,13 @@ const App: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [errorDetails, setErrorDetails] = useState<string | null>(null);
+  const [telegramUser, setTelegramUser] = useState<TelegramUser | null>(null);
 
   const [isChatbotOpen, setIsChatbotOpen] = useState(false);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [isChatbotLoading, setIsChatbotLoading] = useState(false);
   
-  const [showSettings, setShowSettings] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   useEffect(() => {
     // Initialize Telegram Web App if available
@@ -38,6 +39,11 @@ const App: React.FC = () => {
         // Set header color
         window.Telegram.WebApp.setHeaderColor('#0a0a0a');
         window.Telegram.WebApp.setBackgroundColor('#0a0a0a');
+
+        // Extract User Data
+        if (window.Telegram.WebApp.initDataUnsafe?.user) {
+            setTelegramUser(window.Telegram.WebApp.initDataUnsafe.user);
+        }
     }
 
     try {
@@ -60,6 +66,14 @@ const App: React.FC = () => {
     }
   }, []);
 
+  // Toast timer
+  useEffect(() => {
+      if (toastMessage) {
+          const timer = setTimeout(() => setToastMessage(null), 3000);
+          return () => clearTimeout(timer);
+      }
+  }, [toastMessage]);
+
   const handleOnboardingComplete = useCallback(async (profile: OnboardingProfile) => {
     setIsLoading(true);
     setError(null);
@@ -80,41 +94,15 @@ const App: React.FC = () => {
       const errorMsg = e.toString();
       
       if (errorMsg.includes('400') || errorMsg.includes('API key') || e.message?.includes('API key')) {
-          // Use the resolved key from service to determine status
           const key = currentApiKey;
           const isKeyMissing = !key || key.includes('UNUSED');
 
           if (isKeyMissing) {
-             // SCENARIO 1: Key is genuinely missing or default UNUSED
              setError('API Ключ не найден');
-             setErrorDetails(`
-                Платформа не видит ключ (VITE_API_KEY).
-
-                VERCEL:
-                Settings > Environment Variables
-                Key: VITE_API_KEY
-                Value: (Ваш AIza... ключ)
-                > Нажмите "Redeploy"
-                
-                GOOGLE CLOUD RUN:
-                Edit & Deploy > Variables > Add Variable
-                Key: VITE_API_KEY
-             `);
+             setErrorDetails(`Платформа не видит ключ (VITE_API_KEY).`);
           } else {
-             // SCENARIO 2: Key exists (works in Chrome) but blocked in Telegram
              setError('Google блокирует Telegram');
-             setErrorDetails(`
-                Ваш ключ (${key.substring(0,6)}...) работает, но блокирует этот источник (Telegram).
-                
-                РЕШЕНИЕ (Google Cloud Console):
-                1. Перейдите в Credentials / API Keys.
-                2. Нажмите "EDIT API KEY" (карандаш).
-                3. Найдите "Application restrictions".
-                4. Выберите "None".
-                5. Нажмите "Save".
-                
-                Telegram скрывает веб-адрес, поэтому ограничение "Websites" блокирует его.
-             `);
+             setErrorDetails(`Ваш ключ работает, но блокирует этот источник (Telegram).`);
           }
       } else {
           setError('Ошибка генерации');
@@ -134,7 +122,6 @@ const App: React.FC = () => {
         console.warn("Could not save workout logs to localStorage", e);
     }
 
-    // Adapt plan every 3 workouts
     if (updatedLogs.length > 0 && updatedLogs.length % 3 === 0 && trainingProgram) {
       setIsLoading(true);
       setError(null);
@@ -146,9 +133,9 @@ const App: React.FC = () => {
         } catch (e) {
             console.warn("Could not save adapted program to localStorage", e);
         }
+        setToastMessage("Программа адаптирована под твой прогресс!");
       } catch (e) {
         console.error(e);
-        // Non-critical error, we just don't adapt yet
       } finally {
         setIsLoading(false);
       }
@@ -156,12 +143,21 @@ const App: React.FC = () => {
   }, [workoutLogs, trainingProgram]);
   
   const handleChatbotSend = async (message: string) => {
+    if (!trainingProgram) return;
+    
     const newMessages: ChatMessage[] = [...chatMessages, { role: 'user', text: message }];
     setChatMessages(newMessages);
     setIsChatbotLoading(true);
     try {
-      const response = await getChatbotResponse(newMessages);
-      setChatMessages([...newMessages, { role: 'assistant', text: response }]);
+      const response = await getChatbotResponse(newMessages, trainingProgram);
+      setChatMessages([...newMessages, { role: 'assistant', text: response.text }]);
+      
+      if (response.updatedProgram) {
+          setTrainingProgram(response.updatedProgram);
+          localStorage.setItem('trainingProgram', JSON.stringify(response.updatedProgram));
+          setToastMessage("План обновлен тренером!");
+      }
+
     } catch (e) {
       console.error(e);
       setChatMessages([...newMessages, { role: 'assistant', text: "Извини, возникла ошибка. Возможно, API ключ ограничен." }]);
@@ -173,6 +169,7 @@ const App: React.FC = () => {
   const handleUpdateProfile = (newProfile: OnboardingProfile) => {
       setOnboardingProfile(newProfile);
       localStorage.setItem('onboardingProfile', JSON.stringify(newProfile));
+      setToastMessage("Профиль обновлен");
   };
 
   const resetOnboarding = () => {
@@ -185,11 +182,9 @@ const App: React.FC = () => {
     setTrainingProgram(null);
     setWorkoutLogs([]);
     setChatMessages([]);
-    setShowSettings(false);
     setError(null);
   };
 
-  // Error Screen
   if (error && !trainingProgram) {
       return (
         <div className="min-h-[100dvh] bg-neutral-950 flex flex-col items-center justify-center p-6 text-center relative overflow-hidden">
@@ -242,7 +237,6 @@ const App: React.FC = () => {
   if (isLoading && !onboardingProfile) {
     return (
       <div className="flex items-center justify-center min-h-[100dvh] bg-neutral-950 relative overflow-hidden">
-        {/* Background Glows */}
         <div className="absolute top-[-20%] left-[-20%] w-[600px] h-[600px] bg-indigo-600/20 rounded-full blur-[120px]"></div>
         <div className="absolute bottom-[-20%] right-[-20%] w-[600px] h-[600px] bg-violet-600/20 rounded-full blur-[120px]"></div>
         
@@ -259,39 +253,39 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-[100dvh] bg-neutral-950 text-gray-100 font-sans relative selection:bg-indigo-500/30 overflow-x-hidden">
-       {/* Global Ambient Background */}
        <div className="fixed inset-0 z-0 pointer-events-none">
           <div className="absolute top-0 left-1/4 w-96 h-96 bg-indigo-900/10 rounded-full blur-[100px]"></div>
           <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-violet-900/10 rounded-full blur-[100px]"></div>
        </div>
 
+       {toastMessage && (
+           <div className="fixed top-6 left-1/2 transform -translate-x-1/2 z-50 bg-green-600 text-white px-6 py-3 rounded-full shadow-2xl font-bold text-sm animate-slide-up flex items-center gap-2">
+               <RefreshCw size={16} className="animate-spin-slow" />
+               {toastMessage}
+           </div>
+       )}
+
        <div className="relative z-10 h-full">
         {onboardingProfile && trainingProgram ? (
-            showSettings ? (
-                <SettingsView 
-                    profile={onboardingProfile} 
-                    onBack={() => setShowSettings(false)}
-                    onUpdateProfile={handleUpdateProfile}
-                    onResetAccount={resetOnboarding}
-                />
-            ) : (
-                <>
-                <Dashboard 
-                    profile={onboardingProfile}
-                    program={trainingProgram} 
-                    logs={workoutLogs}
-                    onWorkoutComplete={handleWorkoutComplete}
-                    onOpenSettings={() => setShowSettings(true)}
-                />
-                <Chatbot 
-                    isOpen={isChatbotOpen}
-                    onToggle={() => setIsChatbotOpen(!isChatbotOpen)}
-                    messages={chatMessages}
-                    onSendMessage={handleChatbotSend}
-                    isLoading={isChatbotLoading}
-                />
-                </>
-            )
+            <>
+            <Dashboard 
+                profile={onboardingProfile}
+                program={trainingProgram} 
+                logs={workoutLogs}
+                telegramUser={telegramUser}
+                onWorkoutComplete={handleWorkoutComplete}
+                onUpdateProfile={handleUpdateProfile}
+                onResetAccount={resetOnboarding}
+                onOpenChat={() => setIsChatbotOpen(true)}
+            />
+            <Chatbot 
+                isOpen={isChatbotOpen}
+                onToggle={() => setIsChatbotOpen(!isChatbotOpen)}
+                messages={chatMessages}
+                onSendMessage={handleChatbotSend}
+                isLoading={isChatbotLoading}
+            />
+            </>
         ) : (
             <Onboarding onComplete={handleOnboardingComplete} isLoading={isLoading} error={error} />
         )}

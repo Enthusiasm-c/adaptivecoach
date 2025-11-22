@@ -1,7 +1,8 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { WorkoutSession, CompletedExercise, WorkoutLog, OnboardingProfile, Exercise, ReadinessData } from '../types';
 import FeedbackModal from './FeedbackModal';
-import { ChevronLeft, Timer, Replace, AlertTriangle, Info, Calculator, History, CheckCircle2 } from 'lucide-react';
+import { ChevronLeft, Timer, Replace, AlertTriangle, Info, Calculator, History, CheckCircle2, ExternalLink, Video } from 'lucide-react';
 import CoachFeedbackModal from './CoachFeedbackModal';
 import ExerciseSwapModal from './ExerciseSwapModal';
 import PlateCalculatorModal from './PlateCalculatorModal';
@@ -177,6 +178,12 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
     setExerciseToSwap(null);
   };
 
+  const openYouTubeSearch = () => {
+    if (!currentExercise) return;
+    const query = encodeURIComponent(`${currentExercise.name} техника выполнения`);
+    window.open(`https://www.youtube.com/results?search_query=${query}`, '_blank');
+  };
+
 
   const currentExercise = completedExercises[currentExerciseIndex];
 
@@ -193,7 +200,7 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
             <ChevronLeft size={20} />
         </button>
         <div className="flex flex-col items-end">
-            <span className="text-xs text-gray-500 font-bold uppercase tracking-wider">Шаг {currentExerciseIndex + 1} из {completedExercises.length}</span>
+            <span className="text-xs text-gray-500 font-bold uppercase tracking-wider">Упражнение {currentExerciseIndex + 1} из {completedExercises.length}</span>
             <div className="flex gap-1 mt-1">
                 {completedExercises.map((_, idx) => (
                     <div key={idx} className={`h-1 w-4 rounded-full ${idx === currentExerciseIndex ? 'bg-indigo-500' : idx < currentExerciseIndex ? 'bg-indigo-900' : 'bg-neutral-800'}`}></div>
@@ -219,12 +226,29 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
                     <Info size={12}/> Разминка
                 </span>
             )}
-            <div className="flex justify-between items-start">
-                <h2 className={`text-3xl font-black leading-tight ${currentExercise.isWarmup ? 'text-gray-400' : 'text-white'}`}>
-                    {currentExercise.name}
-                </h2>
+            <div className="flex justify-between items-start gap-2">
+                <div>
+                    <h2 className={`text-2xl font-black leading-tight ${currentExercise.isWarmup ? 'text-gray-400' : 'text-white'}`}>
+                        {currentExercise.name}
+                    </h2>
+                    {currentExercise.description && (
+                        <p className="text-sm text-gray-400 mt-2 leading-relaxed">
+                            {currentExercise.description}
+                        </p>
+                    )}
+                    
+                    {!currentExercise.isWarmup && (
+                        <button 
+                            onClick={openYouTubeSearch}
+                            className="mt-3 flex items-center gap-2 text-xs font-bold text-red-400 bg-red-500/10 px-3 py-2 rounded-lg hover:bg-red-500/20 transition"
+                        >
+                            <Video size={14} /> Смотреть технику (YouTube)
+                        </button>
+                    )}
+                </div>
+
                  {!currentExercise.isWarmup && (
-                     <button onClick={() => openSwapModal(currentExercise)} className="text-gray-500 hover:text-indigo-400 transition p-2 bg-neutral-900 rounded-xl border border-white/5">
+                     <button onClick={() => openSwapModal(currentExercise)} className="shrink-0 text-gray-500 hover:text-indigo-400 transition p-2 bg-neutral-900 rounded-xl border border-white/5">
                         <Replace size={20} />
                      </button>
                  )}
@@ -244,13 +268,13 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
                 <div key={setIndex} className="bg-neutral-900/50 border border-white/5 p-4 rounded-3xl flex items-center justify-between gap-4">
                     <div className="flex items-center gap-4">
                         <div className="flex flex-col items-center justify-center w-8">
-                            <span className="text-xs text-gray-500 font-bold uppercase">Сет</span>
+                            <span className="text-xs text-gray-500 font-bold uppercase">Подход</span>
                             <span className="text-lg font-bold text-white">{setIndex + 1}</span>
                         </div>
                         
                         {/* Weight Input */}
                         <div className="flex flex-col gap-1">
-                            <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider pl-1">КГ</span>
+                            <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider pl-1">Вес (кг)</span>
                             <div className="relative w-24">
                                 <input 
                                     type="number"
@@ -271,7 +295,7 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
 
                         {/* Reps Input */}
                         <div className="flex flex-col gap-1">
-                            <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider pl-1">Повторы</span>
+                            <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider pl-1">Повт.</span>
                             <input 
                                 type="number"
                                 value={set.reps}
@@ -285,7 +309,7 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
                     <div className="flex items-center">
                         {!currentExercise.isWarmup ? (
                            <div className="flex flex-col gap-1 w-16">
-                                <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider pl-1 text-center">RIR</span>
+                                <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider pl-1 text-center">Запас</span>
                                 <input 
                                     type="number"
                                     value={set.rir ?? ''}
@@ -333,11 +357,11 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
                   onClick={() => setCurrentExerciseIndex(i => Math.min(completedExercises.length - 1, i+1))}
                   className="flex-grow py-4 bg-white text-black rounded-2xl font-bold hover:bg-gray-200 transition shadow-[0_0_20px_rgba(255,255,255,0.2)] text-lg"
                 >
-                  Далее
+                  Дальше
                 </button>
              ) : (
                 <button onClick={finishWorkout} className="flex-grow py-4 bg-emerald-500 text-white rounded-2xl font-bold hover:bg-emerald-400 transition shadow-[0_0_20px_rgba(16,185,129,0.4)] text-lg">
-                  Завершить
+                  Закончить
                 </button>
              )}
          </div>

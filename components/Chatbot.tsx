@@ -43,7 +43,7 @@ const Chatbot: React.FC<ChatbotProps> = ({ isOpen, onToggle, messages, onSendMes
                     <header className="flex items-center justify-between p-4 border-b border-gray-700">
                         <div className="flex items-center gap-3">
                             <Bot className="text-indigo-400" />
-                            <h3 className="font-bold text-lg">Coach Gemini</h3>
+                            <h3 className="font-bold text-lg">ИИ Тренер</h3>
                         </div>
                         <button onClick={onToggle} className="text-gray-400 hover:text-white">
                             <X size={20} />

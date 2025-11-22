@@ -1,25 +1,30 @@
 
-import React, { useState } from 'react';
-import { OnboardingProfile, TrainingProgram, WorkoutLog, WorkoutSession, ReadinessData } from '../types';
+import React, { useState, useEffect } from 'react';
+import { OnboardingProfile, TrainingProgram, WorkoutLog, WorkoutSession, ReadinessData, TelegramUser } from '../types';
 import WorkoutView from './WorkoutView';
 import ProgressView from './ProgressView';
-import { Calendar, BarChart2, Dumbbell, Play, Flame, Activity, Zap, LayoutGrid } from 'lucide-react';
+import SettingsView from './SettingsView';
+import { Calendar, BarChart2, Dumbbell, Play, Flame, Activity, Zap, LayoutGrid, Bot, MessageCircle, ChevronLeft, ChevronRight, Check, Clock, Settings } from 'lucide-react';
 import WorkoutPreviewModal from './WorkoutPreviewModal';
 import ReadinessModal from './ReadinessModal';
 import { calculateStreaks, calculateWorkoutVolume } from '../utils/progressUtils';
+import { getDashboardInsight } from '../services/geminiService';
 
 
 interface DashboardProps {
   profile: OnboardingProfile;
   program: TrainingProgram;
   logs: WorkoutLog[];
+  telegramUser: TelegramUser | null;
   onWorkoutComplete: (log: WorkoutLog) => void;
-  onOpenSettings: () => void;
+  onUpdateProfile: (newProfile: OnboardingProfile) => void;
+  onResetAccount: () => void;
+  onOpenChat: () => void;
 }
 
-type View = 'today' | 'plan' | 'progress';
+type View = 'today' | 'plan' | 'progress' | 'settings';
 
-const Dashboard: React.FC<DashboardProps> = ({ profile, program, logs, onWorkoutComplete, onOpenSettings }) => {
+const Dashboard: React.FC<DashboardProps> = ({ profile, program, logs, telegramUser, onWorkoutComplete, onUpdateProfile, onResetAccount, onOpenChat }) => {
   const [activeView, setActiveView] = useState<View>('today');
   const [activeWorkout, setActiveWorkout] = useState<string | null>(null);
   const [workoutToPreview, setWorkoutToPreview] = useState<WorkoutSession | null>(null);
@@ -29,12 +34,60 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, program, logs, onWorkout
   const [pendingSessionName, setPendingSessionName] = useState<string | null>(null);
   const [currentReadiness, setCurrentReadiness] = useState<ReadinessData | null>(null);
 
+  // AI Insight State
+  const [coachInsight, setCoachInsight] = useState<string | null>(null);
+  const [isInsightLoading, setIsInsightLoading] = useState(false);
+
+  // Calendar State
+  const [calendarDate, setCalendarDate] = useState(new Date());
+
+
+  useEffect(() => {
+      // Check local storage for cached insight
+      const cached = localStorage.getItem('lastCoachInsight');
+      const lastLogCount = logs.length;
+      
+      let shouldFetch = true;
+      
+      if (cached) {
+          const parsed = JSON.parse(cached);
+          // Fetch if logs count changed OR it's been > 6 hours
+          const now = new Date().getTime();
+          const isStale = (now - parsed.timestamp) > 6 * 60 * 60 * 1000;
+          
+          if (parsed.logCount === lastLogCount && !isStale) {
+              setCoachInsight(parsed.text);
+              shouldFetch = false;
+          }
+      }
+
+      if (shouldFetch) {
+          const fetchInsight = async () => {
+              setIsInsightLoading(true);
+              try {
+                  const text = await getDashboardInsight(profile, logs);
+                  setCoachInsight(text);
+                  localStorage.setItem('lastCoachInsight', JSON.stringify({
+                      timestamp: new Date().getTime(),
+                      logCount: lastLogCount,
+                      text: text
+                  }));
+              } catch (e) {
+                  console.error("Failed to fetch insight", e);
+              } finally {
+                  setIsInsightLoading(false);
+              }
+          }
+          fetchInsight();
+      }
+  }, [logs.length]); // Re-run only if workout count changes
+
 
   if (!program || !Array.isArray(program.sessions) || program.sessions.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[100dvh] text-center p-4">
         <h2 className="text-2xl font-bold text-red-400">Ошибка плана</h2>
-        <button onClick={onOpenSettings} className="mt-4 px-6 py-3 bg-white text-black rounded-full font-bold">
+        <button onClick={onResetAccount} className="mt-4 px-6 py-3 bg-white text-black rounded-full font-bold">
           Сбросить план
         </button>
       </div>
@@ -48,7 +101,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, program, logs, onWorkout
       return (
         <div className="flex flex-col items-center justify-center min-h-[100dvh] text-center p-4">
           <h2 className="text-2xl font-bold text-red-400">Ошибка данных</h2>
-          <button onClick={onOpenSettings} className="mt-4 px-6 py-3 bg-white text-black rounded-full font-bold">
+          <button onClick={onResetAccount} className="mt-4 px-6 py-3 bg-white text-black rounded-full font-bold">
             Сбросить план
           </button>
         </div>
@@ -96,52 +149,186 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, program, logs, onWorkout
     }
   };
 
-  const renderBentoContent = () => {
+  // --- Calendar Logic ---
+  const getDaysInMonth = (date: Date) => {
+      const year = date.getFullYear();
+      const month = date.getMonth();
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      const firstDay = new Date(year, month, 1).getDay(); // 0 = Sunday
+      // Adjust for Monday start (Russian standard)
+      const adjustedFirstDay = firstDay === 0 ? 6 : firstDay - 1; 
+      
+      const days = [];
+      // Padding
+      for (let i = 0; i < adjustedFirstDay; i++) days.push(null);
+      // Days
+      for (let i = 1; i <= daysInMonth; i++) days.push(new Date(year, month, i));
+      
+      return days;
+  };
+
+  const getScheduledWorkoutForDate = (date: Date) => {
+      if (!date) return null;
+      
+      // Check completion first
+      const dateStr = date.toDateString();
+      const completedLog = logs.find(l => new Date(l.date).toDateString() === dateStr);
+      if (completedLog) return { type: 'completed', log: completedLog };
+
+      // Schedule Logic based on frequency
+      const dayOfWeek = date.getDay(); // 0=Sun, 1=Mon...
+      const daysPerWeek = profile.daysPerWeek;
+      
+      let isWorkoutDay = false;
+      
+      // Heuristic Scheduling Mapping
+      if (daysPerWeek === 2) isWorkoutDay = [2, 5].includes(dayOfWeek); // Tue, Fri
+      else if (daysPerWeek === 3) isWorkoutDay = [1, 3, 5].includes(dayOfWeek); // Mon, Wed, Fri
+      else if (daysPerWeek === 4) isWorkoutDay = [1, 2, 4, 5].includes(dayOfWeek); // Mon, Tue, Thu, Fri
+      else if (daysPerWeek === 5) isWorkoutDay = [1, 2, 3, 4, 5].includes(dayOfWeek); // Mon-Fri
+      else if (daysPerWeek >= 6) isWorkoutDay = dayOfWeek !== 0; // Mon-Sat
+
+      if (isWorkoutDay) {
+          // Determine which workout it IS based on rotation
+          // For preview, we just cycle nicely based on day of year or simple index
+          // A simple stable hash for the preview:
+          const dayOfYear = Math.floor((date.getTime() - new Date(date.getFullYear(), 0, 0).getTime()) / 1000 / 60 / 60 / 24);
+          const sessionIndex = dayOfYear % program.sessions.length;
+          return { type: 'planned', session: program.sessions[sessionIndex] };
+      }
+
+      return null;
+  };
+
+  const changeMonth = (delta: number) => {
+      const newDate = new Date(calendarDate);
+      newDate.setMonth(newDate.getMonth() + delta);
+      setCalendarDate(newDate);
+  };
+
+
+  const renderContent = () => {
+      if (activeView === 'settings') {
+          return (
+            <div className="pb-32 animate-fade-in">
+                <SettingsView 
+                    profile={profile} 
+                    telegramUser={telegramUser}
+                    onUpdateProfile={onUpdateProfile}
+                    onResetAccount={onResetAccount}
+                />
+            </div>
+          );
+      }
+
       if (activeView === 'progress') return <ProgressView logs={logs} program={program} />;
       
       if (activeView === 'plan') {
+          const days = getDaysInMonth(calendarDate);
+          const monthName = calendarDate.toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' });
+          const weekDays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+
           return (
-            <div className="space-y-4 pb-32 animate-fade-in">
-                <div className="flex items-center justify-between px-1 pt-[env(safe-area-inset-top)]">
-                    <h2 className="text-2xl font-bold text-white">Тренировочный цикл</h2>
+            <div className="space-y-6 pb-32 animate-fade-in pt-[env(safe-area-inset-top)]">
+                <div className="flex items-center justify-between px-1">
+                    <h2 className="text-2xl font-bold text-white">Календарь</h2>
                 </div>
-                <div className="grid gap-4">
-                    {program.sessions.map((session, index) => {
-                        const isNext = index === todaysWorkoutIndex;
-                        return (
-                            <button 
-                                key={index}
-                                onClick={() => setWorkoutToPreview(session)}
-                                className={`w-full text-left p-6 rounded-3xl border transition-all duration-300 ${
-                                    isNext 
-                                    ? 'bg-indigo-600/10 border-indigo-500/50' 
-                                    : 'bg-neutral-900/50 border-white/5 hover:bg-neutral-800'
-                                }`}
-                            >
-                                <div className="flex justify-between items-start mb-2">
-                                    <h3 className={`font-bold text-lg ${isNext ? 'text-indigo-400' : 'text-white'}`}>{session.name}</h3>
-                                    {isNext && <span className="text-xs font-bold bg-indigo-500 text-white px-2 py-1 rounded-full">ДАЛЕЕ</span>}
-                                </div>
-                                <p className="text-gray-400 text-sm">{session.exercises.length} Упражнений</p>
-                            </button>
-                        );
-                    })}
+
+                {/* Calendar Component */}
+                <div className="bg-neutral-900 border border-white/5 rounded-3xl p-4 shadow-lg">
+                    {/* Header */}
+                    <div className="flex items-center justify-between mb-6">
+                        <button onClick={() => changeMonth(-1)} className="p-2 hover:bg-white/5 rounded-full text-gray-400"><ChevronLeft size={20}/></button>
+                        <span className="font-bold text-lg capitalize text-white">{monthName}</span>
+                        <button onClick={() => changeMonth(1)} className="p-2 hover:bg-white/5 rounded-full text-gray-400"><ChevronRight size={20}/></button>
+                    </div>
+
+                    {/* Grid */}
+                    <div className="grid grid-cols-7 gap-1 mb-2">
+                        {weekDays.map(d => <div key={d} className="text-center text-xs text-gray-500 font-bold py-2">{d}</div>)}
+                    </div>
+                    
+                    <div className="grid grid-cols-7 gap-1">
+                        {days.map((day, idx) => {
+                            if (!day) return <div key={idx} className="aspect-square"></div>;
+                            
+                            const status = getScheduledWorkoutForDate(day);
+                            const isToday = day.toDateString() === new Date().toDateString();
+                            
+                            return (
+                                <button 
+                                    key={idx}
+                                    onClick={() => {
+                                        if (status?.type === 'planned') setWorkoutToPreview(status.session);
+                                    }}
+                                    disabled={!status}
+                                    className={`aspect-square rounded-xl flex flex-col items-center justify-center relative transition-all ${
+                                        isToday ? 'bg-white/10 border border-white/20' : ''
+                                    } ${status ? 'hover:bg-white/5' : 'opacity-50'}`}
+                                >
+                                    <span className={`text-xs font-medium ${isToday ? 'text-white font-bold' : 'text-gray-400'}`}>{day.getDate()}</span>
+                                    
+                                    {status?.type === 'completed' && (
+                                        <div className="mt-1 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center shadow-lg shadow-green-500/20">
+                                            <Check size={10} className="text-black" strokeWidth={4}/>
+                                        </div>
+                                    )}
+                                    
+                                    {status?.type === 'planned' && (
+                                        <div className="mt-1 w-2 h-2 bg-indigo-500 rounded-full shadow-[0_0_8px_rgba(99,102,241,0.8)]"></div>
+                                    )}
+                                </button>
+                            );
+                        })}
+                    </div>
+
+                    <div className="mt-6 pt-4 border-t border-white/5 flex justify-center gap-6 text-xs text-gray-400">
+                        <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 bg-indigo-500 rounded-full"></div> По плану
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 bg-green-500 rounded-full"></div> Выполнено
+                        </div>
+                    </div>
+                </div>
+
+                {/* Next Workout Info */}
+                <div className="bg-gradient-to-br from-indigo-900/20 to-violet-900/20 border border-indigo-500/30 rounded-3xl p-6">
+                     <div className="flex items-center gap-3 mb-3">
+                        <div className="p-2 bg-indigo-500 rounded-xl text-white">
+                            <Clock size={20} />
+                        </div>
+                        <div>
+                            <p className="text-xs font-bold text-indigo-300 uppercase">Частота</p>
+                            <p className="text-white font-bold">{profile.daysPerWeek} тренировки в неделю</p>
+                        </div>
+                     </div>
+                     <p className="text-sm text-gray-400 leading-relaxed">
+                         План автоматически адаптируется. Нажмите на дни с <span className="text-indigo-400 font-bold">•</span> чтобы посмотреть предстоящую тренировку.
+                     </p>
                 </div>
             </div>
           );
       }
 
+      // Default 'today' view
       return (
         <div className="grid grid-cols-2 gap-4 pb-32 animate-fade-in">
             {/* Header */}
             <div className="col-span-2 flex justify-between items-end py-2 px-1 pt-[env(safe-area-inset-top)]">
                 <div>
-                    <p className="text-gray-400 text-sm font-medium">С возвращением,</p>
-                    <h1 className="text-2xl font-bold text-white">Пора тренироваться</h1>
+                    <p className="text-gray-400 text-sm font-medium">
+                        Привет, {telegramUser?.first_name || "Спортсмен"}
+                    </p>
+                    <h1 className="text-2xl font-bold text-white">Время тренировки</h1>
                 </div>
-                <button onClick={onOpenSettings} className="text-[10px] uppercase font-bold text-gray-600 bg-neutral-900 px-3 py-1 rounded-full border border-white/5 hover:text-white hover:border-white/20 transition">
-                    Настройки
-                </button>
+                {telegramUser?.photo_url && (
+                    <img 
+                        src={telegramUser.photo_url} 
+                        alt="User" 
+                        className="w-10 h-10 rounded-full border border-white/20"
+                    />
+                )}
             </div>
 
             {/* Hero Card - Next Workout */}
@@ -151,7 +338,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, program, logs, onWorkout
                     <div className="relative z-10">
                         <div className="flex justify-between items-start mb-6">
                             <div>
-                                <span className="inline-block px-3 py-1 rounded-full bg-white/10 text-indigo-300 text-xs font-bold mb-2 uppercase tracking-wider">Сегодня</span>
+                                <span className="inline-block px-3 py-1 rounded-full bg-white/10 text-indigo-300 text-xs font-bold mb-2 uppercase tracking-wider">По плану</span>
                                 <h2 className="text-3xl font-black text-white leading-tight">{todaysWorkout.name}</h2>
                             </div>
                             <div className="p-3 bg-indigo-500 rounded-2xl text-white shadow-lg shadow-indigo-500/20">
@@ -174,7 +361,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, program, logs, onWorkout
                                 onClick={() => initiateWorkoutStart(todaysWorkout.name)}
                                 className="flex-1 bg-white text-black font-bold py-4 rounded-2xl flex items-center justify-center gap-2 hover:scale-[1.02] transition-transform"
                             >
-                                <Play size={18} fill="currentColor" /> Старт
+                                <Play size={18} fill="currentColor" /> Начать
                             </button>
                             <button 
                                 onClick={() => setWorkoutToPreview(todaysWorkout)}
@@ -187,6 +374,45 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, program, logs, onWorkout
                 </div>
             </div>
 
+            {/* AI Coach Insight Card - NEW FEATURE */}
+            <div 
+                onClick={onOpenChat}
+                className="col-span-2 relative group cursor-pointer"
+            >
+                <div className="absolute inset-0 bg-gradient-to-br from-indigo-900/20 to-violet-900/20 rounded-3xl border border-indigo-500/30 blur-sm opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                <div className="relative bg-neutral-900 border border-indigo-500/20 rounded-3xl p-5 flex items-start gap-4 shadow-lg shadow-indigo-900/10 group-hover:border-indigo-500/40 transition-colors">
+                    
+                    {/* Icon */}
+                    <div className="shrink-0">
+                        <div className="w-10 h-10 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-lg shadow-indigo-600/30 relative">
+                            <Bot size={20} />
+                            <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 border-2 border-neutral-900 rounded-full"></div>
+                        </div>
+                    </div>
+
+                    {/* Content */}
+                    <div className="flex-1 pt-0.5">
+                        <div className="flex items-center justify-between mb-1">
+                            <h3 className="font-bold text-indigo-200 text-sm uppercase tracking-wider">ИИ Тренер</h3>
+                            <div className="flex items-center gap-1 text-indigo-400 text-[10px] font-bold uppercase">
+                                <MessageCircle size={10} />
+                                <span>Чат</span>
+                            </div>
+                        </div>
+                        {isInsightLoading ? (
+                             <div className="space-y-2 opacity-50">
+                                 <div className="h-2 bg-indigo-400/20 rounded w-3/4 animate-pulse"></div>
+                                 <div className="h-2 bg-indigo-400/20 rounded w-1/2 animate-pulse"></div>
+                             </div>
+                        ) : (
+                             <p className="text-sm text-gray-300 leading-relaxed">
+                                 {coachInsight || "Привет! Я изучил твой план. Давай начнем тренировку и сделаем первый шаг к цели!"}
+                             </p>
+                        )}
+                    </div>
+                </div>
+            </div>
+
             {/* Stat Block: Streak */}
             <div className="bg-neutral-900/80 border border-white/5 rounded-3xl p-5 flex flex-col justify-between h-36">
                 <div className="p-2 bg-orange-500/10 w-fit rounded-xl text-orange-500">
@@ -194,7 +420,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, program, logs, onWorkout
                 </div>
                 <div>
                     <p className="text-3xl font-bold text-white">{currentStreak}</p>
-                    <p className="text-xs text-gray-400 font-medium uppercase tracking-wide">Дней подряд</p>
+                    <p className="text-xs text-gray-400 font-medium uppercase tracking-wide">Серия (дней)</p>
                 </div>
             </div>
 
@@ -205,7 +431,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, program, logs, onWorkout
                 </div>
                 <div>
                     <p className="text-lg font-bold text-white leading-none mb-1">{(lastWorkoutVolume / 1000).toFixed(1)}k</p>
-                    <p className="text-xs text-gray-400 font-medium uppercase tracking-wide">Объем (кг)</p>
+                    <p className="text-xs text-gray-400 font-medium uppercase tracking-wide">Тоннаж (кг)</p>
                 </div>
             </div>
 
@@ -216,8 +442,8 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, program, logs, onWorkout
                         <Zap size={20} fill="currentColor"/>
                      </div>
                      <div>
-                         <p className="text-white font-bold">AI Адаптация</p>
-                         <p className="text-xs text-gray-400">Логика Juggernaut активна</p>
+                         <p className="text-white font-bold">Умная адаптация</p>
+                         <p className="text-xs text-gray-400">Система прогрессии активна</p>
                      </div>
                 </div>
                 <div className="flex gap-1">
@@ -233,7 +459,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, program, logs, onWorkout
   return (
     <div className="w-full max-w-md mx-auto min-h-[100dvh] p-4 font-sans text-gray-100 relative">
       <main className="py-2">
-        {renderBentoContent()}
+        {renderContent()}
       </main>
 
       {/* Bottom Navigation Bar */}
@@ -252,9 +478,15 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, program, logs, onWorkout
         />
         <NavButton 
             icon={<BarChart2 size={24} strokeWidth={activeView === 'progress' ? 2.5 : 2} />} 
-            label="Стат" 
+            label="Прогресс" 
             isActive={activeView === 'progress'} 
             onClick={() => setActiveView('progress')} 
+        />
+         <NavButton 
+            icon={<Settings size={24} strokeWidth={activeView === 'settings' ? 2.5 : 2} />} 
+            label="Настройки" 
+            isActive={activeView === 'settings'} 
+            onClick={() => setActiveView('settings')} 
         />
       </nav>
 
@@ -279,7 +511,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, program, logs, onWorkout
 const NavButton = ({ icon, label, isActive, onClick }: any) => (
     <button 
         onClick={onClick} 
-        className={`relative flex flex-col items-center justify-center gap-1 w-20 py-1 transition-all duration-300 group ${isActive ? 'text-white' : 'text-gray-500 hover:text-gray-300'}`}
+        className={`relative flex flex-col items-center justify-center gap-1 w-16 py-1 transition-all duration-300 group ${isActive ? 'text-white' : 'text-gray-500 hover:text-gray-300'}`}
     >
         <div className={`relative p-1 transition-transform duration-300 ${isActive ? '-translate-y-1' : ''}`}>
             {icon}

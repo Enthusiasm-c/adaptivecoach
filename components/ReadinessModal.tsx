@@ -61,15 +61,15 @@ const ReadinessModal: React.FC<ReadinessModalProps> = ({ onConfirm, onCancel }) 
     <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 p-4">
       <div className="bg-neutral-900 border border-white/10 rounded-3xl shadow-2xl p-8 w-full max-w-md space-y-8 animate-scale-in">
         <div className="text-center space-y-2">
-          <h2 className="text-3xl font-black text-white uppercase tracking-tighter">Чек-ин</h2>
-          <p className="text-gray-400 text-sm">Калибровка нагрузки на основе твоего состояния.</p>
+          <h2 className="text-3xl font-black text-white uppercase tracking-tighter">Самочувствие</h2>
+          <p className="text-gray-400 text-sm">Оценим состояние для коррекции нагрузки.</p>
         </div>
 
         <div className="space-y-6">
             {renderDiagnosticBar("Сон", <Battery size={18}/>, sleep, setSleep, "text-indigo-400")}
             {renderDiagnosticBar("Питание", <Utensils size={18}/>, food, setFood, "text-emerald-400")}
             {renderDiagnosticBar("Стресс", <Brain size={18}/>, stress, setStress, "text-violet-400")}
-            {renderDiagnosticBar("Восстановление", <Activity size={18}/>, soreness, setSoreness, "text-rose-400")}
+            {renderDiagnosticBar("Мышцы", <Activity size={18}/>, soreness, setSoreness, "text-rose-400")}
         </div>
 
         <div className="pt-4 flex gap-4">

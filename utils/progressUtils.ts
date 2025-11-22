@@ -1,3 +1,4 @@
+
 import { WorkoutLog, PersonalRecord, ReadinessData, Exercise } from '../types';
 
 // Helper to get the ISO week number for a date
@@ -120,7 +121,15 @@ const calculateE1RM = (weight: number, reps: number): number => {
 };
 
 export const calculatePersonalRecords = (logs: WorkoutLog[]): PersonalRecord[] => {
-    const KEY_LIFTS = ['squat', 'bench', 'deadlift', 'overhead press', 'press', 'row', 'pull up'];
+    // Updated keywords to include Russian terms
+    const KEY_LIFTS = [
+        'squat', 'присед', 
+        'bench', 'жим', 
+        'deadlift', 'тяга', 
+        'overhead', 'армейский', 
+        'row', 'тяга к поясу', 
+        'pull up', 'подтягивания'
+    ];
     const records: { [key: string]: PersonalRecord } = {};
 
     logs.forEach(log => {
@@ -137,12 +146,17 @@ export const calculatePersonalRecords = (logs: WorkoutLog[]): PersonalRecord[] =
                 if (bestSet.weight > 0 && bestSet.reps > 0) {
                     const e1rm = calculateE1RM(bestSet.weight, bestSet.reps);
                     
-                    // Normalize name but keep original flavor if possible
-                    const normalizedName = ex.name; 
+                    // Use a normalized group key to avoid duplicates (e.g., "squat" vs "присед")
+                    // But display the actual name found in logs
+                    let groupKey = keyLift;
+                    if (keyLift === 'присед') groupKey = 'squat';
+                    if (keyLift === 'жим') groupKey = 'bench';
+                    if (keyLift === 'тяга' && !exerciseNameLower.includes('поясу') && !exerciseNameLower.includes('блок')) groupKey = 'deadlift';
+                    if (keyLift === 'армейский') groupKey = 'overhead';
 
-                    if (!records[keyLift] || e1rm > records[keyLift].e1rm) {
-                        records[keyLift] = {
-                            exerciseName: normalizedName, 
+                    if (!records[groupKey] || e1rm > records[groupKey].e1rm) {
+                        records[groupKey] = {
+                            exerciseName: ex.name, // Use the actual name from the log
                             e1rm,
                             date: log.date
                         };
@@ -170,7 +184,8 @@ export const generateWarmupSets = (workingWeight: number): Exercise[] => {
     const warmups: Exercise[] = [];
     
     warmups.push({
-        name: "Warm-up: Empty Bar / Light",
+        name: "Разминка: Гриф / Легкий вес",
+        description: "Подготовьте суставы и мышцы к работе.",
         sets: 1,
         reps: "10",
         weight: 20, 
@@ -180,7 +195,8 @@ export const generateWarmupSets = (workingWeight: number): Exercise[] => {
 
     if (workingWeight > 40) {
         warmups.push({
-            name: "Warm-up: 50%",
+            name: "Разминка: 50%",
+            description: "Умеренный вес, контроль техники.",
             sets: 1,
             reps: "5",
             weight: Math.round((workingWeight * 0.5) / 2.5) * 2.5,
@@ -191,7 +207,8 @@ export const generateWarmupSets = (workingWeight: number): Exercise[] => {
 
     if (workingWeight > 60) {
         warmups.push({
-            name: "Warm-up: 75%",
+            name: "Разминка: 75%",
+            description: "Рабочий подход близко, не утомляйтесь.",
             sets: 1,
             reps: "3",
             weight: Math.round((workingWeight * 0.75) / 2.5) * 2.5,
@@ -202,7 +219,8 @@ export const generateWarmupSets = (workingWeight: number): Exercise[] => {
     
     if (workingWeight > 100) {
         warmups.push({
-            name: "Warm-up: 90% (Single)",
+            name: "Разминка: 90% (Сингл)",
+            description: "Один повтор для активации ЦНС.",
             sets: 1,
             reps: "1",
             weight: Math.round((workingWeight * 0.9) / 2.5) * 2.5,
@@ -248,7 +266,7 @@ export const calculatePlates = (targetWeight: number, barWeight: number = 20): P
 };
 
 export const getLastPerformance = (exerciseName: string, logs: WorkoutLog[]): string | null => {
-    const cleanName = exerciseName.replace("Warm-up: ", "");
+    const cleanName = exerciseName.replace("Разминка: ", "").replace("Warm-up: ", "");
     
     for (let i = logs.length - 1; i >= 0; i--) {
         const log = logs[i];
@@ -298,24 +316,24 @@ export const calculateMovementPatterns = (logs: WorkoutLog[]) => {
         log.completedExercises.forEach(ex => {
             const n = ex.name.toLowerCase();
             
-            if (n.includes('leg curl')) { 
+            if (n.includes('leg curl') || n.includes('сгибани')) { 
                 patterns.Hinge++; 
                 return; 
             }
-            if (n.includes('leg extension')) { 
+            if (n.includes('leg extension') || n.includes('разгибани')) { 
                 patterns.Squat++; 
                 return; 
             }
 
-            if (n.includes('squat') || n.includes('leg press') || n.includes('lunge') || n.includes('step up') || n.includes('bulgarian') || n.includes('hack') || n.includes('goblet')) {
+            if (n.includes('squat') || n.includes('присед') || n.includes('выпады') || n.includes('leg press') || n.includes('lunge') || n.includes('step up') || n.includes('bulgarian') || n.includes('hack') || n.includes('goblet')) {
                 patterns.Squat++;
-            } else if (n.includes('deadlift') || n.includes('rdl') || n.includes('clean') || n.includes('snatch') || n.includes('swing') || n.includes('good morning') || n.includes('hip thrust') || n.includes('glute')) {
+            } else if (n.includes('deadlift') || n.includes('тяга') || n.includes('rdl') || n.includes('clean') || n.includes('snatch') || n.includes('swing') || n.includes('good morning') || n.includes('hip thrust') || n.includes('glute') || n.includes('мост')) {
                 patterns.Hinge++;
-            } else if (n.includes('bench') || n.includes('press') || n.includes('push') || n.includes('dip') || n.includes('fly') || n.includes('raise') || n.includes('tricep') || n.includes('skullcrusher') || n.includes('extension')) {
+            } else if (n.includes('bench') || n.includes('жим') || n.includes('press') || n.includes('push') || n.includes('dip') || n.includes('fly') || n.includes('raise') || n.includes('tricep') || n.includes('skullcrusher') || n.includes('extension') || n.includes('отжимания') || n.includes('разводк')) {
                 patterns.Push++;
-            } else if (n.includes('row') || n.includes('pull') || n.includes('chin') || n.includes('lat') || n.includes('curl') || n.includes('shrug') || n.includes('bicep')) {
+            } else if (n.includes('row') || n.includes('pull') || n.includes('chin') || n.includes('lat') || n.includes('curl') || n.includes('shrug') || n.includes('bicep') || n.includes('подтягиван')) {
                 patterns.Pull++;
-            } else if (n.includes('plank') || n.includes('crunch') || n.includes('sit up') || n.includes('leg raise') || n.includes('ab ') || n.includes('hollow') || n.includes('russian')) {
+            } else if (n.includes('plank') || n.includes('планк') || n.includes('crunch') || n.includes('sit up') || n.includes('leg raise') || n.includes('ab ') || n.includes('hollow') || n.includes('russian') || n.includes('скручиван') || n.includes('пресс')) {
                 patterns.Core++;
             }
         });
@@ -388,7 +406,16 @@ export const getStrengthProgression = (logs: WorkoutLog[]) => {
 
         lifts.forEach(lift => {
             // Find the best set for this lift in this log
-            const exercise = log.completedExercises.find(ex => ex.name.toLowerCase().includes(lift));
+            // Mapping for Russian
+            let searchTerms = [lift];
+            if (lift === 'squat') searchTerms.push('присед');
+            if (lift === 'bench') searchTerms.push('жим');
+            if (lift === 'deadlift') searchTerms.push('тяга');
+
+            const exercise = log.completedExercises.find(ex => 
+                searchTerms.some(term => ex.name.toLowerCase().includes(term))
+            );
+
             if (exercise) {
                 const bestSet = exercise.completedSets.reduce((best, curr) => 
                     (curr.weight > best.weight) ? curr : best
@@ -415,11 +442,11 @@ export const getVolumeDistribution = (logs: WorkoutLog[]) => {
             const vol = ex.completedSets.reduce((s, c) => s + (c.weight * c.reps), 0);
             const n = ex.name.toLowerCase();
 
-            if (n.includes('squat') || n.includes('leg') || n.includes('deadlift') || n.includes('calf') || n.includes('glute')) {
+            if (n.includes('squat') || n.includes('leg') || n.includes('deadlift') || n.includes('calf') || n.includes('glute') || n.includes('присед') || n.includes('тяга') || n.includes('выпады')) {
                 distribution.Legs += vol;
-            } else if (n.includes('bench') || n.includes('press') || n.includes('push') || n.includes('tricep') || n.includes('dip')) {
+            } else if (n.includes('bench') || n.includes('press') || n.includes('push') || n.includes('tricep') || n.includes('dip') || n.includes('жим') || n.includes('отжимания')) {
                 distribution.Push += vol;
-            } else if (n.includes('row') || n.includes('pull') || n.includes('curl') || n.includes('lat') || n.includes('shrug')) {
+            } else if (n.includes('row') || n.includes('pull') || n.includes('curl') || n.includes('lat') || n.includes('shrug') || n.includes('бицепс') || n.includes('подтягивания')) {
                 distribution.Pull += vol;
             } else {
                 distribution.Core += vol; // Catch-all/Core

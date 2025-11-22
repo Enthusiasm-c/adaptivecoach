@@ -1,3 +1,4 @@
+
 import React, { useMemo } from 'react';
 import { WorkoutLog, TrainingProgram, ReadinessData, WorkoutCompletion } from '../types';
 import { 
@@ -10,7 +11,7 @@ import {
     calculatePersonalRecords, calculateReadinessHistory, calculateMovementPatterns, getHeatmapData,
     calculateLevel, getStrengthProgression, getVolumeDistribution
 } from '../utils/progressUtils';
-import { Dumbbell, Flame, TrendingUp, Trophy, Battery, PieChart as PieIcon, Calendar, Eye, Crown, Star, Activity } from 'lucide-react';
+import { Dumbbell, Flame, TrendingUp, Trophy, Battery, PieChart as PieIcon, Calendar, Eye, Crown, Star, Activity, HeartPulse } from 'lucide-react';
 
 interface ProgressViewProps {
   logs: WorkoutLog[];
@@ -35,23 +36,23 @@ const generateMockLogs = (): WorkoutLog[] => {
         const readinessScore = isStrongDay ? 18 : 10; // Mix of Green and Red days
 
         logs.push({
-            sessionId: `Mock Session ${i}`,
+            sessionId: `Тренировка ${i}`,
             date: date.toISOString(),
             feedback: {
                 completion: WorkoutCompletion.Yes,
                 pain: { hasPain: false },
                 readiness: {
-                    sleep: isStrongDay ? 5 : 2,
+                    sleep: isStrongDay ? 4 : 2,
                     food: 4,
                     stress: isStrongDay ? 4 : 2,
-                    soreness: 5,
+                    soreness: isStrongDay ? 5 : 3,
                     score: readinessScore,
                     status: readinessScore > 15 ? 'Green' : 'Red'
                 }
             },
             completedExercises: [
                 {
-                    name: "Barbell Squat",
+                    name: "Приседания со штангой",
                     sets: 3,
                     reps: "5",
                     rest: 120,
@@ -62,7 +63,7 @@ const generateMockLogs = (): WorkoutLog[] => {
                     ]
                 },
                 {
-                    name: "Bench Press",
+                    name: "Жим лежа",
                     sets: 3,
                     reps: "8-10",
                     rest: 90,
@@ -73,7 +74,7 @@ const generateMockLogs = (): WorkoutLog[] => {
                     ]
                 },
                 {
-                    name: "Deadlift",
+                    name: "Становая тяга",
                     sets: 1,
                     reps: "5",
                     rest: 180,
@@ -83,7 +84,7 @@ const generateMockLogs = (): WorkoutLog[] => {
                 },
                 // Add variety for radar chart
                 ...(i % 2 === 0 ? [{
-                    name: "Pull Up",
+                    name: "Подтягивания",
                     sets: 3,
                     reps: "10",
                     rest: 60,
@@ -123,8 +124,10 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program }) => {
   const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ec4899']; // Indigo, Emerald, Amber, Pink
 
   return (
-    <div className="pb-40 space-y-6 animate-fade-in px-1 relative">
+    <div className="pb-40 space-y-6 animate-fade-in px-1 relative pt-[env(safe-area-inset-top)]">
       
+      <h2 className="text-2xl font-bold text-white mb-4 px-2">Мой Прогресс</h2>
+
       {/* Demo Mode Banner */}
       {isDemoMode && (
           <div className="bg-indigo-500/10 border border-indigo-500/50 rounded-2xl p-4 flex items-start gap-3 animate-slide-up">
@@ -178,7 +181,7 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program }) => {
         <StatCard 
             label="Общий Тоннаж" 
             value={`${(totalVolume/1000).toFixed(1)}k`} 
-            sub="КГ Поднято" 
+            sub="Всего поднято (кг)" 
             icon={<Dumbbell size={16}/>}
             color="text-indigo-400"
             bg="bg-indigo-500/10"
@@ -197,7 +200,7 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program }) => {
       <div className="bg-neutral-900 border border-white/5 rounded-3xl p-5 shadow-lg">
           <div className="flex items-center gap-2 mb-4 text-gray-300 font-bold text-sm">
               <TrendingUp size={16} className="text-indigo-400"/>
-              Силовой Прогресс (e1RM)
+              Динамика Силы (e1RM)
           </div>
           <div className="h-56 -ml-2">
              <ResponsiveContainer width="100%" height="100%">
@@ -217,11 +220,34 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program }) => {
           </div>
       </div>
 
-      {/* Readiness Trends */}
+      {/* Detailed Readiness Trends (Health & Recovery) - NEW FEATURE */}
+      <div className="bg-neutral-900 border border-white/5 rounded-3xl p-5 shadow-lg overflow-hidden relative">
+        <div className="flex items-center gap-2 mb-4 text-gray-300 font-bold text-sm z-10 relative">
+            <HeartPulse size={16} className="text-pink-400"/>
+            Здоровье и Восстановление
+        </div>
+        <div className="h-48 -ml-2">
+            <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={readinessData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                    <CartesianGrid stroke={chartTheme.grid} vertical={false} strokeDasharray="3 3" />
+                    <XAxis dataKey="date" stroke={chartTheme.text} fontSize={10} tickLine={false} axisLine={false} dy={10} />
+                    <YAxis stroke={chartTheme.text} fontSize={10} tickLine={false} axisLine={false} domain={[0, 6]} hide />
+                    <Tooltip contentStyle={{ backgroundColor: '#171717', border: '1px solid #333', borderRadius: '8px', color: '#fff' }} />
+                    <Legend wrapperStyle={{ fontSize: '10px', paddingTop: '10px' }} iconType="circle" />
+                    
+                    <Line type="monotone" dataKey="sleep" name="Сон" stroke="#818cf8" strokeWidth={2} dot={false} />
+                    <Line type="monotone" dataKey="food" name="Еда" stroke="#34d399" strokeWidth={2} dot={false} />
+                    <Line type="monotone" dataKey="stress" name="Стресс" stroke="#f472b6" strokeWidth={2} dot={false} />
+                </LineChart>
+            </ResponsiveContainer>
+        </div>
+      </div>
+
+      {/* Total Readiness Score Area Chart */}
       <div className="bg-neutral-900 border border-white/5 rounded-3xl p-5 shadow-lg overflow-hidden relative">
         <div className="flex items-center gap-2 mb-4 text-gray-300 font-bold text-sm z-10 relative">
             <Battery size={16} className="text-blue-400"/>
-            Тенденция Восстановления
+            Общий уровень энергии
         </div>
         <div className="h-48 -ml-2">
             <ResponsiveContainer width="100%" height="100%">
@@ -248,11 +274,11 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program }) => {
           <div className="bg-neutral-900 border border-white/5 rounded-3xl p-5 shadow-lg">
             <div className="flex items-center gap-2 mb-4 text-gray-300 font-bold text-sm">
                 <Activity size={16} className="text-emerald-400"/>
-                Недельный Объем
+                Объем за неделю
             </div>
             <div className="h-48 -ml-2">
                 <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={weeklyVolumeData.length > 0 ? weeklyVolumeData : [{name: 'No Data', volume: 0}]} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
+                    <BarChart data={weeklyVolumeData.length > 0 ? weeklyVolumeData : [{name: 'Нет данных', volume: 0}]} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
                     <CartesianGrid stroke={chartTheme.grid} vertical={false} strokeDasharray="3 3" />
                     <XAxis 
                         dataKey="name" 
@@ -278,7 +304,7 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program }) => {
           <div className="bg-neutral-900 border border-white/5 rounded-3xl p-5 shadow-lg">
             <div className="flex items-center gap-2 mb-2 text-gray-300 font-bold text-sm">
                 <PieIcon size={16} className="text-pink-400"/>
-                Распределение Нагрузки
+                Акцент Нагрузки
             </div>
             <div className="h-48 flex items-center justify-center">
                 <ResponsiveContainer width="100%" height="100%">
@@ -306,7 +332,7 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program }) => {
       <div className="bg-neutral-900 border border-white/5 rounded-3xl p-5 shadow-lg">
           <div className="flex items-center gap-2 mb-4 text-gray-300 font-bold text-sm">
               <Calendar size={16} className="text-green-400"/>
-              Активность
+              Календарь Активности
           </div>
           <div className="flex justify-between gap-1">
               {heatmapData.map((day, idx) => (

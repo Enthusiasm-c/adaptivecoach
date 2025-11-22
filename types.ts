@@ -6,27 +6,27 @@ export enum Gender {
 
 export enum ExperienceLevel {
   Beginner = "Новичок (0-6 месяцев)",
-  Intermediate = "Средний (6-24 месяцев)",
-  Advanced = "Продвинутый (2+ года)",
+  Intermediate = "Любитель (6-24 месяцев)",
+  Advanced = "Атлет (2+ года)",
 }
 
 export enum Goal {
-  LoseFat = "Похудение",
+  LoseFat = "Снижение веса / Рельеф",
   BuildMuscle = "Набор мышечной массы",
-  GetStronger = "Увеличение силы",
-  GeneralHealth = "Общее здоровье",
+  GetStronger = "Развитие силы",
+  GeneralHealth = "Тонус и здоровье",
 }
 
 export enum Location {
   CommercialGym = "Фитнес-клуб",
-  HomeGym = "Домашний зал (штанга/гантели)",
-  Bodyweight = "Дома (минимум оборудования)",
+  HomeGym = "Домашний зал (штанга)",
+  Bodyweight = "Дома (свой вес/резинки)",
 }
 
 export enum Intensity {
-  Easy = "Легко для начала",
-  Normal = "Нормально, люблю челлендж",
-  Hard = "Тяжело, работаю на отказ",
+  Easy = "Вводная нагрузка",
+  Normal = "Умеренная (есть прогресс)",
+  Hard = "Высокая (работа на отказ)",
 }
 
 export interface OnboardingProfile {
@@ -47,6 +47,14 @@ export interface OnboardingProfile {
   intensity: Intensity;
 }
 
+export interface TelegramUser {
+    id: number;
+    first_name: string;
+    last_name?: string;
+    username?: string;
+    photo_url?: string;
+}
+
 export interface Exercise {
   name: string;
   sets: number;
@@ -54,6 +62,7 @@ export interface Exercise {
   weight?: number; // Starting weight suggestion
   rest: number; // in seconds
   isWarmup?: boolean; // New: to distinguish warmup sets
+  description?: string; // Short technical instruction
 }
 
 export interface WorkoutSession {
@@ -76,9 +85,9 @@ export interface CompletedExercise extends Exercise {
 }
 
 export enum WorkoutCompletion {
-  Yes = "Да, полностью!",
+  Yes = "Все выполнил",
   Mostly = "Почти все",
-  No = "Нет, не совсем"
+  No = "Не совсем"
 }
 
 export interface WorkoutFeedback {
@@ -101,6 +110,11 @@ export interface WorkoutLog {
 export interface ChatMessage {
   role: 'user' | 'assistant';
   text: string;
+}
+
+export interface ChatResponse {
+    text: string;
+    updatedProgram?: TrainingProgram;
 }
 
 export interface PersonalRecord {

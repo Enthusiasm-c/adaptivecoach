@@ -105,7 +105,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete, isLoading, error })
                                     disabled={isLoading} 
                                     className="flex-1 py-4 bg-white text-black rounded-2xl hover:bg-gray-200 transition disabled:opacity-50 font-bold text-lg flex items-center justify-center gap-2 shadow-lg shadow-white/10 active:scale-[0.98]"
                                 >
-                                    Далее <ArrowRight size={20} />
+                                    Дальше <ArrowRight size={20} />
                                 </button>
                             ) : (
                                 <button 
@@ -151,10 +151,10 @@ const WelcomeStep = ({ onNext }: { onNext: () => void }) => (
             </div>
             <h1 className="text-5xl font-black tracking-tighter text-white leading-[1.1]">
                 Тренируйся <br/>
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-violet-400">Умнее.</span>
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-violet-400">с умом.</span>
             </h1>
             <p className="text-lg text-gray-400 leading-relaxed max-w-xs">
-                Персональный план адаптивных тренировок, созданный ИИ специально для твоего прогресса.
+                Персональный адаптивный план тренировок, который подстраивается под твой прогресс.
             </p>
         </div>
         
@@ -162,7 +162,7 @@ const WelcomeStep = ({ onNext }: { onNext: () => void }) => (
             onClick={onNext} 
             className="w-full py-5 bg-white text-black rounded-2xl font-bold text-xl shadow-[0_0_40px_rgba(255,255,255,0.1)] active:scale-[0.98] transition-transform flex items-center justify-center gap-2 group"
         >
-            Начать путь <ArrowRight className="group-hover:translate-x-1 transition-transform" />
+            Начать <ArrowRight className="group-hover:translate-x-1 transition-transform" />
         </button>
     </div>
 );
@@ -221,8 +221,8 @@ const ProfileStep = ({ profile, updateProfile }: any) => (
 const ExperienceStep = ({ profile, updateProfile }: any) => (
     <div className="space-y-6 animate-slide-up">
         <div className="space-y-2">
-            <h2 className="text-3xl font-black tracking-tight">Твой опыт</h2>
-            <p className="text-gray-500">Чтобы подобрать правильный объем.</p>
+            <h2 className="text-3xl font-black tracking-tight">Опыт</h2>
+            <p className="text-gray-500">Это поможет подобрать правильный объем.</p>
         </div>
         <div className="space-y-3">
             {Object.values(ExperienceLevel).map(level => (
@@ -245,7 +245,7 @@ const GoalStep = ({ profile, setProfile }: any) => {
     return (
     <div className="space-y-6 animate-slide-up">
         <div className="space-y-2">
-            <h2 className="text-3xl font-black tracking-tight">Главная цель</h2>
+            <h2 className="text-3xl font-black tracking-tight">Цель</h2>
             <p className="text-gray-500">К чему будем стремиться?</p>
         </div>
         <div className="space-y-3">
@@ -270,8 +270,8 @@ const GoalStep = ({ profile, setProfile }: any) => {
 const LogisticsStep = ({ profile, updateProfile }: any) => (
     <div className="space-y-8 animate-slide-up">
         <div className="space-y-2">
-            <h2 className="text-3xl font-black tracking-tight">Настройки</h2>
-            <p className="text-gray-500">Адаптируем под твой график и зал.</p>
+            <h2 className="text-3xl font-black tracking-tight">Параметры</h2>
+            <p className="text-gray-500">Настроим под твой график и зал.</p>
         </div>
         
         <div>
@@ -313,7 +313,7 @@ const LogisticsStep = ({ profile, updateProfile }: any) => (
         </div>
 
         <div>
-            <label className="block mb-3 text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Место</label>
+            <label className="block mb-3 text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Оборудование</label>
              <div className="space-y-2">
                 {Object.values(Location).map(loc => (
                     <SelectionCard 
@@ -336,8 +336,8 @@ const InjuryStep = ({ profile, updateProfile }: any) => (
             <div className="w-16 h-16 mx-auto bg-red-500/10 rounded-full flex items-center justify-center mb-4">
                  <ShieldAlert className="text-red-500" size={32} />
             </div>
-            <h2 className="text-3xl font-black tracking-tight">Травмы?</h2>
-            <p className="text-gray-500">Безопасность прежде всего.</p>
+            <h2 className="text-3xl font-black tracking-tight">Ограничения?</h2>
+            <p className="text-gray-500">Травмы или боли, которые нужно учесть.</p>
         </div>
         
         <div className="grid grid-cols-2 gap-4">
@@ -346,25 +346,25 @@ const InjuryStep = ({ profile, updateProfile }: any) => (
                 className={`p-6 rounded-3xl border-2 transition-all duration-200 ${!profile.hasInjuries ? 'border-emerald-500 bg-emerald-500/10' : 'border-neutral-800 bg-neutral-900 grayscale opacity-60 hover:opacity-100'}`}
             >
                 <span className={`block text-2xl font-black mb-1 ${!profile.hasInjuries ? 'text-emerald-400' : 'text-gray-400'}`}>Нет</span>
-                <span className="text-xs text-gray-500 font-bold uppercase">Я здоров</span>
+                <span className="text-xs text-gray-500 font-bold uppercase">Здоров</span>
             </button>
             <button 
                 onClick={() => updateProfile('hasInjuries', true)} 
                 className={`p-6 rounded-3xl border-2 transition-all duration-200 ${profile.hasInjuries ? 'border-red-500 bg-red-500/10' : 'border-neutral-800 bg-neutral-900 grayscale opacity-60 hover:opacity-100'}`}
             >
                 <span className={`block text-2xl font-black mb-1 ${profile.hasInjuries ? 'text-red-400' : 'text-gray-400'}`}>Да</span>
-                <span className="text-xs text-gray-500 font-bold uppercase">Есть проблемы</span>
+                <span className="text-xs text-gray-500 font-bold uppercase">Есть нюансы</span>
             </button>
         </div>
 
         {profile.hasInjuries && (
             <div className="animate-fade-in">
-                <label className="block mb-3 text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Что болит?</label>
+                <label className="block mb-3 text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Что беспокоит?</label>
                 <textarea 
                     value={profile.injuries || ''} 
                     onChange={e => updateProfile('injuries', e.target.value)} 
                     className="w-full p-4 bg-neutral-900 rounded-2xl border border-neutral-800 focus:border-red-500 focus:ring-1 focus:ring-red-500 outline-none min-h-[120px] text-white text-lg placeholder-gray-700"
-                    placeholder="Поясница, колени..."
+                    placeholder="Например: болит поясница при приседаниях..."
                 />
             </div>
         )}
@@ -374,7 +374,7 @@ const InjuryStep = ({ profile, updateProfile }: any) => (
 const SummaryStep = ({ profile }: { profile: OnboardingProfile }) => (
     <div className="space-y-8 animate-slide-up">
         <div className="text-center space-y-2">
-            <h2 className="text-3xl font-black tracking-tight">Все готово</h2>
+            <h2 className="text-3xl font-black tracking-tight">Готово</h2>
             <p className="text-gray-500">Проверь данные перед стартом.</p>
         </div>
         
@@ -387,7 +387,7 @@ const SummaryStep = ({ profile }: { profile: OnboardingProfile }) => (
         </div>
         
         <p className="text-center text-xs text-gray-600 px-8">
-            Нажимая "Создать план", ИИ сгенерирует программу специально для тебя.
+            Нажимая "Создать план", AI составит программу специально для тебя.
         </p>
     </div>
 );
