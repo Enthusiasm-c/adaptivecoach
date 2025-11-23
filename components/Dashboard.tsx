@@ -4,7 +4,7 @@ import { OnboardingProfile, TrainingProgram, WorkoutLog, WorkoutSession, Readine
 import WorkoutView from './WorkoutView';
 import ProgressView from './ProgressView';
 import SettingsView from './SettingsView';
-import { Calendar, BarChart2, Dumbbell, Play, Flame, Activity, Zap, LayoutGrid, Bot, MessageCircle, ChevronLeft, ChevronRight, Check, Clock, Settings } from 'lucide-react';
+import { Calendar, BarChart2, Dumbbell, Play, Flame, Activity, Zap, LayoutGrid, Bot, MessageCircle, ChevronLeft, ChevronRight, Check, Clock, Settings, ArrowLeftRight, Edit3, X } from 'lucide-react';
 import WorkoutPreviewModal from './WorkoutPreviewModal';
 import ReadinessModal from './ReadinessModal';
 import { calculateStreaks, calculateWorkoutVolume } from '../utils/progressUtils';
@@ -40,6 +40,24 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, program, logs, telegramU
 
   // Calendar State
   const [calendarDate, setCalendarDate] = useState(new Date());
+  
+  // Schedule Editing State
+  const [isEditingSchedule, setIsEditingSchedule] = useState(false);
+  const [selectedDateToMove, setSelectedDateToMove] = useState<Date | null>(null);
+  const [scheduleOverrides, setScheduleOverrides] = useState<{[date: string]: number | null}>({}); // DateString -> SessionIndex (null means Rest)
+
+  useEffect(() => {
+    // Load overrides
+    const storedOverrides = localStorage.getItem('scheduleOverrides');
+    if (storedOverrides) {
+        setScheduleOverrides(JSON.parse(storedOverrides));
+    }
+  }, []);
+
+  const saveOverrides = (newOverrides: {[date: string]: number | null}) => {
+      setScheduleOverrides(newOverrides);
+      localStorage.setItem('scheduleOverrides', JSON.stringify(newOverrides));
+  }
 
 
   useEffect(() => {
@@ -170,12 +188,21 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, program, logs, telegramU
   const getScheduledWorkoutForDate = (date: Date) => {
       if (!date) return null;
       
-      // Check completion first
       const dateStr = date.toDateString();
-      const completedLog = logs.find(l => new Date(l.date).toDateString() === dateStr);
-      if (completedLog) return { type: 'completed', log: completedLog };
+      const overrideKey = dateStr;
 
-      // Schedule Logic based on frequency
+      // 1. Check completion first (Immutable history)
+      const completedLog = logs.find(l => new Date(l.date).toDateString() === dateStr);
+      if (completedLog) return { type: 'completed', log: completedLog, index: -1 };
+
+      // 2. Check for manual overrides (User edits)
+      if (scheduleOverrides.hasOwnProperty(overrideKey)) {
+          const overrideIndex = scheduleOverrides[overrideKey];
+          if (overrideIndex === null) return null; // Explicit Rest Day
+          return { type: 'planned', session: program.sessions[overrideIndex], index: overrideIndex };
+      }
+
+      // 3. Default Schedule Logic based on frequency
       const dayOfWeek = date.getDay(); // 0=Sun, 1=Mon...
       const daysPerWeek = profile.daysPerWeek;
       
@@ -189,12 +216,10 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, program, logs, telegramU
       else if (daysPerWeek >= 6) isWorkoutDay = dayOfWeek !== 0; // Mon-Sat
 
       if (isWorkoutDay) {
-          // Determine which workout it IS based on rotation
-          // For preview, we just cycle nicely based on day of year or simple index
-          // A simple stable hash for the preview:
+          // Default rotation based on day of year
           const dayOfYear = Math.floor((date.getTime() - new Date(date.getFullYear(), 0, 0).getTime()) / 1000 / 60 / 60 / 24);
           const sessionIndex = dayOfYear % program.sessions.length;
-          return { type: 'planned', session: program.sessions[sessionIndex] };
+          return { type: 'planned', session: program.sessions[sessionIndex], index: sessionIndex };
       }
 
       return null;
@@ -204,6 +229,56 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, program, logs, telegramU
       const newDate = new Date(calendarDate);
       newDate.setMonth(newDate.getMonth() + delta);
       setCalendarDate(newDate);
+  };
+
+  const handleDateClick = (date: Date, status: any) => {
+      if (isEditingSchedule) {
+          if (!selectedDateToMove) {
+              // Select first date
+              setSelectedDateToMove(date);
+          } else {
+              // Swap Logic
+              const date1Str = selectedDateToMove.toDateString();
+              const date2Str = date.toDateString();
+
+              if (date1Str === date2Str) {
+                  setSelectedDateToMove(null); // Deselect
+                  return;
+              }
+
+              const status1 = getScheduledWorkoutForDate(selectedDateToMove);
+              const status2 = getScheduledWorkoutForDate(date);
+
+              // We only swap planned sessions, not completed ones
+              if (status1?.type === 'completed' || status2?.type === 'completed') {
+                  alert("Нельзя менять уже выполненные тренировки!");
+                  setSelectedDateToMove(null);
+                  return;
+              }
+
+              const newOverrides = { ...scheduleOverrides };
+
+              // Determine index for Date 1
+              let idx1 = null; // null means rest
+              if (status1?.type === 'planned') idx1 = status1.index;
+              
+              // Determine index for Date 2
+              let idx2 = null;
+              if (status2?.type === 'planned') idx2 = status2.index;
+
+              // Swap
+              newOverrides[date1Str] = idx2;
+              newOverrides[date2Str] = idx1;
+
+              saveOverrides(newOverrides);
+              setSelectedDateToMove(null);
+          }
+      } else {
+          // Normal Click -> Preview
+          if (status?.type === 'planned') {
+              setWorkoutToPreview(status.session);
+          }
+      }
   };
 
 
@@ -232,10 +307,28 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, program, logs, telegramU
             <div className="space-y-6 pb-32 animate-fade-in pt-[env(safe-area-inset-top)]">
                 <div className="flex items-center justify-between px-1">
                     <h2 className="text-2xl font-bold text-white">Календарь</h2>
+                    <button 
+                        onClick={() => {
+                            setIsEditingSchedule(!isEditingSchedule);
+                            setSelectedDateToMove(null);
+                        }}
+                        className={`p-2 rounded-xl border flex items-center gap-2 text-xs font-bold transition-all ${isEditingSchedule ? 'bg-indigo-600 border-indigo-500 text-white' : 'bg-neutral-900 border-white/10 text-gray-400'}`}
+                    >
+                        {isEditingSchedule ? <><X size={14}/> Готово</> : <><Edit3 size={14}/> Изменить</>}
+                    </button>
                 </div>
 
                 {/* Calendar Component */}
-                <div className="bg-neutral-900 border border-white/5 rounded-3xl p-4 shadow-lg">
+                <div className={`bg-neutral-900 border rounded-3xl p-4 shadow-lg transition-colors ${isEditingSchedule ? 'border-indigo-500/30' : 'border-white/5'}`}>
+                    
+                    {isEditingSchedule && (
+                        <div className="mb-4 text-center p-2 bg-indigo-500/10 rounded-xl text-indigo-300 text-xs font-bold">
+                             {selectedDateToMove 
+                                ? "Выберите второй день для обмена" 
+                                : "Выберите день, чтобы переместить тренировку"}
+                        </div>
+                    )}
+
                     {/* Header */}
                     <div className="flex items-center justify-between mb-6">
                         <button onClick={() => changeMonth(-1)} className="p-2 hover:bg-white/5 rounded-full text-gray-400"><ChevronLeft size={20}/></button>
@@ -254,17 +347,19 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, program, logs, telegramU
                             
                             const status = getScheduledWorkoutForDate(day);
                             const isToday = day.toDateString() === new Date().toDateString();
+                            const isSelected = selectedDateToMove?.toDateString() === day.toDateString();
                             
                             return (
                                 <button 
                                     key={idx}
-                                    onClick={() => {
-                                        if (status?.type === 'planned') setWorkoutToPreview(status.session);
-                                    }}
-                                    disabled={!status}
-                                    className={`aspect-square rounded-xl flex flex-col items-center justify-center relative transition-all ${
-                                        isToday ? 'bg-white/10 border border-white/20' : ''
-                                    } ${status ? 'hover:bg-white/5' : 'opacity-50'}`}
+                                    onClick={() => handleDateClick(day, status)}
+                                    disabled={!status && !isEditingSchedule}
+                                    className={`aspect-square rounded-xl flex flex-col items-center justify-center relative transition-all duration-300 
+                                        ${isToday ? 'bg-white/10 border border-white/20' : ''} 
+                                        ${(status || isEditingSchedule) ? 'hover:bg-white/5' : 'opacity-30'}
+                                        ${isSelected ? 'bg-indigo-600/40 border-indigo-500 ring-2 ring-indigo-500 scale-95' : ''}
+                                        ${isEditingSchedule && !isSelected ? 'animate-pulse bg-neutral-800/50' : ''}
+                                    `}
                                 >
                                     <span className={`text-xs font-medium ${isToday ? 'text-white font-bold' : 'text-gray-400'}`}>{day.getDate()}</span>
                                     
@@ -276,6 +371,11 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, program, logs, telegramU
                                     
                                     {status?.type === 'planned' && (
                                         <div className="mt-1 w-2 h-2 bg-indigo-500 rounded-full shadow-[0_0_8px_rgba(99,102,241,0.8)]"></div>
+                                    )}
+
+                                    {/* Empty slot visual for editing */}
+                                    {isEditingSchedule && !status && (
+                                        <div className="mt-1 w-1.5 h-1.5 border border-gray-600 rounded-full"></div>
                                     )}
                                 </button>
                             );
@@ -292,19 +392,19 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, program, logs, telegramU
                     </div>
                 </div>
 
-                {/* Next Workout Info */}
+                {/* Info Card */}
                 <div className="bg-gradient-to-br from-indigo-900/20 to-violet-900/20 border border-indigo-500/30 rounded-3xl p-6">
                      <div className="flex items-center gap-3 mb-3">
                         <div className="p-2 bg-indigo-500 rounded-xl text-white">
-                            <Clock size={20} />
+                            <ArrowLeftRight size={20} />
                         </div>
                         <div>
-                            <p className="text-xs font-bold text-indigo-300 uppercase">Частота</p>
-                            <p className="text-white font-bold">{profile.daysPerWeek} тренировки в неделю</p>
+                            <p className="text-xs font-bold text-indigo-300 uppercase">Гибкий график</p>
+                            <p className="text-white font-bold">Меняй дни местами</p>
                         </div>
                      </div>
                      <p className="text-sm text-gray-400 leading-relaxed">
-                         План автоматически адаптируется. Нажмите на дни с <span className="text-indigo-400 font-bold">•</span> чтобы посмотреть предстоящую тренировку.
+                         Нажми "Изменить", чтобы перенести тренировку на другой день или поменять их местами. Адаптируй план под свою жизнь.
                      </p>
                 </div>
             </div>
@@ -374,7 +474,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, program, logs, telegramU
                 </div>
             </div>
 
-            {/* AI Coach Insight Card - NEW FEATURE */}
+            {/* AI Coach Insight Card */}
             <div 
                 onClick={onOpenChat}
                 className="col-span-2 relative group cursor-pointer"
@@ -430,8 +530,10 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, program, logs, telegramU
                     <Activity size={20} />
                 </div>
                 <div>
-                    <p className="text-lg font-bold text-white leading-none mb-1">{(lastWorkoutVolume / 1000).toFixed(1)}k</p>
-                    <p className="text-xs text-gray-400 font-medium uppercase tracking-wide">Тоннаж (кг)</p>
+                    <p className="text-lg font-bold text-white leading-none mb-1">
+                        {(lastWorkoutVolume / 1000).toLocaleString('ru-RU', { maximumFractionDigits: 1 })} т
+                    </p>
+                    <p className="text-xs text-gray-400 font-medium uppercase tracking-wide">Веса поднято</p>
                 </div>
             </div>
 

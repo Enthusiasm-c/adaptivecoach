@@ -2,13 +2,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { WorkoutSession, CompletedExercise, WorkoutLog, OnboardingProfile, Exercise, ReadinessData } from '../types';
 import FeedbackModal from './FeedbackModal';
-import { ChevronLeft, Timer, Replace, AlertTriangle, Info, Calculator, History, CheckCircle2, ExternalLink, Video } from 'lucide-react';
+import { ChevronLeft, Timer, Replace, AlertTriangle, Info, Calculator, History, CheckCircle2, ExternalLink, Video, ChevronDown, ChevronUp } from 'lucide-react';
 import CoachFeedbackModal from './CoachFeedbackModal';
 import ExerciseSwapModal from './ExerciseSwapModal';
 import PlateCalculatorModal from './PlateCalculatorModal';
 import RestTimer from './RestTimer';
 import { getCoachFeedback } from '../services/geminiService';
-import { generateWarmupSets, getLastPerformance } from '../utils/progressUtils';
+import { generateWarmupSets, getLastPerformance, getExerciseHistory } from '../utils/progressUtils';
 
 interface WorkoutViewProps {
   session: WorkoutSession;
@@ -38,7 +38,10 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
   const [plateCalcWeight, setPlateCalcWeight] = useState<number | null>(null);
   const [showRestTimer, setShowRestTimer] = useState(false);
   const [timerSeconds, setTimerSeconds] = useState(60);
-  const [lastPerformance, setLastPerformance] = useState<string | null>(null);
+  
+  // History State
+  const [exerciseHistory, setExerciseHistory] = useState<{ date: string, sets: { weight: number, reps: number }[] }[]>([]);
+  const [showHistory, setShowHistory] = useState(false);
 
   useEffect(() => {
     let adjustedExercises = [...session.exercises];
@@ -78,16 +81,18 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
 
   }, [session, readiness]);
 
-  // Fetch history
+  // Fetch history on exercise change
   useEffect(() => {
       const currentEx = completedExercises[currentExerciseIndex];
+      setShowHistory(false); // Reset history view
+      
       if (currentEx) {
           try {
               const storedLogs = localStorage.getItem('workoutLogs');
               if (storedLogs) {
                   const logs: WorkoutLog[] = JSON.parse(storedLogs);
-                  const lastPerf = getLastPerformance(currentEx.name, logs);
-                  setLastPerformance(lastPerf);
+                  const history = getExerciseHistory(currentEx.name, logs, 3); // Last 3 sessions
+                  setExerciseHistory(history);
               }
           } catch (e) {
               console.error(e);
@@ -95,7 +100,7 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
       }
       // Scroll top on exercise change
       if(scrollRef.current) scrollRef.current.scrollTop = 0;
-  }, [currentExerciseIndex, completedExercises]);
+  }, [currentExerciseIndex, completedExercises.length]); // Depend on length to ensure init triggers
 
   const handleValueChange = (exIndex: number, setIndex: number, field: 'reps' | 'weight' | 'rir', value: number) => {
     const newExercises = [...completedExercises];
@@ -227,10 +232,21 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
                 </span>
             )}
             <div className="flex justify-between items-start gap-2">
-                <div>
-                    <h2 className={`text-2xl font-black leading-tight ${currentExercise.isWarmup ? 'text-gray-400' : 'text-white'}`}>
-                        {currentExercise.name}
-                    </h2>
+                <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                        <h2 className={`text-2xl font-black leading-tight ${currentExercise.isWarmup ? 'text-gray-400' : 'text-white'}`}>
+                            {currentExercise.name}
+                        </h2>
+                        {!currentExercise.isWarmup && exerciseHistory.length > 0 && (
+                             <button 
+                                onClick={() => setShowHistory(!showHistory)}
+                                className={`p-2 rounded-full transition-colors ${showHistory ? 'bg-indigo-600 text-white' : 'bg-neutral-800 text-gray-400 hover:bg-neutral-700'}`}
+                             >
+                                 <History size={18} />
+                             </button>
+                        )}
+                    </div>
+                    
                     {currentExercise.description && (
                         <p className="text-sm text-gray-400 mt-2 leading-relaxed">
                             {currentExercise.description}
@@ -254,11 +270,29 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
                  )}
             </div>
             
-            {!currentExercise.isWarmup && lastPerformance && (
-                 <div className="inline-flex items-center gap-2 mt-3 px-3 py-2 bg-neutral-900 rounded-lg border border-white/5">
-                     <History size={14} className="text-gray-500"/>
-                     <span className="text-xs text-gray-400">Рекорд: <span className="text-white font-mono font-bold">{lastPerformance}</span></span>
-                 </div>
+            {/* Contextual History Section */}
+            {showHistory && !currentExercise.isWarmup && (
+                <div className="mt-4 bg-neutral-900 rounded-xl border border-indigo-500/30 p-4 animate-slide-up">
+                    <h4 className="text-xs font-bold text-indigo-400 uppercase mb-3 flex items-center gap-2">
+                        <History size={12}/> Прошлые тренировки
+                    </h4>
+                    <div className="space-y-3">
+                        {exerciseHistory.map((h, i) => (
+                            <div key={i} className="text-sm">
+                                <div className="flex justify-between text-gray-500 text-xs mb-1">
+                                    <span>{new Date(h.date).toLocaleDateString('ru-RU', {day:'numeric', month:'long'})}</span>
+                                </div>
+                                <div className="flex flex-wrap gap-2">
+                                    {h.sets.map((s, idx) => (
+                                        <span key={idx} className="px-2 py-1 bg-neutral-800 rounded text-white font-mono text-xs border border-white/5">
+                                            {s.weight}кг x {s.reps}
+                                        </span>
+                                    ))}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
             )}
         </div>
 

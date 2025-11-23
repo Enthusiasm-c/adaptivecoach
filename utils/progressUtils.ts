@@ -287,6 +287,30 @@ export const getLastPerformance = (exerciseName: string, logs: WorkoutLog[]): st
     return null;
 };
 
+// New Helper for Contextual History
+export const getExerciseHistory = (exerciseName: string, logs: WorkoutLog[], limit: number = 5) => {
+    const cleanName = exerciseName.replace("Разминка: ", "").replace("Warm-up: ", "");
+    const history: { date: string, sets: { weight: number, reps: number }[] }[] = [];
+
+    // Iterate backwards
+    for (let i = logs.length - 1; i >= 0; i--) {
+        const log = logs[i];
+        const exLog = log.completedExercises.find(e => 
+            e.name.toLowerCase().trim() === cleanName.toLowerCase().trim() && !e.isWarmup
+        );
+
+        if (exLog && exLog.completedSets.length > 0) {
+            history.push({
+                date: log.date,
+                sets: exLog.completedSets.filter(s => s.weight > 0)
+            });
+        }
+        if (history.length >= limit) break;
+    }
+    return history;
+};
+
+
 // --- Statistics Utils ---
 
 export const calculateReadinessHistory = (logs: WorkoutLog[]) => {

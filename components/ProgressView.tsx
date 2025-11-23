@@ -36,7 +36,7 @@ const generateMockLogs = (): WorkoutLog[] => {
         const readinessScore = isStrongDay ? 18 : 10; // Mix of Green and Red days
 
         logs.push({
-            sessionId: `Тренировка ${i}`,
+            sessionId: `Тренировка ${12 - i}`,
             date: date.toISOString(),
             feedback: {
                 completion: WorkoutCompletion.Yes,
@@ -179,9 +179,9 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program }) => {
       {/* Top Stats Grid */}
       <div className="grid grid-cols-2 gap-3">
         <StatCard 
-            label="Общий Тоннаж" 
-            value={`${(totalVolume/1000).toFixed(1)}k`} 
-            sub="Всего поднято (кг)" 
+            label="Веса поднято" 
+            value={`${totalVolume.toLocaleString('ru-RU')} кг`} 
+            sub="За все время" 
             icon={<Dumbbell size={16}/>}
             color="text-indigo-400"
             bg="bg-indigo-500/10"
@@ -220,7 +220,7 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program }) => {
           </div>
       </div>
 
-      {/* Detailed Readiness Trends (Health & Recovery) - NEW FEATURE */}
+      {/* Detailed Readiness Trends (Health & Recovery) */}
       <div className="bg-neutral-900 border border-white/5 rounded-3xl p-5 shadow-lg overflow-hidden relative">
         <div className="flex items-center gap-2 mb-4 text-gray-300 font-bold text-sm z-10 relative">
             <HeartPulse size={16} className="text-pink-400"/>
@@ -289,11 +289,12 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program }) => {
                         tickFormatter={(val) => val.includes('-W') ? val.split('-W')[1] : val} 
                         dy={10}
                     />
-                    <YAxis stroke={chartTheme.text} fontSize={10} tickLine={false} axisLine={false} tickFormatter={(val) => `${(val/1000).toFixed(0)}k`} />
+                    <YAxis stroke={chartTheme.text} fontSize={10} tickLine={false} axisLine={false} tickFormatter={(val) => `${(val/1000).toFixed(0)} т`} />
                     <Bar dataKey="volume" fill="#10b981" radius={[4, 4, 0, 0]} barSize={30} />
                     <Tooltip 
                         cursor={{fill: 'rgba(255,255,255,0.05)'}}
                         contentStyle={{ backgroundColor: '#171717', border: '1px solid #333', borderRadius: '8px', color: '#fff' }}
+                        formatter={(value: any) => [`${(value/1000).toFixed(2)} тонн`, 'Объем']}
                     />
                     </BarChart>
                 </ResponsiveContainer>
