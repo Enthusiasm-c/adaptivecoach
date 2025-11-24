@@ -5,7 +5,7 @@ import Onboarding from './components/Onboarding';
 import Dashboard from './components/Dashboard';
 import { generateInitialPlan, adaptPlan, getChatbotResponse, currentApiKey } from './services/geminiService';
 import Chatbot from './components/Chatbot';
-import { AlertTriangle, RefreshCw, Copy, Settings } from 'lucide-react';
+import { AlertTriangle, RefreshCw, Copy, Settings, Globe } from 'lucide-react';
 
 declare global {
   interface Window {
@@ -91,9 +91,15 @@ const App: React.FC = () => {
       }
     } catch (e: any) {
       console.error(e);
-      const errorMsg = e.toString();
+      const errorMsg = e.toString().toLowerCase();
       
-      if (errorMsg.includes('400') || errorMsg.includes('API key') || e.message?.includes('API key')) {
+      // Check specifically for location/region errors common with Google AI
+      const isLocationError = errorMsg.includes('location') || errorMsg.includes('region') || errorMsg.includes('supported');
+      
+      if (isLocationError) {
+          setError('Доступ ограничен регионом');
+          setErrorDetails('Google Gemini не работает в вашей стране (РФ). Пожалуйста, включите VPN (США/Европа) и попробуйте снова.');
+      } else if (errorMsg.includes('400') || errorMsg.includes('api key') || e.message?.includes('API key')) {
           const key = currentApiKey;
           const isKeyMissing = !key || key.includes('UNUSED');
 
@@ -101,8 +107,9 @@ const App: React.FC = () => {
              setError('API Ключ не найден');
              setErrorDetails(`Платформа не видит ключ (VITE_API_KEY).`);
           } else {
-             setError('Google блокирует Telegram');
-             setErrorDetails(`Ваш ключ работает, но блокирует этот источник (Telegram).`);
+             // General API error, likely VPN or Key restriction
+             setError('Ошибка соединения с AI');
+             setErrorDetails(`Не удается связаться с Google. Если вы в РФ - включите VPN.`);
           }
       } else {
           setError('Ошибка генерации');
@@ -160,7 +167,7 @@ const App: React.FC = () => {
 
     } catch (e) {
       console.error(e);
-      setChatMessages([...newMessages, { role: 'assistant', text: "Извини, возникла ошибка. Возможно, API ключ ограничен." }]);
+      setChatMessages([...newMessages, { role: 'assistant', text: "Ошибка сети. Проверь VPN (если ты в РФ) или соединение." }]);
     } finally {
       setIsChatbotLoading(false);
     }
@@ -192,7 +199,11 @@ const App: React.FC = () => {
              
              <div className="relative z-10 bg-neutral-900 border border-red-500/30 rounded-3xl p-6 shadow-2xl max-w-md w-full animate-scale-in">
                 <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
-                    <AlertTriangle className="text-red-500" size={32} />
+                    {error.includes('регионом') || error.includes('VPN') ? (
+                        <Globe className="text-red-500" size={32} />
+                    ) : (
+                        <AlertTriangle className="text-red-500" size={32} />
+                    )}
                 </div>
                 
                 <h2 className="text-2xl font-black text-white mb-2">{error}</h2>

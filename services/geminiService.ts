@@ -43,14 +43,38 @@ export const getApiKey = () => {
   return process.env.API_KEY || "";
 };
 
+// Retrieve Proxy URL if available (For bypassing geo-blocks via Digital Ocean, etc.)
+export const getProxyUrl = () => {
+    // @ts-ignore
+    if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_PROXY_URL) {
+        // @ts-ignore
+        return import.meta.env.VITE_PROXY_URL;
+    }
+    return undefined;
+}
+
 // Export the resolved key for UI diagnostics
 export const currentApiKey = getApiKey();
+export const currentProxyUrl = getProxyUrl();
 
 // Always log the key status to console for debugging deployments
-console.log("Gemini Service Init. Key Status:", currentApiKey && !currentApiKey.includes('UNUSED') ? `Loaded (${currentApiKey.substring(0, 6)}...)` : "MISSING/UNUSED");
+console.log("Gemini Service Init.", 
+    "Key Status:", currentApiKey && !currentApiKey.includes('UNUSED') ? `Loaded (${currentApiKey.substring(0, 6)}...)` : "MISSING/UNUSED",
+    "Proxy:", currentProxyUrl ? `Active (${currentProxyUrl})` : "Direct Mode"
+);
 
-// Initialize even if empty/placeholder so App.tsx can handle the error gracefully in the UI
-const ai = new GoogleGenAI({ apiKey: currentApiKey || "MISSING_KEY" });
+// Initialize configuration
+const clientOptions: any = { 
+    apiKey: currentApiKey || "MISSING_KEY" 
+};
+
+// If a proxy URL is set (e.g. "https://my-do-server.com"), use it as the baseUrl.
+// The SDK will append /v1beta/... to this URL.
+if (currentProxyUrl) {
+    clientOptions.baseUrl = currentProxyUrl;
+}
+
+const ai = new GoogleGenAI(clientOptions);
 
 const exerciseSchema = {
     type: Type.OBJECT,
