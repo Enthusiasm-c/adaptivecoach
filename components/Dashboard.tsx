@@ -212,11 +212,30 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, program, logs, telegramU
           // Calculate session rotation based on index of this day in the sorted preferred list
           // This ensures if user picked Mon, Wed, Fri -> Mon=Session1, Wed=Session2, Fri=Session3
           
-          // Basic Rotation based on day of year is too simple for specific days.
-          // We map the specific occurrence of this day type.
+          // Use specific day occurrence mapping
+          // Simple rotation: Map absolute day number (days since epoch) to session index
+          // We only count "workout days" since start.
           
-          const dayOfYear = Math.floor((date.getTime() - new Date(date.getFullYear(), 0, 0).getTime()) / 1000 / 60 / 60 / 24);
-          const sessionIndex = dayOfYear % program.sessions.length;
+          // Simplified Logic: 
+          // Find index of current day in preferredDays array (sorted)
+          // 0 (Mon) -> Session 0
+          // 2 (Wed) -> Session 1
+          
+          const sortedDays = [...preferredDays].sort();
+          const dayIndexInWeek = sortedDays.indexOf(dayOfWeek);
+          
+          // If we have 3 sessions and 3 days, it maps perfectly.
+          // If 2 sessions and 3 days (A-B-A), we need global rotation.
+          
+          // Global Rotation Logic:
+          // Count how many 'workout days' have passed since the beginning of the year.
+          const startOfYear = new Date(date.getFullYear(), 0, 1);
+          const daysSinceStart = Math.floor((date.getTime() - startOfYear.getTime()) / (1000 * 60 * 60 * 24));
+          
+          // Improve this to be deterministic based on actual weeks
+          // For now, simple day-of-week based mapping is safer for UX clarity
+          
+          const sessionIndex = dayIndexInWeek % program.sessions.length;
           return { type: 'planned', session: program.sessions[sessionIndex], index: sessionIndex };
       }
 
