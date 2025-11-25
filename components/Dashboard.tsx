@@ -4,10 +4,10 @@ import { OnboardingProfile, TrainingProgram, WorkoutLog, WorkoutSession, Readine
 import WorkoutView from './WorkoutView';
 import ProgressView from './ProgressView';
 import SettingsView from './SettingsView';
-import { Calendar, BarChart2, Dumbbell, Play, Flame, Activity, Zap, LayoutGrid, Bot, MessageCircle, ChevronLeft, ChevronRight, Check, Clock, Settings, ArrowLeftRight, Edit3, X } from 'lucide-react';
+import { Calendar, BarChart2, Dumbbell, Play, Flame, Activity, Zap, LayoutGrid, Bot, MessageCircle, ChevronLeft, ChevronRight, Check, Clock, Settings, ArrowLeftRight, Edit3, X, Crown, TrendingUp } from 'lucide-react';
 import WorkoutPreviewModal from './WorkoutPreviewModal';
 import ReadinessModal from './ReadinessModal';
-import { calculateStreaks, calculateWorkoutVolume } from '../utils/progressUtils';
+import { calculateStreaks, calculateWorkoutVolume, calculateWeeklyProgress, getMuscleFocus, calculateLevel } from '../utils/progressUtils';
 import { getDashboardInsight } from '../services/geminiService';
 
 
@@ -128,6 +128,9 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, program, logs, telegramU
   
   const { currentStreak } = calculateStreaks(logs);
   const lastWorkoutVolume = logs.length > 0 ? calculateWorkoutVolume(logs[logs.length-1]) : 0;
+  const weeklyProgress = calculateWeeklyProgress(logs);
+  const userLevel = calculateLevel(logs);
+  const muscleFocus = getMuscleFocus(todaysWorkout);
 
 
   if (activeWorkout) {
@@ -209,32 +212,8 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, program, logs, telegramU
       const isWorkoutDay = preferredDays.includes(dayOfWeek);
 
       if (isWorkoutDay) {
-          // Calculate session rotation based on index of this day in the sorted preferred list
-          // This ensures if user picked Mon, Wed, Fri -> Mon=Session1, Wed=Session2, Fri=Session3
-          
-          // Use specific day occurrence mapping
-          // Simple rotation: Map absolute day number (days since epoch) to session index
-          // We only count "workout days" since start.
-          
-          // Simplified Logic: 
-          // Find index of current day in preferredDays array (sorted)
-          // 0 (Mon) -> Session 0
-          // 2 (Wed) -> Session 1
-          
           const sortedDays = [...preferredDays].sort();
           const dayIndexInWeek = sortedDays.indexOf(dayOfWeek);
-          
-          // If we have 3 sessions and 3 days, it maps perfectly.
-          // If 2 sessions and 3 days (A-B-A), we need global rotation.
-          
-          // Global Rotation Logic:
-          // Count how many 'workout days' have passed since the beginning of the year.
-          const startOfYear = new Date(date.getFullYear(), 0, 1);
-          const daysSinceStart = Math.floor((date.getTime() - startOfYear.getTime()) / (1000 * 60 * 60 * 24));
-          
-          // Improve this to be deterministic based on actual weeks
-          // For now, simple day-of-week based mapping is safer for UX clarity
-          
           const sessionIndex = dayIndexInWeek % program.sessions.length;
           return { type: 'planned', session: program.sessions[sessionIndex], index: sessionIndex };
       }
@@ -431,58 +410,144 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, program, logs, telegramU
       // Default 'today' view
       return (
         <div className="grid grid-cols-2 gap-4 pb-32 animate-fade-in">
-            {/* Header */}
-            <div className="col-span-2 flex justify-between items-end py-2 px-1 pt-[env(safe-area-inset-top)]">
-                <div>
-                    <p className="text-gray-400 text-sm font-medium">
-                        Привет, {telegramUser?.first_name || "Спортсмен"}
-                    </p>
-                    <h1 className="text-2xl font-bold text-white">Время тренировки</h1>
+            {/* Header with Weekly Progress Ring */}
+            <div className="col-span-2 flex justify-between items-center py-2 px-1 pt-[env(safe-area-inset-top)]">
+                <div className="flex items-center gap-3">
+                     {telegramUser?.photo_url ? (
+                        <img 
+                            src={telegramUser.photo_url} 
+                            alt="User" 
+                            className="w-12 h-12 rounded-full border border-white/20"
+                        />
+                    ) : (
+                         <div className="w-12 h-12 rounded-full bg-neutral-800 border border-white/10 flex items-center justify-center">
+                            <Bot size={20} className="text-gray-400"/>
+                         </div>
+                    )}
+                    <div>
+                         <p className="text-gray-400 text-xs font-bold uppercase tracking-wider">
+                            Добрый день,
+                        </p>
+                        <h1 className="text-xl font-bold text-white leading-none mt-0.5">
+                            {telegramUser?.first_name || "Спортсмен"}
+                        </h1>
+                    </div>
                 </div>
-                {telegramUser?.photo_url && (
-                    <img 
-                        src={telegramUser.photo_url} 
-                        alt="User" 
-                        className="w-10 h-10 rounded-full border border-white/20"
-                    />
-                )}
+                
+                {/* Weekly Goal Widget */}
+                <div className="flex items-center gap-3 bg-neutral-900 border border-white/10 rounded-full pl-4 pr-1.5 py-1.5">
+                    <div className="text-right mr-1">
+                        <p className="text-[10px] text-gray-400 font-bold uppercase">План на неделю</p>
+                        <p className="text-sm font-black text-white leading-none">{weeklyProgress} <span className="text-gray-500">/ {profile.daysPerWeek}</span></p>
+                    </div>
+                    <div className="relative w-10 h-10 flex items-center justify-center">
+                        <svg className="w-full h-full transform -rotate-90">
+                            <circle cx="20" cy="20" r="16" stroke="#333" strokeWidth="4" fill="none" />
+                            <circle 
+                                cx="20" cy="20" r="16" 
+                                stroke={weeklyProgress >= profile.daysPerWeek ? '#10B981' : '#6366f1'} 
+                                strokeWidth="4" 
+                                fill="none" 
+                                strokeDasharray={100}
+                                strokeDashoffset={100 - (100 * Math.min(weeklyProgress, profile.daysPerWeek) / profile.daysPerWeek)}
+                                className="transition-all duration-1000 ease-out"
+                                strokeLinecap="round"
+                            />
+                        </svg>
+                        {weeklyProgress >= profile.daysPerWeek && (
+                             <div className="absolute inset-0 flex items-center justify-center">
+                                 <Check size={14} className="text-green-500" strokeWidth={4} />
+                             </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+
+            {/* AI Insight & Body Status Combined Widget */}
+            <div 
+                onClick={onOpenChat}
+                className="col-span-2 bg-neutral-900/80 border border-white/10 rounded-3xl p-4 flex items-start gap-4 cursor-pointer hover:bg-neutral-800 transition active:scale-[0.99] relative overflow-hidden group"
+            >
+                <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500"></div>
+                
+                <div className="shrink-0 pt-1">
+                    <div className="w-10 h-10 bg-indigo-500/10 rounded-xl flex items-center justify-center text-indigo-400 relative">
+                        <MessageCircle size={20} />
+                        {!coachInsight && <div className="absolute top-0 right-0 w-2.5 h-2.5 bg-indigo-500 rounded-full border-2 border-neutral-900 animate-pulse"></div>}
+                    </div>
+                </div>
+
+                <div className="flex-1 min-w-0">
+                    <div className="flex justify-between items-start mb-1">
+                         <h3 className="font-bold text-white text-sm">Статус восстановления</h3>
+                         <div className="px-2 py-0.5 bg-green-500/10 rounded text-[10px] font-bold text-green-400 uppercase tracking-wide">
+                            Готов к бою
+                         </div>
+                    </div>
+                    
+                    {/* Visual Battery Bar */}
+                    <div className="flex gap-1 mb-2 h-1.5 w-full max-w-[120px]">
+                        <div className="flex-1 bg-green-500 rounded-full"></div>
+                        <div className="flex-1 bg-green-500 rounded-full"></div>
+                        <div className="flex-1 bg-green-500 rounded-full"></div>
+                        <div className="flex-1 bg-neutral-700 rounded-full"></div>
+                    </div>
+
+                    <p className="text-xs text-gray-400 line-clamp-2 leading-relaxed">
+                        {coachInsight || "Твое тело восстановилось. Сегодня отличный день, чтобы увеличить нагрузку в базовых движениях."}
+                    </p>
+                </div>
             </div>
 
             {/* Hero Card - Next Workout */}
-            <div className="col-span-2 relative group">
-                <div className="absolute inset-0 bg-gradient-to-r from-indigo-600 to-violet-600 rounded-3xl blur-xl opacity-30 group-hover:opacity-50 transition-opacity duration-500"></div>
-                <div className="relative bg-neutral-900/90 border border-white/10 rounded-3xl p-6 overflow-hidden">
+            <div className="col-span-2 relative group mt-2">
+                <div className="absolute inset-0 bg-gradient-to-r from-indigo-600 to-violet-600 rounded-[2rem] blur-xl opacity-40 group-hover:opacity-60 transition-opacity duration-500"></div>
+                <div className="relative bg-[#111] border border-white/10 rounded-[2rem] p-6 overflow-hidden">
+                    
+                    {/* Background Pattern */}
+                    <div className="absolute top-0 right-0 opacity-10 pointer-events-none">
+                        <svg width="200" height="200" viewBox="0 0 200 200" fill="none">
+                            <path d="M100 0L200 100L100 200L0 100L100 0Z" fill="white"/>
+                        </svg>
+                    </div>
+
                     <div className="relative z-10">
-                        <div className="flex justify-between items-start mb-6">
+                        <div className="flex justify-between items-start mb-4">
                             <div>
-                                <span className="inline-block px-3 py-1 rounded-full bg-white/10 text-indigo-300 text-xs font-bold mb-2 uppercase tracking-wider">По плану</span>
-                                <h2 className="text-3xl font-black text-white leading-tight">{todaysWorkout.name}</h2>
-                            </div>
-                            <div className="p-3 bg-indigo-500 rounded-2xl text-white shadow-lg shadow-indigo-500/20">
-                                <Dumbbell size={24} />
-                            </div>
-                        </div>
-                        
-                        <div className="space-y-2 mb-8">
-                             {todaysWorkout.exercises.slice(0, 3).map((ex, i) => (
-                                <div key={i} className="flex items-center gap-3 text-sm text-gray-300">
-                                    <div className="w-1.5 h-1.5 rounded-full bg-indigo-500"></div>
-                                    {ex.name} <span className="text-gray-500"> {ex.sets}x{ex.reps}</span>
+                                <div className="flex items-center gap-2 mb-2">
+                                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/10 text-white text-[10px] font-bold uppercase tracking-wider">
+                                        <Calendar size={10} /> Сегодня
+                                    </span>
+                                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/5 text-gray-400 text-[10px] font-bold uppercase tracking-wider">
+                                        <Clock size={10} /> ~{profile.timePerWorkout} мин
+                                    </span>
                                 </div>
-                            ))}
-                            {todaysWorkout.exercises.length > 3 && <p className="text-xs text-gray-500 pl-4.5">+{todaysWorkout.exercises.length - 3} еще</p>}
+                                <h2 className="text-3xl font-black text-white leading-tight mb-2">{todaysWorkout.name}</h2>
+                            </div>
                         </div>
 
+                        {/* Muscle Focus Tags */}
+                        <div className="flex flex-wrap gap-2 mb-6">
+                            {muscleFocus.map(muscle => (
+                                <span key={muscle} className="px-3 py-1 rounded-full border border-indigo-500/30 text-indigo-300 text-xs font-bold bg-indigo-500/10">
+                                    {muscle}
+                                </span>
+                            ))}
+                            <span className="px-3 py-1 rounded-full border border-white/5 text-gray-500 text-xs font-bold">
+                                +{Math.max(0, todaysWorkout.exercises.length - muscleFocus.length)} упр.
+                            </span>
+                        </div>
+                        
                         <div className="flex gap-3">
                             <button 
                                 onClick={() => initiateWorkoutStart(todaysWorkout.name)}
-                                className="flex-1 bg-white text-black font-bold py-4 rounded-2xl flex items-center justify-center gap-2 hover:scale-[1.02] transition-transform"
+                                className="flex-1 bg-white text-black font-bold py-4 rounded-2xl flex items-center justify-center gap-2 hover:bg-gray-200 transition active:scale-95 shadow-xl shadow-white/5"
                             >
-                                <Play size={18} fill="currentColor" /> Начать
+                                <Play size={20} fill="currentColor" /> Начать
                             </button>
                             <button 
                                 onClick={() => setWorkoutToPreview(todaysWorkout)}
-                                className="px-6 bg-white/5 text-white font-semibold rounded-2xl border border-white/10 hover:bg-white/10 transition-colors"
+                                className="px-5 bg-white/5 text-white font-semibold rounded-2xl border border-white/10 hover:bg-white/10 transition active:scale-95"
                             >
                                 Обзор
                             </button>
@@ -491,86 +556,33 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, program, logs, telegramU
                 </div>
             </div>
 
-            {/* AI Coach Insight Card */}
-            <div 
-                onClick={onOpenChat}
-                className="col-span-2 relative group cursor-pointer"
-            >
-                <div className="absolute inset-0 bg-gradient-to-br from-indigo-900/20 to-violet-900/20 rounded-3xl border border-indigo-500/30 blur-sm opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                <div className="relative bg-neutral-900 border border-indigo-500/20 rounded-3xl p-5 flex items-start gap-4 shadow-lg shadow-indigo-900/10 group-hover:border-indigo-500/40 transition-colors">
-                    
-                    {/* Icon */}
-                    <div className="shrink-0">
-                        <div className="w-10 h-10 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-lg shadow-indigo-600/30 relative">
-                            <Bot size={20} />
-                            <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 border-2 border-neutral-900 rounded-full"></div>
-                        </div>
+            {/* Stats Grid - Gamification */}
+            <div className="col-span-2 grid grid-cols-3 gap-3 mt-2">
+                
+                {/* Streak */}
+                <div className="bg-neutral-900/50 border border-white/5 rounded-2xl p-3 flex flex-col items-center justify-center text-center gap-1">
+                    <Flame size={20} className="text-orange-500 mb-1" fill="currentColor" fillOpacity={0.2} />
+                    <span className="text-xl font-black text-white leading-none">{currentStreak}</span>
+                    <span className="text-[10px] text-gray-500 font-bold uppercase">Дней подряд</span>
+                </div>
+
+                {/* Level */}
+                <div className="bg-neutral-900/50 border border-white/5 rounded-2xl p-3 flex flex-col items-center justify-center text-center gap-1 relative overflow-hidden">
+                    <div className="absolute inset-x-0 bottom-0 h-1 bg-neutral-800">
+                        <div className="h-full bg-yellow-500" style={{ width: `${userLevel.levelProgress}%` }}></div>
                     </div>
+                    <Crown size={20} className="text-yellow-500 mb-1" fill="currentColor" fillOpacity={0.2} />
+                    <span className="text-xl font-black text-white leading-none">{userLevel.level}</span>
+                    <span className="text-[10px] text-gray-500 font-bold uppercase">Уровень</span>
+                </div>
 
-                    {/* Content */}
-                    <div className="flex-1 pt-0.5">
-                        <div className="flex items-center justify-between mb-1">
-                            <h3 className="font-bold text-indigo-200 text-sm uppercase tracking-wider">ИИ Тренер</h3>
-                            <div className="flex items-center gap-1 text-indigo-400 text-[10px] font-bold uppercase">
-                                <MessageCircle size={10} />
-                                <span>Чат</span>
-                            </div>
-                        </div>
-                        {isInsightLoading ? (
-                             <div className="space-y-2 opacity-50">
-                                 <div className="h-2 bg-indigo-400/20 rounded w-3/4 animate-pulse"></div>
-                                 <div className="h-2 bg-indigo-400/20 rounded w-1/2 animate-pulse"></div>
-                             </div>
-                        ) : (
-                             <p className="text-sm text-gray-300 leading-relaxed">
-                                 {coachInsight || "Привет! Я изучил твой план. Давай начнем тренировку и сделаем первый шаг к цели!"}
-                             </p>
-                        )}
-                    </div>
+                {/* Last Volume */}
+                <div className="bg-neutral-900/50 border border-white/5 rounded-2xl p-3 flex flex-col items-center justify-center text-center gap-1">
+                    <Dumbbell size={20} className="text-emerald-500 mb-1" />
+                    <span className="text-xl font-black text-white leading-none">{(lastWorkoutVolume / 1000).toFixed(1)}т</span>
+                    <span className="text-[10px] text-gray-500 font-bold uppercase">Поднято</span>
                 </div>
             </div>
-
-            {/* Stat Block: Streak */}
-            <div className="bg-neutral-900/80 border border-white/5 rounded-3xl p-5 flex flex-col justify-between h-36">
-                <div className="p-2 bg-orange-500/10 w-fit rounded-xl text-orange-500">
-                    <Flame size={20} />
-                </div>
-                <div>
-                    <p className="text-3xl font-bold text-white">{currentStreak}</p>
-                    <p className="text-xs text-gray-400 font-medium uppercase tracking-wide">Серия (дней)</p>
-                </div>
-            </div>
-
-            {/* Stat Block: Volume */}
-            <div className="bg-neutral-900/80 border border-white/5 rounded-3xl p-5 flex flex-col justify-between h-36">
-                <div className="p-2 bg-emerald-500/10 w-fit rounded-xl text-emerald-500">
-                    <Activity size={20} />
-                </div>
-                <div>
-                    <p className="text-lg font-bold text-white leading-none mb-1">
-                        {(lastWorkoutVolume / 1000).toLocaleString('ru-RU', { maximumFractionDigits: 1 })} т
-                    </p>
-                    <p className="text-xs text-gray-400 font-medium uppercase tracking-wide">Веса поднято</p>
-                </div>
-            </div>
-
-            {/* Readiness Status (Simulated/Cached) */}
-             <div className="col-span-2 bg-neutral-900/80 border border-white/5 rounded-3xl p-5 flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                     <div className="p-3 bg-blue-500/10 rounded-xl text-blue-400">
-                        <Zap size={20} fill="currentColor"/>
-                     </div>
-                     <div>
-                         <p className="text-white font-bold">Умная адаптация</p>
-                         <p className="text-xs text-gray-400">Система прогрессии активна</p>
-                     </div>
-                </div>
-                <div className="flex gap-1">
-                    <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-                    <div className="w-2 h-2 rounded-full bg-green-500/30"></div>
-                    <div className="w-2 h-2 rounded-full bg-green-500/30"></div>
-                </div>
-             </div>
         </div>
       );
   };

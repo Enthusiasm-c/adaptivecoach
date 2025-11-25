@@ -1,5 +1,5 @@
 
-import { WorkoutLog, PersonalRecord, ReadinessData, Exercise } from '../types';
+import { WorkoutLog, PersonalRecord, ReadinessData, Exercise, WorkoutSession } from '../types';
 
 // Helper to get the ISO week number for a date
 const getWeekNumber = (d: Date): [number, number] => {
@@ -512,3 +512,50 @@ export const calculateProjectedOutcome = (currentWeight: number, targetWeight: n
         weeklyChange: weeklyRate
     };
 }
+
+export const calculateWeeklyProgress = (logs: WorkoutLog[]): number => {
+    const today = new Date();
+    const [currentYear, currentWeek] = getWeekNumber(today);
+    
+    let count = 0;
+    logs.forEach(log => {
+        const [y, w] = getWeekNumber(new Date(log.date));
+        if (y === currentYear && w === currentWeek) {
+            count++;
+        }
+    });
+    return count;
+};
+
+export const getMuscleFocus = (session: WorkoutSession): string[] => {
+    const name = session.name.toLowerCase();
+    const exNames = session.exercises.map(e => e.name.toLowerCase()).join(' ');
+    
+    const focus = new Set<string>();
+
+    if (name.includes('upper') || name.includes('верх')) {
+        focus.add('Грудь');
+        focus.add('Спина');
+    } else if (name.includes('lower') || name.includes('низ') || name.includes('legs') || name.includes('ног')) {
+        focus.add('Ноги');
+        focus.add('Ягодицы');
+    } else if (name.includes('full') || name.includes('фул')) {
+        focus.add('Все тело');
+    } else if (name.includes('push') || name.includes('тяни')) {
+         focus.add('Грудь');
+         focus.add('Плечи');
+         focus.add('Трицепс');
+    } else if (name.includes('pull') || name.includes('толкай')) {
+         focus.add('Спина');
+         focus.add('Бицепс');
+    }
+
+    // Fallback if name is generic
+    if (focus.size === 0) {
+        if (exNames.includes('bench') || exNames.includes('жим') || exNames.includes('push')) focus.add('Грудь');
+        if (exNames.includes('squat') || exNames.includes('присед') || exNames.includes('leg')) focus.add('Ноги');
+        if (exNames.includes('pull') || exNames.includes('row') || exNames.includes('тяга')) focus.add('Спина');
+    }
+
+    return Array.from(focus).slice(0, 3);
+};

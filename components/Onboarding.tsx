@@ -79,7 +79,12 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete, isLoading, error })
     };
 
     const handleSubmit = () => {
-        onComplete(profile as OnboardingProfile);
+        // Ensure preferredDays has at least one day or default to Mon/Wed/Fri
+        const finalProfile = {
+            ...profile,
+            preferredDays: (profile.preferredDays && profile.preferredDays.length > 0) ? profile.preferredDays : [1, 3, 5]
+        };
+        onComplete(finalProfile as OnboardingProfile);
     };
 
     const renderStep = () => {
