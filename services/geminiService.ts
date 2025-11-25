@@ -1,75 +1,80 @@
 
-import { Type } from "@google/genai";
-import { OnboardingProfile, TrainingProgram, WorkoutLog, ChatMessage, Exercise, WorkoutSession, ChatResponse } from '../types';
+import { GoogleGenAI, Type, Content, FunctionDeclaration, Tool } from "@google/genai";
+import { OnboardingProfile, TrainingProgram, WorkoutLog, ChatMessage, Exercise, WorkoutSession, ChatResponse, ActivityLevel } from '../types';
 
-// =============================================================================
-// PROXY CONFIGURATION
-// All API requests go through our secure proxy server on Digital Ocean.
-// The actual Gemini API key is stored on the proxy server, never exposed to client.
-// =============================================================================
+// Robustly retrieve and sanitize the API Key
+export const getApiKey = () => {
+  // Helper to validate a potential key
+  const isValidKey = (k: any) => k && typeof k === 'string' && k.length > 10 && !k.includes('UNUSED');
+  
+  // Helper to clean a key
+  const cleanKey = (key: string) => {
+    // Remove non-printable characters
+    let cleaned = key.replace(/[^\x20-\x7E]/g, '').trim();
+    // Remove quotes if build tool added them
+    if ((cleaned.startsWith('"') && cleaned.endsWith('"')) || (cleaned.startsWith("'") && cleaned.endsWith("'"))) {
+        cleaned = cleaned.slice(1, -1);
+    }
+    return cleaned.trim();
+  }
 
-// Proxy server URL - all Gemini requests route through here (HTTPS)
-const PROXY_URL = import.meta.env.VITE_PROXY_URL || 'https://api.sensei.training';
+  // 1. Check Vite specific env vars (Client side injection) - PRIORITY for Vite Apps
+  // @ts-ignore
+  if (typeof import.meta !== 'undefined' && import.meta.env) {
+      // @ts-ignore
+      if (isValidKey(import.meta.env.VITE_API_KEY)) return cleanKey(import.meta.env.VITE_API_KEY);
+      // @ts-ignore
+      if (isValidKey(import.meta.env.API_KEY)) return cleanKey(import.meta.env.API_KEY);
+  }
 
-// Client API key for authenticating with our proxy (NOT the Gemini key)
-const CLIENT_API_KEY = import.meta.env.VITE_CLIENT_API_KEY || '9a361ff33289e0723fad20cbf91b263a6cea0d7cf29c44fe7bbe59dd91d2a50d';
+  // 2. Check window.env for runtime injection (Docker patterns)
+  // @ts-ignore
+  if (typeof window !== 'undefined' && window.env) {
+      // @ts-ignore
+      if (isValidKey(window.env.API_KEY)) return cleanKey(window.env.API_KEY);
+      // @ts-ignore
+      if (isValidKey(window.env.VITE_API_KEY)) return cleanKey(window.env.VITE_API_KEY);
+  }
 
-// Model to use
-const GEMINI_MODEL = 'gemini-2.5-flash';
+  // 3. Check standard Node/Process env (Cloud Run / Build time)
+  if (isValidKey(process.env.API_KEY)) return cleanKey(process.env.API_KEY!);
 
-// Export for diagnostics
-export const currentProxyUrl = PROXY_URL;
-export const currentApiKey = '[HIDDEN - stored on proxy server]';
+  // 4. Return existing but invalid key (like UNUSED) for error handling, or empty string
+  return process.env.API_KEY || "";
+};
 
-console.log("Gemini Service Init.",
-    "Mode: Proxy",
-    "Proxy URL:", PROXY_URL
+// Retrieve Proxy URL if available (For bypassing geo-blocks via Digital Ocean, etc.)
+export const getProxyUrl = () => {
+    // @ts-ignore
+    if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_PROXY_URL) {
+        // @ts-ignore
+        return import.meta.env.VITE_PROXY_URL;
+    }
+    return undefined;
+}
+
+// Export the resolved key for UI diagnostics
+export const currentApiKey = getApiKey();
+export const currentProxyUrl = getProxyUrl();
+
+// Always log the key status to console for debugging deployments
+console.log("Gemini Service Init.", 
+    "Key Status:", currentApiKey && !currentApiKey.includes('UNUSED') ? `Loaded (${currentApiKey.substring(0, 6)}...)` : "MISSING/UNUSED",
+    "Proxy:", currentProxyUrl ? `Active (${currentProxyUrl})` : "Direct Mode"
 );
 
-// =============================================================================
-// PROXY API HELPER
-// =============================================================================
+// Initialize configuration
+const clientOptions: any = { 
+    apiKey: currentApiKey || "MISSING_KEY" 
+};
 
-interface GenerateContentRequest {
-    contents: any;
-    generationConfig?: {
-        responseMimeType?: string;
-        responseSchema?: any;
-    };
-    systemInstruction?: string;
-    tools?: any[];
+// If a proxy URL is set (e.g. "https://my-do-server.com"), use it as the baseUrl.
+// The SDK will append /v1beta/... to this URL.
+if (currentProxyUrl) {
+    clientOptions.baseUrl = currentProxyUrl;
 }
 
-async function callGeminiProxy(endpoint: string, body: GenerateContentRequest): Promise<any> {
-    const url = `${PROXY_URL}/api/gemini${endpoint}`;
-
-    const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-API-Key': CLIENT_API_KEY
-        },
-        body: JSON.stringify(body)
-    });
-
-    if (!response.ok) {
-        const error = await response.json().catch(() => ({ error: 'Unknown error' }));
-        throw new Error(error.error?.message || error.message || `Proxy error: ${response.status}`);
-    }
-
-    return response.json();
-}
-
-// Helper to extract text from Gemini response
-function extractText(response: any): string {
-    return response?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-}
-
-// Helper to format contents for API
-function formatContents(text: string): any {
-    return [{ parts: [{ text }] }];
-}
-
+const ai = new GoogleGenAI(clientOptions);
 
 const exerciseSchema = {
     type: Type.OBJECT,
@@ -119,45 +124,65 @@ const trainingProgramSchema = {
     required: ['sessions'],
 };
 
-// Note: Function declarations for chatbot tools are now inline in getChatbotResponse()
+// --- Function Definitions for Chatbot Tools ---
+const updatePlanTool: FunctionDeclaration = {
+    name: "update_workout_plan",
+    description: "Call this function when the user wants to modify their workout plan, has an injury (like back pain), or wants to swap/remove exercises.",
+    parameters: {
+        type: Type.OBJECT,
+        properties: {
+            reason: { type: Type.STRING, description: "The reason for the change (e.g., 'lower back pain', 'no gym equipment')." },
+            instructions: { type: Type.STRING, description: "Specific details on what to change (e.g., 'remove crunches', 'replace squats with leg press')." }
+        },
+        required: ["reason", "instructions"]
+    }
+};
 
 function buildInitialPrompt(profile: OnboardingProfile): string {
-    return `
-    Ты опытный "ИИ тренер". Создай персонализированную программу тренировок на основе профиля пользователя.
-    Программа должна быть структурированной, простой и эффективной.
-    
-    ВАЖНО: Используй естественный русский язык. Избегай кальки с английского (не пиши "Фулбоди", пиши "Тренировка на все тело" или "Круговая").
-    Для каждого упражнения добавь поле "description" с коротким описанием техники (1-2 предложения), чтобы пользователь понял, что делать.
-    Ответ должен быть JSON объектом, соответствующим схеме.
+    const bmi = profile.height ? (profile.weight / ((profile.height / 100) ** 2)).toFixed(1) : "Неизвестно";
+    const weightDiff = profile.targetWeight ? (profile.targetWeight - profile.weight) : 0;
+    const goalContext = weightDiff < 0 
+        ? `Пользователь хочет похудеть на ${Math.abs(weightDiff).toFixed(1)} кг.`
+        : weightDiff > 0 
+            ? `Пользователь хочет набрать ${weightDiff.toFixed(1)} кг.`
+            : 'Поддержание веса.';
 
+    return `
+    Ты опытный "ИИ тренер". Создай персонализированную программу тренировок на основе детального профиля.
+    Программа должна быть структурированной, простой и эффективной, учитывая физические параметры.
+    
     Профиль пользователя:
     - Пол: ${profile.gender}
     - Возраст: ${profile.age}
-    - Вес: ${profile.weight} кг
+    - Текущий вес: ${profile.weight} кг (BMI: ${bmi})
+    - Цель (вес): ${profile.targetWeight ? `${profile.targetWeight} кг` : 'Не указан'} (${goalContext})
+    - Уровень активности (вне зала): ${profile.activityLevel}
     - Опыт: ${profile.experience}
     - Главная цель: ${profile.goals.primary}
     - Дней в неделю: ${profile.daysPerWeek}
     - Время на тренировку: ${profile.timePerWorkout} минут
     - Оборудование: ${profile.location}
-    - Интенсивность: ${profile.intensity}
     - Травмы/Ограничения: ${profile.hasInjuries ? profile.injuries : 'Нет'}
+
+    ВАЖНО:
+    1. Если активность "Сидячая", добавь больше упражнений на осанку и core (ядро).
+    2. Если цель похудение, увеличь плотность тренировки (суперсеты или короткий отдых).
+    3. Используй естественный русский язык. Избегай кальки с английского.
+    4. Для каждого упражнения добавь поле "description" с коротким описанием техники.
 
     Правила составления:
     1. Сплит (структура):
-        - 2-3 дня: Тренировка на все тело (Full Body) или Круговая.
-        - 4 дня: Верх / Низ.
-        - 5 дней: Жим / Тяга / Ноги (Push/Pull/Legs) или сплит по группам мышц.
+        - 2-3 дня: Full Body (Фулбоди).
+        - 4 дня: Upper/Lower (Верх/Низ).
+        - 5 дней: PPL (Жим/Тяга/Ноги) или сплит.
     2. Выбор упражнений:
-        - Приоритет базовым многосуставным движениям.
-        - Учитывай оборудование (${profile.location}). Если "Дома", используй собственный вес, гантели или резинки.
-        - Учитывай травмы (${profile.injuries}). Избегай упражнений, нагружающих больные зоны.
+        - Приоритет базовым движениям.
+        - Учитывай оборудование: ${profile.location}.
     3. Объем:
-        - Новички: 2-3 подхода, 8-12 повторов. Акцент на технику.
-        - Продвинутые: 3-5 подходов, периодизация.
-    4. Вес:
-        - Стартовые веса в КГ (консервативно).
+        - Новички: 2-3 подхода, акцент на технику.
+        - Если есть лишний вес (BMI > 25), предложи кардио-заминку (ходьба в гору) в конце сессии.
 
-    Сгенерируй программу в формате JSON на русском языке.
+    Сгенерируй программу в формате JSON.
     `;
 }
 
@@ -216,6 +241,7 @@ function buildCoachFeedbackPrompt(profile: OnboardingProfile, log: WorkoutLog): 
     
     Контекст:
     - Цель: ${profile.goals.primary}
+    - Вес: ${profile.weight}
     - Тренировка: ${log.sessionId}
     - Выполнение: ${log.feedback.completion}
     - Боль/Дискомфорт: ${log.feedback.pain.hasPain ? `Да - ${log.feedback.pain.details}` : 'Нет'}
@@ -248,15 +274,15 @@ function buildDashboardInsightPrompt(profile: OnboardingProfile, logs: WorkoutLo
     Проанализируй прогресс пользователя и дай одну емкую фразу для главного экрана.
     
     Данные:
-    - Уровень: ${profile.experience}
+    - Цель: ${profile.goals.primary}
     - Тренировок всего: ${logs.length}
     - Последняя активность: ${recentLogs.length > 0 ? recentLogs[recentLogs.length-1].date : 'Давно'}
     - Оценка готовности (Readiness): ${recentLogs.length > 0 ? recentLogs[recentLogs.length-1].feedback.readiness?.score : 'Нет данных'}
     
     Задача:
-    1. Если пользователь тренируется регулярно -> Похвали за ритм ("Отличный темп", "Ты в режиме").
-    2. Если перерыв -> Мягко позови назад ("Давно не виделись, давай начнем с легкой").
-    3. Если только начал -> Подбодри ("Начало положено").
+    1. Если пользователь тренируется регулярно -> Похвали за ритм.
+    2. Если перерыв -> Мягко позови назад.
+    3. Если только начал -> Подбодри.
     
     Язык: Естественный русский, 2-3 предложения. Можно 1 эмодзи.
     `;
@@ -264,14 +290,15 @@ function buildDashboardInsightPrompt(profile: OnboardingProfile, logs: WorkoutLo
 
 export const getExerciseAlternatives = async (exercise: Exercise, session: WorkoutSession, profile: OnboardingProfile): Promise<Exercise[]> => {
     const prompt = buildExerciseSwapPrompt(exercise, session, profile);
-    const response = await callGeminiProxy(`/v1beta/models/${GEMINI_MODEL}:generateContent`, {
-        contents: formatContents(prompt),
-        generationConfig: {
+    const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: prompt,
+        config: {
             responseMimeType: 'application/json',
             responseSchema: exerciseAlternativesSchema,
         },
     });
-    const jsonText = extractText(response).trim();
+    const jsonText = response.text.trim();
     const result = JSON.parse(jsonText) as { alternatives: Exercise[] };
     return result.alternatives;
 };
@@ -280,15 +307,16 @@ export const getExerciseAlternatives = async (exercise: Exercise, session: Worko
 export const generateInitialPlan = async (profile: OnboardingProfile): Promise<TrainingProgram> => {
     const prompt = buildInitialPrompt(profile);
 
-    const response = await callGeminiProxy(`/v1beta/models/${GEMINI_MODEL}:generateContent`, {
-        contents: formatContents(prompt),
-        generationConfig: {
+    const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash', 
+        contents: prompt,
+        config: {
             responseMimeType: 'application/json',
             responseSchema: trainingProgramSchema,
         },
     });
 
-    const jsonText = extractText(response).trim();
+    const jsonText = response.text.trim();
     return JSON.parse(jsonText) as TrainingProgram;
 };
 
@@ -296,56 +324,60 @@ export const generateInitialPlan = async (profile: OnboardingProfile): Promise<T
 export const adaptPlan = async (currentProgram: TrainingProgram, logs: WorkoutLog[]): Promise<TrainingProgram> => {
     const prompt = buildAdaptationPrompt(currentProgram, logs);
 
-    const response = await callGeminiProxy(`/v1beta/models/${GEMINI_MODEL}:generateContent`, {
-        contents: formatContents(prompt),
-        generationConfig: {
+    const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: prompt,
+        config: {
             responseMimeType: 'application/json',
             responseSchema: trainingProgramSchema,
         },
     });
-
-    const jsonText = extractText(response).trim();
+    
+    const jsonText = response.text.trim();
     return JSON.parse(jsonText) as TrainingProgram;
 };
 
 // Internal helper to actually rewrite the JSON
 const modifyPlanWithInstructions = async (currentProgram: TrainingProgram, reason: string, instructions: string): Promise<TrainingProgram> => {
     const prompt = buildModificationPrompt(currentProgram, reason, instructions);
-
-    const response = await callGeminiProxy(`/v1beta/models/${GEMINI_MODEL}:generateContent`, {
-        contents: formatContents(prompt),
-        generationConfig: {
+    
+    const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: prompt,
+        config: {
             responseMimeType: 'application/json',
             responseSchema: trainingProgramSchema,
         },
     });
 
-    const jsonText = extractText(response).trim();
+    const jsonText = response.text.trim();
     return JSON.parse(jsonText) as TrainingProgram;
 };
 
 export const getCoachFeedback = async (profile: OnboardingProfile, log: WorkoutLog): Promise<string> => {
     const prompt = buildCoachFeedbackPrompt(profile, log);
-    const response = await callGeminiProxy(`/v1beta/models/${GEMINI_MODEL}:generateContent`, {
-        contents: formatContents(prompt),
+    const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: prompt,
     });
-    return extractText(response);
+    return response.text;
 };
 
 export const getDashboardInsight = async (profile: OnboardingProfile, logs: WorkoutLog[]): Promise<string> => {
     const prompt = buildDashboardInsightPrompt(profile, logs);
-    const response = await callGeminiProxy(`/v1beta/models/${GEMINI_MODEL}:generateContent`, {
-        contents: formatContents(prompt),
+    const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: prompt,
     });
-    return extractText(response);
+    return response.text;
 };
 
 export const getChatbotResponse = async (history: ChatMessage[], currentProgram: TrainingProgram): Promise<ChatResponse> => {
     // 1. Extract the new user message (last element)
     const newMessage = history[history.length - 1];
-
-    // 2. Format the previous history for API
-    const historyContent = history.slice(0, -1).map(msg => ({
+    
+    // 2. Format the previous history
+    const historyContent: Content[] = history.slice(0, -1).map(msg => ({
         role: msg.role === 'user' ? 'user' : 'model',
         parts: [{ text: msg.text }]
     }));
@@ -354,63 +386,59 @@ export const getChatbotResponse = async (history: ChatMessage[], currentProgram:
     const systemInstruction = `
     Ты дружелюбный "ИИ тренер". Твоя задача - помогать пользователю с тренировками, питанием и мотивацией.
     Ты имеешь доступ к текущей программе тренировок пользователя.
-
-    ВАЖНО: Если пользователь жалуется на боль, травму (например, "болит спина") или просит изменить упражнения ("убери приседания"),
-    ТЫ ОБЯЗАН использовать инструмент 'update_workout_plan'.
+    
+    ВАЖНО: Если пользователь жалуется на боль, травму (например, "болит спина") или просит изменить упражнения ("убери приседания"), 
+    ТЫ ОБЯЗАН использовать инструмент 'update_workout_plan'. 
     Не просто давай советы, а реально меняй план через этот инструмент.
 
     Отвечай на естественном РУССКОМ языке.
-
-    Текущая программа пользователя:
-    ${JSON.stringify(currentProgram, null, 2)}
     `;
 
-    // 4. Build contents with history + new message
-    const contents = [
-        ...historyContent,
-        { role: 'user', parts: [{ text: newMessage.text }] }
-    ];
+    // 4. Initialize chat with tool support
+    const chat = ai.chats.create({
+      model: 'gemini-2.5-flash',
+      history: historyContent,
+      config: {
+        systemInstruction: systemInstruction,
+        tools: [{ functionDeclarations: [updatePlanTool] }]
+      },
+    });
 
-    // 5. Make API call with tools
-    const response = await callGeminiProxy(`/v1beta/models/${GEMINI_MODEL}:generateContent`, {
-        contents,
-        systemInstruction,
-        tools: [{
-            functionDeclarations: [{
-                name: "update_workout_plan",
-                description: "Call this function when the user wants to modify their workout plan, has an injury (like back pain), or wants to swap/remove exercises.",
-                parameters: {
-                    type: "OBJECT",
-                    properties: {
-                        reason: { type: "STRING", description: "The reason for the change (e.g., 'lower back pain', 'no gym equipment')." },
-                        instructions: { type: "STRING", description: "Specific details on what to change (e.g., 'remove crunches', 'replace squats with leg press')." }
-                    },
-                    required: ["reason", "instructions"]
-                }
-            }]
-        }]
+    // 5. Send message
+    const result = await chat.sendMessage({
+        message: newMessage.text
     });
 
     // 6. Handle Function Calls
-    const candidate = response?.candidates?.[0];
-    const functionCall = candidate?.content?.parts?.find((p: any) => p.functionCall)?.functionCall;
+    const toolCalls = result.functionCalls;
+    if (toolCalls && toolCalls.length > 0) {
+        const call = toolCalls[0];
+        
+        if (call.name === 'update_workout_plan') {
+            const args = call.args as { reason: string, instructions: string };
+            
+            // Perform the actual program modification using a separate robust call
+            const updatedProgram = await modifyPlanWithInstructions(currentProgram, args.reason, args.instructions);
 
-    if (functionCall && functionCall.name === 'update_workout_plan') {
-        const args = functionCall.args as { reason: string, instructions: string };
+            // Return a response indicating success + the new object
+            // We also want the model to generate a polite text response acknowledging the action.
+            // We simulate a tool output back to the model
+            const toolResponse = await chat.sendMessage({
+               toolResponse: {
+                   functionResponses: [{
+                       name: 'update_workout_plan',
+                       id: call.id,
+                       response: { result: 'Program updated successfully.' }
+                   }]
+               }
+            });
 
-        // Perform the actual program modification
-        const updatedProgram = await modifyPlanWithInstructions(currentProgram, args.reason, args.instructions);
-
-        // Generate acknowledgment text
-        const ackResponse = await callGeminiProxy(`/v1beta/models/${GEMINI_MODEL}:generateContent`, {
-            contents: formatContents(`Ты только что обновил программу тренировок пользователя по причине: "${args.reason}". Кратко (1-2 предложения) подтверди это на русском языке.`),
-        });
-
-        return {
-            text: extractText(ackResponse) || 'Программа обновлена!',
-            updatedProgram: updatedProgram
-        };
+            return {
+                text: toolResponse.text,
+                updatedProgram: updatedProgram
+            };
+        }
     }
 
-    return { text: extractText(response) };
+    return { text: result.text };
 }

@@ -483,3 +483,31 @@ export const getVolumeDistribution = (logs: WorkoutLog[]) => {
         .filter(k => (distribution as any)[k] > 0)
         .map(k => ({ name: k, value: (distribution as any)[k] }));
 };
+
+// Prediction Logic for Onboarding
+export const calculateProjectedOutcome = (currentWeight: number, targetWeight: number): {
+    months: number;
+    completionDate: string;
+    weeklyChange: number;
+} | null => {
+    if (!targetWeight || currentWeight === targetWeight) return null;
+
+    const diff = currentWeight - targetWeight;
+    const isWeightLoss = diff > 0;
+    
+    // Conservative estimates
+    const weeklyRate = isWeightLoss ? 0.6 : 0.3; // kg per week
+    const weeksNeeded = Math.abs(diff) / weeklyRate;
+    const months = Math.ceil(weeksNeeded / 4);
+    
+    const today = new Date();
+    today.setDate(today.getDate() + (weeksNeeded * 7));
+    
+    const completionDate = today.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
+
+    return {
+        months,
+        completionDate,
+        weeklyChange: weeklyRate
+    };
+}

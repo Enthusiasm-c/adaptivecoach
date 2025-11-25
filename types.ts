@@ -10,6 +10,13 @@ export enum ExperienceLevel {
   Advanced = "Атлет (2+ года)",
 }
 
+export enum ActivityLevel {
+  Sedentary = "Сидячий (офис, дом)",
+  Light = "Малоактивный (прогулки)",
+  Moderate = "Средний (спорт 1-2 раза)",
+  VeryActive = "Активный (физ. работа/спорт)",
+}
+
 export enum Goal {
   LoseFat = "Снижение веса / Рельеф",
   BuildMuscle = "Набор мышечной массы",
@@ -33,7 +40,9 @@ export interface OnboardingProfile {
   gender: Gender;
   age: number;
   weight: number;
-  height?: number;
+  height: number; // New: Needed for BMI
+  targetWeight?: number; // New: Specific goal
+  activityLevel: ActivityLevel; // New: For calorie/recovery estimation
   experience: ExperienceLevel;
   hasInjuries: boolean;
   injuries?: string;
