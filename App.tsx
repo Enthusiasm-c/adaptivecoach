@@ -5,7 +5,7 @@ import Onboarding from './components/Onboarding';
 import Dashboard from './components/Dashboard';
 import { generateInitialPlan, adaptPlan, getChatbotResponse, currentApiKey } from './services/geminiService';
 import Chatbot from './components/Chatbot';
-import { AlertTriangle, RefreshCw, Copy, Settings, Globe } from 'lucide-react';
+import { AlertTriangle, RefreshCw, Copy, Settings, Globe, Brain, Dumbbell, Activity, CalendarCheck } from 'lucide-react';
 
 declare global {
   interface Window {
@@ -27,6 +27,30 @@ const App: React.FC = () => {
   const [isChatbotLoading, setIsChatbotLoading] = useState(false);
   
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // Loading State Animation
+  const [loadingStep, setLoadingStep] = useState(0);
+  const loadingMessages = [
+      { text: "Анализируем биомеханику...", icon: <Activity size={32} className="text-indigo-400" /> },
+      { text: "Подбираем оптимальный сплит...", icon: <CalendarCheck size={32} className="text-violet-400" /> },
+      { text: "Рассчитываем рабочие веса...", icon: <Dumbbell size={32} className="text-emerald-400" /> },
+      { text: "Проверяем на совместимость травм...", icon: <Activity size={32} className="text-red-400" /> },
+      { text: "Финальная сборка программы...", icon: <Brain size={32} className="text-blue-400" /> }
+  ];
+
+  useEffect(() => {
+      if (isLoading && !onboardingProfile) return; // Don't run on initial check
+      
+      let interval: any;
+      if (isLoading) {
+          setLoadingStep(0);
+          interval = setInterval(() => {
+              setLoadingStep(prev => (prev + 1) % loadingMessages.length);
+          }, 4000); // Change message every 4 seconds
+      }
+      return () => clearInterval(interval);
+  }, [isLoading]);
+
 
   useEffect(() => {
     // Initialize Telegram Web App if available
@@ -86,6 +110,8 @@ const App: React.FC = () => {
         localStorage.setItem('onboardingProfile', JSON.stringify(profile));
         localStorage.setItem('trainingProgram', JSON.stringify(program));
         localStorage.setItem('workoutLogs', JSON.stringify([]));
+        // Mark first login to show tutorial later
+        localStorage.setItem('isFirstLogin', 'true');
       } catch (storageError) {
         console.warn("Could not save to localStorage", storageError);
       }
@@ -245,18 +271,43 @@ const App: React.FC = () => {
       );
   }
 
+  // Enhanced Loading Screen
   if (isLoading && !onboardingProfile) {
+    const currentMsg = loadingMessages[loadingStep % loadingMessages.length];
+    
     return (
-      <div className="flex items-center justify-center min-h-[100dvh] bg-neutral-950 relative overflow-hidden">
-        <div className="absolute top-[-20%] left-[-20%] w-[600px] h-[600px] bg-indigo-600/20 rounded-full blur-[120px]"></div>
-        <div className="absolute bottom-[-20%] right-[-20%] w-[600px] h-[600px] bg-violet-600/20 rounded-full blur-[120px]"></div>
+      <div className="flex flex-col items-center justify-center min-h-[100dvh] bg-neutral-950 relative overflow-hidden px-6">
+        <div className="absolute top-[-20%] left-[-20%] w-[600px] h-[600px] bg-indigo-600/10 rounded-full blur-[120px]"></div>
+        <div className="absolute bottom-[-20%] right-[-20%] w-[600px] h-[600px] bg-violet-600/10 rounded-full blur-[120px]"></div>
         
-        <div className="text-center relative z-10">
-          <div className="relative w-16 h-16 mx-auto mb-6">
-             <div className="absolute inset-0 border-4 border-indigo-500/30 rounded-full"></div>
-             <div className="absolute inset-0 border-4 border-indigo-500 rounded-full border-t-transparent animate-spin"></div>
+        <div className="text-center relative z-10 w-full max-w-sm">
+          {/* Main Spinner */}
+          <div className="relative w-24 h-24 mx-auto mb-10">
+             <div className="absolute inset-0 border-4 border-indigo-500/10 rounded-full"></div>
+             <div className="absolute inset-0 border-4 border-t-indigo-500 border-r-indigo-500 border-b-transparent border-l-transparent rounded-full animate-spin"></div>
+             <div className="absolute inset-0 flex items-center justify-center animate-pulse">
+                {currentMsg.icon}
+             </div>
           </div>
-          <p className="mt-4 text-xl font-light tracking-wide text-white">Создаем план тренировок...</p>
+
+          <h3 className="text-2xl font-bold text-white mb-2 animate-fade-in key-{loadingStep}">
+            {currentMsg.text}
+          </h3>
+          <p className="text-gray-500 text-sm mb-8 animate-pulse">
+            Это может занять до 30 секунд...
+          </p>
+
+          {/* Progress Steps Visualizer */}
+          <div className="flex justify-between items-center gap-2 px-4">
+              {loadingMessages.map((_, idx) => (
+                  <div 
+                    key={idx} 
+                    className={`h-1.5 flex-1 rounded-full transition-all duration-500 ${
+                        idx <= loadingStep ? 'bg-indigo-500' : 'bg-neutral-800'
+                    }`}
+                  ></div>
+              ))}
+          </div>
         </div>
       </div>
     );
@@ -270,8 +321,8 @@ const App: React.FC = () => {
        </div>
 
        {toastMessage && (
-           <div className="fixed top-6 left-1/2 transform -translate-x-1/2 z-50 bg-green-600 text-white px-6 py-3 rounded-full shadow-2xl font-bold text-sm animate-slide-up flex items-center gap-2">
-               <RefreshCw size={16} className="animate-spin-slow" />
+           <div className="fixed top-6 left-1/2 transform -translate-x-1/2 z-50 bg-neutral-800/90 backdrop-blur border border-green-500/30 text-green-400 px-6 py-3 rounded-full shadow-2xl font-bold text-sm animate-slide-up flex items-center gap-3">
+               <div className="bg-green-500/20 p-1 rounded-full"><RefreshCw size={14} className="animate-spin-slow" /></div>
                {toastMessage}
            </div>
        )}

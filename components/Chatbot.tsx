@@ -1,6 +1,7 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { ChatMessage } from '../types';
-import { MessageSquare, Send, X, Bot } from 'lucide-react';
+import { MessageSquare, Send, X, Bot, Zap, ShieldAlert, Clock, ArrowRight } from 'lucide-react';
 
 interface ChatbotProps {
     isOpen: boolean;
@@ -18,7 +19,7 @@ const Chatbot: React.FC<ChatbotProps> = ({ isOpen, onToggle, messages, onSendMes
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }
 
-    useEffect(scrollToBottom, [messages, isLoading]);
+    useEffect(scrollToBottom, [messages, isLoading, isOpen]);
 
     const handleSend = (e: React.FormEvent) => {
         e.preventDefault();
@@ -27,6 +28,24 @@ const Chatbot: React.FC<ChatbotProps> = ({ isOpen, onToggle, messages, onSendMes
             setInput('');
         }
     };
+
+    const suggestions = [
+        { 
+            label: "🥵 Слишком легко", 
+            text: "Мне слишком легко заниматься. Можешь усложнить программу?",
+            icon: <Zap size={16} className="text-yellow-400"/>
+        },
+        { 
+            label: "🤕 Болит спина", 
+            text: "У меня болит спина при нагрузках. Замени опасные упражнения.",
+            icon: <ShieldAlert size={16} className="text-red-400"/>
+        },
+        { 
+            label: "⏳ Мало времени", 
+            text: "Сократи тренировки до 30 минут, я не успеваю.",
+            icon: <Clock size={16} className="text-blue-400"/>
+        }
+    ];
 
     return (
         <>
@@ -52,8 +71,30 @@ const Chatbot: React.FC<ChatbotProps> = ({ isOpen, onToggle, messages, onSendMes
 
                     <div className="flex-1 p-4 overflow-y-auto space-y-4">
                         {messages.length === 0 && (
-                             <div className="text-center text-gray-400 h-full flex items-center justify-center">
-                                <p>Спроси меня о тренировках, упражнениях или питании!</p>
+                             <div className="h-full flex flex-col justify-center items-center text-center space-y-6">
+                                <div className="p-4 bg-indigo-500/10 rounded-full">
+                                    <Bot size={32} className="text-indigo-400"/>
+                                </div>
+                                <div>
+                                    <h4 className="text-white font-bold text-lg mb-1">Привет!</h4>
+                                    <p className="text-gray-400 text-sm max-w-[250px] mx-auto">Я могу изменить твою программу, дать совет по питанию или технике.</p>
+                                </div>
+                                
+                                <div className="grid gap-2 w-full">
+                                    {suggestions.map((s, idx) => (
+                                        <button 
+                                            key={idx}
+                                            onClick={() => onSendMessage(s.text)}
+                                            className="flex items-center gap-3 p-3 bg-gray-700 hover:bg-gray-600 rounded-xl transition text-left group"
+                                        >
+                                            <div className="p-2 bg-gray-800 rounded-lg group-hover:bg-gray-700 transition">
+                                                {s.icon}
+                                            </div>
+                                            <span className="flex-1 text-sm font-medium text-gray-200">{s.label}</span>
+                                            <ArrowRight size={14} className="text-gray-500 group-hover:text-white"/>
+                                        </button>
+                                    ))}
+                                </div>
                              </div>
                         )}
                         {messages.map((msg, index) => (
@@ -84,7 +125,7 @@ const Chatbot: React.FC<ChatbotProps> = ({ isOpen, onToggle, messages, onSendMes
                                 value={input}
                                 onChange={(e) => setInput(e.target.value)}
                                 placeholder="Задай вопрос..."
-                                className="w-full bg-transparent p-3 focus:outline-none"
+                                className="w-full bg-transparent p-3 focus:outline-none text-white placeholder-gray-400"
                                 disabled={isLoading}
                             />
                             <button type="submit" className="p-3 text-indigo-400 hover:text-indigo-300 disabled:opacity-50" disabled={isLoading || !input.trim()}>

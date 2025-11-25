@@ -4,7 +4,7 @@ import { OnboardingProfile, TrainingProgram, WorkoutLog, WorkoutSession, Readine
 import WorkoutView from './WorkoutView';
 import ProgressView from './ProgressView';
 import SettingsView from './SettingsView';
-import { Calendar, BarChart2, Dumbbell, Play, Flame, Activity, Zap, LayoutGrid, Bot, MessageCircle, ChevronLeft, ChevronRight, Check, Clock, Settings, ArrowLeftRight, Edit3, X, Crown, TrendingUp } from 'lucide-react';
+import { Calendar, BarChart2, Dumbbell, Play, Flame, Activity, Zap, LayoutGrid, Bot, MessageCircle, ChevronLeft, ChevronRight, Check, Clock, Settings, ArrowLeftRight, Edit3, X, Crown, TrendingUp, Sparkles, MessageSquarePlus } from 'lucide-react';
 import WorkoutPreviewModal from './WorkoutPreviewModal';
 import ReadinessModal from './ReadinessModal';
 import { calculateStreaks, calculateWorkoutVolume, calculateWeeklyProgress, getMuscleFocus, calculateLevel } from '../utils/progressUtils';
@@ -45,6 +45,18 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, program, logs, telegramU
   const [isEditingSchedule, setIsEditingSchedule] = useState(false);
   const [selectedDateToMove, setSelectedDateToMove] = useState<Date | null>(null);
   const [scheduleOverrides, setScheduleOverrides] = useState<{[date: string]: number | null}>({}); // DateString -> SessionIndex (null means Rest)
+
+  // Tutorial / Welcome State
+  const [showWelcomeGuide, setShowWelcomeGuide] = useState(false);
+
+  useEffect(() => {
+    // Check for first login
+    const isFirstLogin = localStorage.getItem('isFirstLogin');
+    if (isFirstLogin === 'true') {
+        setShowWelcomeGuide(true);
+        localStorage.removeItem('isFirstLogin');
+    }
+  }, []);
 
   useEffect(() => {
     // Load overrides
@@ -463,6 +475,33 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, program, logs, telegramU
                 </div>
             </div>
 
+            {/* Quick Action Grid (New Feature for Richness) */}
+            <div className="col-span-2 overflow-x-auto no-scrollbar -mx-4 px-4 pb-2">
+                <div className="flex gap-3 w-max">
+                    <button 
+                        onClick={onOpenChat}
+                        className="flex items-center gap-2 bg-neutral-900 border border-white/10 rounded-xl px-4 py-3 whitespace-nowrap active:scale-95 transition"
+                    >
+                        <MessageSquarePlus size={16} className="text-indigo-400"/>
+                        <span className="text-xs font-bold text-gray-300">Чат с тренером</span>
+                    </button>
+                    <button 
+                        onClick={() => setActiveView('plan')}
+                        className="flex items-center gap-2 bg-neutral-900 border border-white/10 rounded-xl px-4 py-3 whitespace-nowrap active:scale-95 transition"
+                    >
+                        <Calendar size={16} className="text-violet-400"/>
+                        <span className="text-xs font-bold text-gray-300">Изменить график</span>
+                    </button>
+                    <button 
+                        onClick={() => setWorkoutToPreview(todaysWorkout)}
+                        className="flex items-center gap-2 bg-neutral-900 border border-white/10 rounded-xl px-4 py-3 whitespace-nowrap active:scale-95 transition"
+                    >
+                        <Dumbbell size={16} className="text-emerald-400"/>
+                        <span className="text-xs font-bold text-gray-300">Обзор тренировки</span>
+                    </button>
+                </div>
+            </div>
+
             {/* AI Insight & Body Status Combined Widget */}
             <div 
                 onClick={onOpenChat}
@@ -594,7 +633,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, program, logs, telegramU
       </main>
 
       {/* Bottom Navigation Bar */}
-      <nav className="fixed bottom-0 left-0 w-full bg-neutral-950/90 backdrop-blur-md border-t border-white/5 pb-[calc(0.5rem+env(safe-area-inset-bottom))] pt-3 flex justify-around items-center z-50 shadow-[0_-10px_30px_rgba(0,0,0,0.5)]">
+      <nav className="fixed bottom-0 left-0 w-full bg-neutral-950/90 backdrop-blur-md border-t border-white/5 pb-[calc(0.5rem+env(safe-area-inset-bottom))] pt-3 flex justify-around items-center z-40 shadow-[0_-10px_30px_rgba(0,0,0,0.5)]">
         <NavButton 
             icon={<LayoutGrid size={24} strokeWidth={activeView === 'today' ? 2.5 : 2} />} 
             label="Главная" 
@@ -620,6 +659,45 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, program, logs, telegramU
             onClick={() => setActiveView('settings')} 
         />
       </nav>
+
+      {/* Welcome / First Login Modal */}
+      {showWelcomeGuide && (
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-6">
+              <div className="bg-neutral-900 border border-white/10 rounded-3xl p-6 max-w-sm w-full animate-scale-in relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/20 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none"></div>
+                  
+                  <div className="flex justify-center mb-6">
+                      <div className="w-20 h-20 bg-indigo-500/10 rounded-full flex items-center justify-center text-indigo-400 relative">
+                          <Bot size={40} />
+                          <div className="absolute top-0 right-0 w-4 h-4 bg-indigo-500 rounded-full border-2 border-neutral-900 animate-pulse"></div>
+                      </div>
+                  </div>
+
+                  <h2 className="text-2xl font-black text-center text-white mb-2">Я — твой ИИ тренер!</h2>
+                  <p className="text-gray-400 text-center text-sm leading-relaxed mb-6">
+                      Я не просто выдаю план. Ты можешь написать мне в чат:
+                  </p>
+
+                  <div className="space-y-3 mb-8">
+                       <div className="flex items-start gap-3 bg-neutral-800/50 p-3 rounded-xl border border-white/5">
+                           <Sparkles size={18} className="text-yellow-400 mt-0.5" />
+                           <p className="text-xs text-gray-300">"Слишком легко, добавь нагрузку"</p>
+                       </div>
+                       <div className="flex items-start gap-3 bg-neutral-800/50 p-3 rounded-xl border border-white/5">
+                           <Activity size={18} className="text-red-400 mt-0.5" />
+                           <p className="text-xs text-gray-300">"Болит плечо, замени жим лежа"</p>
+                       </div>
+                  </div>
+
+                  <button 
+                    onClick={() => setShowWelcomeGuide(false)}
+                    className="w-full py-4 bg-white text-black font-bold rounded-2xl hover:scale-[1.02] transition shadow-lg"
+                  >
+                      Понял, спасибо!
+                  </button>
+              </div>
+          </div>
+      )}
 
       {workoutToPreview && (
         <WorkoutPreviewModal 
