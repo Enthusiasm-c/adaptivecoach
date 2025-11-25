@@ -8,8 +8,8 @@ import { OnboardingProfile, TrainingProgram, WorkoutLog, ChatMessage, Exercise, 
 // The actual Gemini API key is stored on the proxy server, never exposed to client.
 // =============================================================================
 
-// Proxy server URL - all Gemini requests route through here
-const PROXY_URL = import.meta.env.VITE_PROXY_URL || 'http://178.128.102.253:3003';
+// Proxy server URL - all Gemini requests route through here (HTTPS via Cloudflare Tunnel)
+const PROXY_URL = import.meta.env.VITE_PROXY_URL || 'https://appearing-responsible-comes-gateway.trycloudflare.com';
 
 // Client API key for authenticating with our proxy (NOT the Gemini key)
 const CLIENT_API_KEY = import.meta.env.VITE_CLIENT_API_KEY || '9a361ff33289e0723fad20cbf91b263a6cea0d7cf29c44fe7bbe59dd91d2a50d';
