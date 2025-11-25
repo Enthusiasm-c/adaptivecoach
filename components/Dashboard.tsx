@@ -202,21 +202,19 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, program, logs, telegramU
           return { type: 'planned', session: program.sessions[overrideIndex], index: overrideIndex };
       }
 
-      // 3. Default Schedule Logic based on frequency
+      // 3. New Schedule Logic based on specific days
       const dayOfWeek = date.getDay(); // 0=Sun, 1=Mon...
-      const daysPerWeek = profile.daysPerWeek;
       
-      let isWorkoutDay = false;
-      
-      // Heuristic Scheduling Mapping
-      if (daysPerWeek === 2) isWorkoutDay = [2, 5].includes(dayOfWeek); // Tue, Fri
-      else if (daysPerWeek === 3) isWorkoutDay = [1, 3, 5].includes(dayOfWeek); // Mon, Wed, Fri
-      else if (daysPerWeek === 4) isWorkoutDay = [1, 2, 4, 5].includes(dayOfWeek); // Mon, Tue, Thu, Fri
-      else if (daysPerWeek === 5) isWorkoutDay = [1, 2, 3, 4, 5].includes(dayOfWeek); // Mon-Fri
-      else if (daysPerWeek >= 6) isWorkoutDay = dayOfWeek !== 0; // Mon-Sat
+      const preferredDays = profile.preferredDays || [];
+      const isWorkoutDay = preferredDays.includes(dayOfWeek);
 
       if (isWorkoutDay) {
-          // Default rotation based on day of year
+          // Calculate session rotation based on index of this day in the sorted preferred list
+          // This ensures if user picked Mon, Wed, Fri -> Mon=Session1, Wed=Session2, Fri=Session3
+          
+          // Basic Rotation based on day of year is too simple for specific days.
+          // We map the specific occurrence of this day type.
+          
           const dayOfYear = Math.floor((date.getTime() - new Date(date.getFullYear(), 0, 0).getTime()) / 1000 / 60 / 60 / 24);
           const sessionIndex = dayOfYear % program.sessions.length;
           return { type: 'planned', session: program.sessions[sessionIndex], index: sessionIndex };

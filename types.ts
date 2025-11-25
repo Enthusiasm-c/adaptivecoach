@@ -40,9 +40,9 @@ export interface OnboardingProfile {
   gender: Gender;
   age: number;
   weight: number;
-  height: number; // New: Needed for BMI
-  targetWeight?: number; // New: Specific goal
-  activityLevel: ActivityLevel; // New: For calorie/recovery estimation
+  height: number;
+  targetWeight?: number;
+  activityLevel: ActivityLevel;
   experience: ExperienceLevel;
   hasInjuries: boolean;
   injuries?: string;
@@ -50,7 +50,8 @@ export interface OnboardingProfile {
     primary: Goal;
     secondary?: Goal;
   };
-  daysPerWeek: number;
+  daysPerWeek: number; // Keep for legacy/summary, but derived from preferredDays length
+  preferredDays: number[]; // New: Array of day indices (0=Sun, 1=Mon, etc.)
   location: Location;
   timePerWorkout: number;
   intensity: Intensity;

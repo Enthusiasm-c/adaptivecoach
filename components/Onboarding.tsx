@@ -24,6 +24,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete, isLoading, error })
         injuries: '',
         goals: { primary: Goal.LoseFat },
         daysPerWeek: 3,
+        preferredDays: [1, 3, 5], // Default Mon, Wed, Fri
         location: Location.CommercialGym,
         timePerWorkout: 60,
         intensity: Intensity.Normal,
@@ -61,6 +62,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete, isLoading, error })
         const steps = [
             "Расчет BMI...",
             "Анализ уровня активности...",
+            "Оценка дней восстановления...",
             "Подбор оптимального сплита...",
             "Прогноз сроков..."
         ];
@@ -90,7 +92,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete, isLoading, error })
             case 3: return <GoalStep profile={profile} updateProfile={updateProfile} setProfile={setProfile} />;
             case 4: return <ActivityStep profile={profile} updateProfile={updateProfile} />;
             case 5: return <ExperienceStep profile={profile} updateProfile={updateProfile} />;
-            case 6: return <LogisticsStep profile={profile} updateProfile={updateProfile} />;
+            case 6: return <LogisticsStep profile={profile} updateProfile={updateProfile} setProfile={setProfile} />;
             case 7: return <InjuryStep profile={profile} updateProfile={updateProfile} />;
             default: return null;
         }
@@ -143,8 +145,8 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete, isLoading, error })
                             {!showPrediction ? (
                                 <button 
                                     onClick={nextStep} 
-                                    disabled={isLoading} 
-                                    className="flex-1 py-4 bg-white text-black rounded-2xl hover:bg-gray-200 transition disabled:opacity-50 font-bold text-lg flex items-center justify-center gap-2 shadow-lg shadow-white/10 active:scale-[0.98]"
+                                    disabled={isLoading || (step === 6 && (!profile.preferredDays || profile.preferredDays.length === 0))} 
+                                    className="flex-1 py-4 bg-white text-black rounded-2xl hover:bg-gray-200 transition disabled:opacity-50 disabled:bg-neutral-800 disabled:text-gray-500 font-bold text-lg flex items-center justify-center gap-2 shadow-lg shadow-white/10 active:scale-[0.98]"
                                 >
                                     Дальше <ArrowRight size={20} />
                                 </button>
@@ -393,68 +395,106 @@ const ExperienceStep = ({ profile, updateProfile }: any) => (
     </div>
 );
 
-const LogisticsStep = ({ profile, updateProfile }: any) => (
-    <div className="space-y-8 animate-slide-up">
-        <div className="space-y-2">
-            <h2 className="text-3xl font-black tracking-tight">График</h2>
-            <p className="text-gray-500">Настроим расписание.</p>
-        </div>
+const LogisticsStep = ({ profile, updateProfile, setProfile }: any) => {
+    // 0=Sun, 1=Mon, ..., 6=Sat
+    const days = [
+        { label: 'Пн', val: 1 },
+        { label: 'Вт', val: 2 },
+        { label: 'Ср', val: 3 },
+        { label: 'Чт', val: 4 },
+        { label: 'Пт', val: 5 },
+        { label: 'Сб', val: 6 },
+        { label: 'Вс', val: 0 },
+    ];
+
+    const toggleDay = (val: number) => {
+        const current = profile.preferredDays || [];
+        let newDays;
+        if (current.includes(val)) {
+            newDays = current.filter((d: number) => d !== val);
+        } else {
+            newDays = [...current, val];
+        }
         
-        <div>
-            <label className="block mb-3 text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Дней в неделю</label>
-            <div className="flex justify-between gap-2 bg-neutral-900 p-1.5 rounded-2xl border border-neutral-800">
-                {[2, 3, 4, 5, 6].map(day => (
-                    <button 
-                        key={day} 
-                        onClick={() => updateProfile('daysPerWeek', day)} 
-                        className={`flex-1 py-3 rounded-xl font-bold text-lg transition-all ${
-                            profile.daysPerWeek === day 
-                            ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-900/50' 
-                            : 'text-gray-600 hover:text-white'
-                        }`}
-                    >
-                        {day}
-                    </button>
-                ))}
-            </div>
-        </div>
+        // Update both the specific days list and the count
+        setProfile((prev: any) => ({
+            ...prev,
+            preferredDays: newDays,
+            daysPerWeek: newDays.length
+        }));
+    };
 
-        <div>
-            <label className="block mb-3 text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Минут на тренировку</label>
-            <div className="grid grid-cols-4 gap-2">
-                {[30, 45, 60, 75].map(time => (
-                    <button 
-                        key={time} 
-                        onClick={() => updateProfile('timePerWorkout', time)} 
-                        className={`py-3 rounded-xl font-bold text-lg border transition-all ${
-                            profile.timePerWorkout === time 
-                            ? 'border-indigo-500 bg-indigo-600/10 text-indigo-400' 
-                            : 'border-neutral-800 bg-neutral-900 text-gray-600 hover:border-neutral-700'
-                        }`}
-                    >
-                        {time}
-                    </button>
-                ))}
+    return (
+        <div className="space-y-8 animate-slide-up">
+            <div className="space-y-2">
+                <h2 className="text-3xl font-black tracking-tight">График</h2>
+                <p className="text-gray-500">Выберите дни для тренировок.</p>
             </div>
-        </div>
+            
+            <div>
+                <label className="block mb-3 text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Дни недели</label>
+                <div className="grid grid-cols-4 gap-2">
+                    {days.map(day => {
+                        const isSelected = (profile.preferredDays || []).includes(day.val);
+                        return (
+                            <button 
+                                key={day.val} 
+                                onClick={() => toggleDay(day.val)} 
+                                className={`py-3 rounded-xl font-bold text-lg transition-all duration-200 border ${
+                                    isSelected
+                                    ? 'bg-indigo-600 border-indigo-500 text-white shadow-lg shadow-indigo-900/50' 
+                                    : 'bg-neutral-900 border-neutral-800 text-gray-500 hover:border-gray-600 hover:text-white'
+                                }`}
+                            >
+                                {day.label}
+                            </button>
+                        );
+                    })}
+                </div>
+                <div className="mt-2 text-center">
+                    <p className="text-sm font-medium text-gray-400">
+                        Выбрано дней: <span className="text-white font-bold">{profile.preferredDays?.length || 0}</span>
+                    </p>
+                </div>
+            </div>
 
-        <div>
-            <label className="block mb-3 text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Оборудование</label>
-             <div className="space-y-2">
-                {Object.values(Location).map(loc => (
-                    <SelectionCard 
-                        key={loc} 
-                        selected={profile.location === loc} 
-                        onClick={() => updateProfile('location', loc)}
-                        className="py-4"
-                    >
-                        <span className="text-sm font-bold">{loc}</span>
-                    </SelectionCard>
-                ))}
+            <div>
+                <label className="block mb-3 text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Минут на тренировку</label>
+                <div className="grid grid-cols-4 gap-2">
+                    {[30, 45, 60, 75].map(time => (
+                        <button 
+                            key={time} 
+                            onClick={() => updateProfile('timePerWorkout', time)} 
+                            className={`py-3 rounded-xl font-bold text-lg border transition-all ${
+                                profile.timePerWorkout === time 
+                                ? 'border-indigo-500 bg-indigo-600/10 text-indigo-400' 
+                                : 'border-neutral-800 bg-neutral-900 text-gray-600 hover:border-neutral-700'
+                            }`}
+                        >
+                            {time}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            <div>
+                <label className="block mb-3 text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Оборудование</label>
+                 <div className="space-y-2">
+                    {Object.values(Location).map(loc => (
+                        <SelectionCard 
+                            key={loc} 
+                            selected={profile.location === loc} 
+                            onClick={() => updateProfile('location', loc)}
+                            className="py-4"
+                        >
+                            <span className="text-sm font-bold">{loc}</span>
+                        </SelectionCard>
+                    ))}
+                </div>
             </div>
         </div>
-    </div>
-);
+    );
+};
 
 const InjuryStep = ({ profile, updateProfile }: any) => (
     <div className="space-y-6 animate-slide-up">
