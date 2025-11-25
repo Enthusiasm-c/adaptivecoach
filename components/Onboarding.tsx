@@ -157,7 +157,10 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete, isLoading, error })
                                     className="flex-1 py-4 bg-indigo-600 text-white rounded-2xl hover:bg-indigo-500 transition font-bold text-lg disabled:opacity-50 shadow-lg shadow-indigo-500/30 flex items-center justify-center gap-2 active:scale-[0.98]"
                                 >
                                     {isLoading ? (
-                                        <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                                        <div className="flex items-center gap-2 text-sm">
+                                            <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                                            Генерация...
+                                        </div>
                                     ) : "Получить план"}
                                 </button>
                             )}

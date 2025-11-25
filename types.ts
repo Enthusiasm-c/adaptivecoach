@@ -50,8 +50,8 @@ export interface OnboardingProfile {
     primary: Goal;
     secondary?: Goal;
   };
-  daysPerWeek: number; // Keep for legacy/summary, but derived from preferredDays length
-  preferredDays: number[]; // New: Array of day indices (0=Sun, 1=Mon, etc.)
+  daysPerWeek: number; 
+  preferredDays: number[]; // 0=Sun, 1=Mon, etc.
   location: Location;
   timePerWorkout: number;
   intensity: Intensity;
@@ -133,7 +133,7 @@ export interface PersonalRecord {
     date: string;
 }
 
-// --- New Types for Readiness ---
+// --- Readiness ---
 
 export interface ReadinessData {
   sleep: number; // 1-5

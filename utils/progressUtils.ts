@@ -495,7 +495,7 @@ export const calculateProjectedOutcome = (currentWeight: number, targetWeight: n
     const diff = currentWeight - targetWeight;
     const isWeightLoss = diff > 0;
     
-    // Conservative estimates
+    // Conservative estimates based on standard health recommendations (0.5-0.7kg per week)
     const weeklyRate = isWeightLoss ? 0.6 : 0.3; // kg per week
     const weeksNeeded = Math.abs(diff) / weeklyRate;
     const months = Math.ceil(weeksNeeded / 4);
@@ -503,7 +503,8 @@ export const calculateProjectedOutcome = (currentWeight: number, targetWeight: n
     const today = new Date();
     today.setDate(today.getDate() + (weeksNeeded * 7));
     
-    const completionDate = today.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
+    const monthName = today.toLocaleDateString('ru-RU', { month: 'long' });
+    const completionDate = `к ${today.getDate()} ${monthName} ${today.getFullYear()}`;
 
     return {
         months,
