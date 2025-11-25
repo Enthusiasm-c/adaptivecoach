@@ -42,13 +42,19 @@ interface GeminiResponse {
 async function callGeminiProxy(endpoint: string, body: GenerateContentRequest): Promise<GeminiResponse> {
     const url = `${PROXY_URL}/api/gemini${endpoint}`;
 
+    // Normalize contents: if it's a string, wrap it in proper format
+    let normalizedBody = { ...body };
+    if (typeof body.contents === 'string') {
+        normalizedBody.contents = [{ role: 'user', parts: [{ text: body.contents }] }];
+    }
+
     const response = await fetch(url, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
             'X-API-Key': CLIENT_API_KEY
         },
-        body: JSON.stringify(body)
+        body: JSON.stringify(normalizedBody)
     });
 
     if (!response.ok) {
