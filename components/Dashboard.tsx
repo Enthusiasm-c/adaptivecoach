@@ -4,7 +4,7 @@ import { OnboardingProfile, TrainingProgram, WorkoutLog, WorkoutSession, Readine
 import WorkoutView from './WorkoutView';
 import ProgressView from './ProgressView';
 import SettingsView from './SettingsView';
-import { Calendar, BarChart2, Dumbbell, Play, Flame, Activity, Zap, LayoutGrid, Bot, MessageCircle, ChevronLeft, ChevronRight, Check, Clock, Settings, ArrowLeftRight, Edit3, X, Crown, TrendingUp, Sparkles, MessageSquarePlus } from 'lucide-react';
+import { Calendar, BarChart2, Dumbbell, Play, Flame, Activity, Zap, LayoutGrid, Bot, MessageCircle, ChevronLeft, ChevronRight, Check, Clock, Settings, ArrowLeftRight, Edit3, X, Crown, TrendingUp, Sparkles, MessageSquarePlus, HelpCircle, Coffee, Sun, Moon } from 'lucide-react';
 import WorkoutPreviewModal from './WorkoutPreviewModal';
 import ReadinessModal from './ReadinessModal';
 import { calculateStreaks, calculateWorkoutVolume, calculateWeeklyProgress, getMuscleFocus, calculateLevel } from '../utils/progressUtils';
@@ -124,25 +124,39 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, program, logs, telegramU
     );
   }
 
-  const todaysWorkoutIndex = logs.length % program.sessions.length;
-  const todaysWorkout = program.sessions[todaysWorkoutIndex];
+  // --- Logic for "What is the next workout?" ---
+  // The next workout in the sequence is always based on total logs.
+  const nextWorkoutIndex = logs.length % program.sessions.length;
+  const nextWorkout = program.sessions[nextWorkoutIndex];
 
-  if (!todaysWorkout || !todaysWorkout.name) {
-      return (
-        <div className="flex flex-col items-center justify-center min-h-[100dvh] text-center p-4">
-          <h2 className="text-2xl font-bold text-red-400">Ошибка данных</h2>
-          <button onClick={onResetAccount} className="mt-4 px-6 py-3 bg-white text-black rounded-full font-bold">
-            Сбросить план
-          </button>
-        </div>
-      );
-  }
-  
+  // --- Logic for "Is today a workout day?" ---
+  const getIsTodayWorkoutDay = () => {
+      const today = new Date();
+      const dateStr = today.toDateString();
+      
+      // 1. Check for manual override (User moved workout to today)
+      if (scheduleOverrides.hasOwnProperty(dateStr)) {
+          return scheduleOverrides[dateStr] !== null;
+      }
+
+      // 2. Check completed logs (Did we already work out today?)
+      const hasLogToday = logs.some(l => new Date(l.date).toDateString() === dateStr);
+      if (hasLogToday) return false; // Already done, so "no workout pending"
+
+      // 3. Check Schedule Preference
+      const dayOfWeek = today.getDay(); // 0=Sun, 1=Mon...
+      return (profile.preferredDays || []).includes(dayOfWeek);
+  };
+
+  const isTodayWorkoutDay = getIsTodayWorkoutDay();
+
   const { currentStreak } = calculateStreaks(logs);
   const lastWorkoutVolume = logs.length > 0 ? calculateWorkoutVolume(logs[logs.length-1]) : 0;
   const weeklyProgress = calculateWeeklyProgress(logs);
   const userLevel = calculateLevel(logs);
-  const muscleFocus = getMuscleFocus(todaysWorkout);
+  
+  // Calculate muscle focus based on the *next* workout, even if not today
+  const muscleFocus = getMuscleFocus(nextWorkout);
 
 
   if (activeWorkout) {
@@ -172,6 +186,12 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, program, logs, telegramU
     setWorkoutToPreview(null);
     setShowReadinessModal(true);
   };
+
+  // Called when user clicks "Start" on a future workout in the calendar or preview
+  // This effectively "moves" it to today by starting it now.
+  const forceStartWorkout = (sessionName: string) => {
+      initiateWorkoutStart(sessionName);
+  }
 
   const handleReadinessConfirm = (data: ReadinessData) => {
     setCurrentReadiness(data);
@@ -224,9 +244,20 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, program, logs, telegramU
       const isWorkoutDay = preferredDays.includes(dayOfWeek);
 
       if (isWorkoutDay) {
-          const sortedDays = [...preferredDays].sort();
-          const dayIndexInWeek = sortedDays.indexOf(dayOfWeek);
-          const sessionIndex = dayIndexInWeek % program.sessions.length;
+          // Simple projection for calendar visualization:
+          // We don't try to predict exact rotation for future dates perfectly because 
+          // one missed day shifts everything. We just show "A workout is planned".
+          // For the sake of the calendar UI, we can cycle them based on date, 
+          // but for "Next Up" logic we use logs.length.
+          
+          // Let's use a day-of-year based modulo for consistent calendar visuals
+          // (This is just visual, actual workout is determined by queue)
+          const startOfYear = new Date(date.getFullYear(), 0, 0);
+          const diff = date.getTime() - startOfYear.getTime();
+          const oneDay = 1000 * 60 * 60 * 24;
+          const dayOfYear = Math.floor(diff / oneDay);
+          
+          const sessionIndex = dayOfYear % program.sessions.length;
           return { type: 'planned', session: program.sessions[sessionIndex], index: sessionIndex };
       }
 
@@ -399,22 +430,6 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, program, logs, telegramU
                         </div>
                     </div>
                 </div>
-
-                {/* Info Card */}
-                <div className="bg-gradient-to-br from-indigo-900/20 to-violet-900/20 border border-indigo-500/30 rounded-3xl p-6">
-                     <div className="flex items-center gap-3 mb-3">
-                        <div className="p-2 bg-indigo-500 rounded-xl text-white">
-                            <ArrowLeftRight size={20} />
-                        </div>
-                        <div>
-                            <p className="text-xs font-bold text-indigo-300 uppercase">Гибкий график</p>
-                            <p className="text-white font-bold">Меняй дни местами</p>
-                        </div>
-                     </div>
-                     <p className="text-sm text-gray-400 leading-relaxed">
-                         Нажми "Изменить", чтобы перенести тренировку на другой день или поменять их местами. Адаптируй план под свою жизнь.
-                     </p>
-                </div>
             </div>
           );
       }
@@ -486,19 +501,28 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, program, logs, telegramU
                         <span className="text-xs font-bold text-gray-300">Чат с тренером</span>
                     </button>
                     <button 
+                        onClick={() => setShowWelcomeGuide(true)}
+                        className="flex items-center gap-2 bg-neutral-900 border border-white/10 rounded-xl px-4 py-3 whitespace-nowrap active:scale-95 transition"
+                    >
+                        <HelpCircle size={16} className="text-yellow-400"/>
+                        <span className="text-xs font-bold text-gray-300">Как это работает?</span>
+                    </button>
+                    <button 
                         onClick={() => setActiveView('plan')}
                         className="flex items-center gap-2 bg-neutral-900 border border-white/10 rounded-xl px-4 py-3 whitespace-nowrap active:scale-95 transition"
                     >
                         <Calendar size={16} className="text-violet-400"/>
                         <span className="text-xs font-bold text-gray-300">Изменить график</span>
                     </button>
-                    <button 
-                        onClick={() => setWorkoutToPreview(todaysWorkout)}
-                        className="flex items-center gap-2 bg-neutral-900 border border-white/10 rounded-xl px-4 py-3 whitespace-nowrap active:scale-95 transition"
-                    >
-                        <Dumbbell size={16} className="text-emerald-400"/>
-                        <span className="text-xs font-bold text-gray-300">Обзор тренировки</span>
-                    </button>
+                    {isTodayWorkoutDay && (
+                        <button 
+                            onClick={() => setWorkoutToPreview(nextWorkout)}
+                            className="flex items-center gap-2 bg-neutral-900 border border-white/10 rounded-xl px-4 py-3 whitespace-nowrap active:scale-95 transition"
+                        >
+                            <Dumbbell size={16} className="text-emerald-400"/>
+                            <span className="text-xs font-bold text-gray-300">Обзор тренировки</span>
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -520,7 +544,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, program, logs, telegramU
                     <div className="flex justify-between items-start mb-1">
                          <h3 className="font-bold text-white text-sm">Статус восстановления</h3>
                          <div className="px-2 py-0.5 bg-green-500/10 rounded text-[10px] font-bold text-green-400 uppercase tracking-wide">
-                            Готов к бою
+                            {isTodayWorkoutDay ? "Готов к бою" : "Активный отдых"}
                          </div>
                     </div>
                     
@@ -529,71 +553,122 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, program, logs, telegramU
                         <div className="flex-1 bg-green-500 rounded-full"></div>
                         <div className="flex-1 bg-green-500 rounded-full"></div>
                         <div className="flex-1 bg-green-500 rounded-full"></div>
-                        <div className="flex-1 bg-neutral-700 rounded-full"></div>
+                        <div className={`flex-1 rounded-full ${isTodayWorkoutDay ? 'bg-neutral-700' : 'bg-green-500'}`}></div>
                     </div>
 
                     <p className="text-xs text-gray-400 line-clamp-2 leading-relaxed">
-                        {coachInsight || "Твое тело восстановилось. Сегодня отличный день, чтобы увеличить нагрузку в базовых движениях."}
+                        {coachInsight || (isTodayWorkoutDay 
+                            ? "Твое тело восстановилось. Сегодня отличный день, чтобы увеличить нагрузку." 
+                            : "Сегодня день восстановления. Легкая прогулка или растяжка помогут мышцам расти.")}
                     </p>
                 </div>
             </div>
 
-            {/* Hero Card - Next Workout */}
-            <div className="col-span-2 relative group mt-2">
-                <div className="absolute inset-0 bg-gradient-to-r from-indigo-600 to-violet-600 rounded-[2rem] blur-xl opacity-40 group-hover:opacity-60 transition-opacity duration-500"></div>
-                <div className="relative bg-[#111] border border-white/10 rounded-[2rem] p-6 overflow-hidden">
-                    
-                    {/* Background Pattern */}
-                    <div className="absolute top-0 right-0 opacity-10 pointer-events-none">
-                        <svg width="200" height="200" viewBox="0 0 200 200" fill="none">
-                            <path d="M100 0L200 100L100 200L0 100L100 0Z" fill="white"/>
-                        </svg>
-                    </div>
-
-                    <div className="relative z-10">
-                        <div className="flex justify-between items-start mb-4">
-                            <div>
-                                <div className="flex items-center gap-2 mb-2">
-                                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/10 text-white text-[10px] font-bold uppercase tracking-wider">
-                                        <Calendar size={10} /> Сегодня
-                                    </span>
-                                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/5 text-gray-400 text-[10px] font-bold uppercase tracking-wider">
-                                        <Clock size={10} /> ~{profile.timePerWorkout} мин
-                                    </span>
-                                </div>
-                                <h2 className="text-3xl font-black text-white leading-tight mb-2">{todaysWorkout.name}</h2>
-                            </div>
-                        </div>
-
-                        {/* Muscle Focus Tags */}
-                        <div className="flex flex-wrap gap-2 mb-6">
-                            {muscleFocus.map(muscle => (
-                                <span key={muscle} className="px-3 py-1 rounded-full border border-indigo-500/30 text-indigo-300 text-xs font-bold bg-indigo-500/10">
-                                    {muscle}
-                                </span>
-                            ))}
-                            <span className="px-3 py-1 rounded-full border border-white/5 text-gray-500 text-xs font-bold">
-                                +{Math.max(0, todaysWorkout.exercises.length - muscleFocus.length)} упр.
-                            </span>
-                        </div>
+            {/* CONDITIONAL MAIN CARD: Workout OR Rest */}
+            {isTodayWorkoutDay ? (
+                /* WORKOUT CARD */
+                <div className="col-span-2 relative group mt-2">
+                    <div className="absolute inset-0 bg-gradient-to-r from-indigo-600 to-violet-600 rounded-[2rem] blur-xl opacity-40 group-hover:opacity-60 transition-opacity duration-500"></div>
+                    <div className="relative bg-[#111] border border-white/10 rounded-[2rem] p-6 overflow-hidden">
                         
-                        <div className="flex gap-3">
-                            <button 
-                                onClick={() => initiateWorkoutStart(todaysWorkout.name)}
-                                className="flex-1 bg-white text-black font-bold py-4 rounded-2xl flex items-center justify-center gap-2 hover:bg-gray-200 transition active:scale-95 shadow-xl shadow-white/5"
-                            >
-                                <Play size={20} fill="currentColor" /> Начать
-                            </button>
-                            <button 
-                                onClick={() => setWorkoutToPreview(todaysWorkout)}
-                                className="px-5 bg-white/5 text-white font-semibold rounded-2xl border border-white/10 hover:bg-white/10 transition active:scale-95"
-                            >
-                                Обзор
-                            </button>
+                        {/* Background Pattern */}
+                        <div className="absolute top-0 right-0 opacity-10 pointer-events-none">
+                            <svg width="200" height="200" viewBox="0 0 200 200" fill="none">
+                                <path d="M100 0L200 100L100 200L0 100L100 0Z" fill="white"/>
+                            </svg>
+                        </div>
+
+                        <div className="relative z-10">
+                            <div className="flex justify-between items-start mb-4">
+                                <div>
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/10 text-white text-[10px] font-bold uppercase tracking-wider">
+                                            <Calendar size={10} /> Сегодня
+                                        </span>
+                                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/5 text-gray-400 text-[10px] font-bold uppercase tracking-wider">
+                                            <Clock size={10} /> ~{profile.timePerWorkout} мин
+                                        </span>
+                                    </div>
+                                    <h2 className="text-3xl font-black text-white leading-tight mb-2">{nextWorkout.name}</h2>
+                                </div>
+                            </div>
+
+                            {/* Muscle Focus Tags */}
+                            <div className="flex flex-wrap gap-2 mb-6">
+                                {muscleFocus.map(muscle => (
+                                    <span key={muscle} className="px-3 py-1 rounded-full border border-indigo-500/30 text-indigo-300 text-xs font-bold bg-indigo-500/10">
+                                        {muscle}
+                                    </span>
+                                ))}
+                                <span className="px-3 py-1 rounded-full border border-white/5 text-gray-500 text-xs font-bold">
+                                    +{Math.max(0, nextWorkout.exercises.length - muscleFocus.length)} упр.
+                                </span>
+                            </div>
+                            
+                            <div className="flex gap-3">
+                                <button 
+                                    onClick={() => initiateWorkoutStart(nextWorkout.name)}
+                                    className="flex-1 bg-white text-black font-bold py-4 rounded-2xl flex items-center justify-center gap-2 hover:bg-gray-200 transition active:scale-95 shadow-xl shadow-white/5"
+                                >
+                                    <Play size={20} fill="currentColor" /> Начать
+                                </button>
+                                <button 
+                                    onClick={() => setWorkoutToPreview(nextWorkout)}
+                                    className="px-5 bg-white/5 text-white font-semibold rounded-2xl border border-white/10 hover:bg-white/10 transition active:scale-95"
+                                >
+                                    Обзор
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
+            ) : (
+                /* REST DAY CARD */
+                <div className="col-span-2 relative group mt-2">
+                     <div className="absolute inset-0 bg-gradient-to-r from-emerald-600 to-teal-600 rounded-[2rem] blur-xl opacity-20"></div>
+                     <div className="relative bg-[#111] border border-white/10 rounded-[2rem] p-6 overflow-hidden">
+                        
+                        <div className="relative z-10">
+                             <div className="flex justify-between items-start mb-4">
+                                <div>
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 text-[10px] font-bold uppercase tracking-wider">
+                                            <Moon size={10} /> День Отдыха
+                                        </span>
+                                    </div>
+                                    <h2 className="text-3xl font-black text-white leading-tight mb-2">Восстановление</h2>
+                                    <p className="text-gray-400 text-sm mb-4">
+                                        Сегодня по плану отдых. Мышцы растут именно сейчас.
+                                    </p>
+                                </div>
+                                <div className="w-16 h-16 bg-emerald-500/10 rounded-full flex items-center justify-center">
+                                     <Coffee size={32} className="text-emerald-500" />
+                                </div>
+                            </div>
+
+                            <div className="flex gap-2 mb-6 overflow-x-auto no-scrollbar">
+                                <div className="bg-neutral-900 border border-white/5 rounded-xl p-3 min-w-[120px]">
+                                    <Sun size={16} className="text-yellow-400 mb-2"/>
+                                    <p className="text-xs font-bold text-white">Прогулка</p>
+                                    <p className="text-[10px] text-gray-500">30-40 мин</p>
+                                </div>
+                                <div className="bg-neutral-900 border border-white/5 rounded-xl p-3 min-w-[120px]">
+                                    <Activity size={16} className="text-blue-400 mb-2"/>
+                                    <p className="text-xs font-bold text-white">Растяжка</p>
+                                    <p className="text-[10px] text-gray-500">Легкая йога</p>
+                                </div>
+                            </div>
+
+                            <button 
+                                onClick={() => initiateWorkoutStart(nextWorkout.name)}
+                                className="w-full bg-neutral-800 text-gray-400 font-bold py-3 rounded-2xl flex items-center justify-center gap-2 hover:bg-neutral-700 hover:text-white transition active:scale-95 text-sm border border-white/5"
+                            >
+                                <Play size={14} /> Начать "{nextWorkout.name}" досрочно
+                            </button>
+                        </div>
+                     </div>
+                </div>
+            )}
 
             {/* Stats Grid - Gamification */}
             <div className="col-span-2 grid grid-cols-3 gap-3 mt-2">
@@ -703,7 +778,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, program, logs, telegramU
         <WorkoutPreviewModal 
           session={workoutToPreview}
           onClose={() => setWorkoutToPreview(null)}
-          onStart={() => initiateWorkoutStart(workoutToPreview.name)}
+          onStart={() => forceStartWorkout(workoutToPreview.name)}
         />
       )}
 

@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { WorkoutSession } from '../types';
-import { X, Dumbbell, Repeat, Timer } from 'lucide-react';
+import { X, Dumbbell, Repeat, Timer, CalendarCheck } from 'lucide-react';
 
 interface WorkoutPreviewModalProps {
   session: WorkoutSession;
@@ -35,10 +35,14 @@ const WorkoutPreviewModal: React.FC<WorkoutPreviewModalProps> = ({ session, onCl
         <div className="pt-2">
             <button 
                 onClick={onStart}
-                className="w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-indigo-500 transition-all duration-300"
+                className="w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-indigo-500 transition-all duration-300 flex items-center justify-center gap-2"
             >
-                Начать Тренировку
+                <CalendarCheck size={18} />
+                Начать сегодня
             </button>
+            <p className="text-center text-[10px] text-gray-400 mt-2">
+                Это перенесет тренировку в ваш план на сегодня.
+            </p>
         </div>
 
       </div>

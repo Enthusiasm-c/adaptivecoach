@@ -39,15 +39,16 @@ const App: React.FC = () => {
   ];
 
   useEffect(() => {
-      if (isLoading && !onboardingProfile) return; // Don't run on initial check
-      
-      let interval: any;
-      if (isLoading) {
+      // Fix: Only run interval if loading. Removed the check that prevented it from running during onboarding.
+      if (!isLoading) {
           setLoadingStep(0);
-          interval = setInterval(() => {
-              setLoadingStep(prev => (prev + 1) % loadingMessages.length);
-          }, 4000); // Change message every 4 seconds
+          return;
       }
+      
+      const interval = setInterval(() => {
+          setLoadingStep(prev => (prev + 1) % loadingMessages.length);
+      }, 3000); // Speed up slightly to 3s to ensure user sees progress
+
       return () => clearInterval(interval);
   }, [isLoading]);
 
@@ -100,6 +101,7 @@ const App: React.FC = () => {
 
   const handleOnboardingComplete = useCallback(async (profile: OnboardingProfile) => {
     setIsLoading(true);
+    setLoadingStep(0); // Reset animation to start
     setError(null);
     setErrorDetails(null);
     try {
@@ -156,7 +158,7 @@ const App: React.FC = () => {
     }
 
     if (updatedLogs.length > 0 && updatedLogs.length % 3 === 0 && trainingProgram) {
-      setIsLoading(true);
+      setIsLoading(true); // Short loading for adaptation
       setError(null);
       try {
         const adaptedProgram = await adaptPlan(trainingProgram, updatedLogs);
@@ -290,7 +292,7 @@ const App: React.FC = () => {
              </div>
           </div>
 
-          <h3 className="text-2xl font-bold text-white mb-2 animate-fade-in key-{loadingStep}">
+          <h3 className="text-2xl font-bold text-white mb-2 animate-fade-in" key={currentMsg.text}>
             {currentMsg.text}
           </h3>
           <p className="text-gray-500 text-sm mb-8 animate-pulse">
