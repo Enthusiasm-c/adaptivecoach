@@ -9,6 +9,9 @@ import WorkoutPreviewModal from './WorkoutPreviewModal';
 import ReadinessModal from './ReadinessModal';
 import { calculateStreaks, calculateWorkoutVolume, calculateWeeklyProgress, getMuscleFocus, calculateLevel } from '../utils/progressUtils';
 import { getDashboardInsight } from '../services/geminiService';
+import { hapticFeedback } from '../utils/hapticUtils';
+import TechCard from './TechCard';
+import SkeletonLoader from './SkeletonLoader';
 
 
 interface DashboardProps {
@@ -47,16 +50,9 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, program, logs, telegramU
     const [selectedDateToMove, setSelectedDateToMove] = useState<Date | null>(null);
     const [scheduleOverrides, setScheduleOverrides] = useState<{ [date: string]: number | null }>({}); // DateString -> SessionIndex (null means Rest)
 
-    // Tutorial / Welcome State
-    const [showWelcomeGuide, setShowWelcomeGuide] = useState(false);
-
     useEffect(() => {
         // Check for first login
-        const isFirstLogin = localStorage.getItem('isFirstLogin');
-        if (isFirstLogin === 'true') {
-            setShowWelcomeGuide(true);
-            localStorage.removeItem('isFirstLogin');
-        }
+        // Removed Welcome Guide as per user request
     }, []);
 
     useEffect(() => {
@@ -248,9 +244,10 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, program, logs, telegramU
     }
 
     const initiateWorkoutStart = (sessionName: string) => {
+        // Check readiness first
         setPendingSessionName(sessionName);
-        setWorkoutToPreview(null);
         setShowReadinessModal(true);
+        hapticFeedback.impactOccurred('heavy');
     };
 
     // Called when user clicks "Start" on a future workout in the calendar or preview
@@ -566,13 +563,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, program, logs, telegramU
                             <MessageSquarePlus size={16} className="text-indigo-400" />
                             <span className="text-xs font-bold text-gray-300">Чат с тренером</span>
                         </button>
-                        <button
-                            onClick={() => setShowWelcomeGuide(true)}
-                            className="flex items-center gap-2 bg-neutral-900 border border-white/10 rounded-xl px-4 py-3 whitespace-nowrap active:scale-95 transition"
-                        >
-                            <HelpCircle size={16} className="text-yellow-400" />
-                            <span className="text-xs font-bold text-gray-300">Как это работает?</span>
-                        </button>
+
                         <button
                             onClick={() => setActiveView('plan')}
                             className="flex items-center gap-2 bg-neutral-900 border border-white/10 rounded-xl px-4 py-3 whitespace-nowrap active:scale-95 transition"
@@ -724,7 +715,43 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, program, logs, telegramU
                                         <p className="text-[10px] text-gray-500">Легкая йога</p>
                                     </div>
                                 </div>
+                                {/* Coach Insight */}
+                                <TechCard className="mb-6">
+                                    <div className="p-5">
+                                        <div className="flex items-center gap-3 mb-3">
+                                            <div className="w-10 h-10 rounded-xl bg-indigo-500/20 flex items-center justify-center">
+                                                <Bot size={20} className="text-indigo-400" />
+                                            </div>
+                                            <h3 className="font-bold text-lg text-white">Тренер на связи</h3>
+                                        </div>
 
+                                        <div className="bg-neutral-900/50 rounded-xl p-4 border border-white/5 relative">
+                                            {isInsightLoading ? (
+                                                <div className="space-y-2">
+                                                    <SkeletonLoader className="h-4 w-3/4" />
+                                                    <SkeletonLoader className="h-4 w-full" />
+                                                    <SkeletonLoader className="h-4 w-5/6" />
+                                                </div>
+                                            ) : (
+                                                <p className="text-gray-300 text-sm leading-relaxed">
+                                                    {coachInsight || "Анализирую твой прогресс..."}
+                                                </p>
+                                            )}
+
+                                            <div className="absolute -bottom-3 -right-3 opacity-10">
+                                                <MessageCircle size={64} />
+                                            </div>
+                                        </div>
+
+                                        <button
+                                            onClick={onOpenChat}
+                                            className="w-full mt-4 py-3 bg-indigo-600 text-white rounded-xl font-bold text-sm hover:bg-indigo-500 transition shadow-lg shadow-indigo-500/20 flex items-center justify-center gap-2"
+                                        >
+                                            <MessageSquarePlus size={16} />
+                                            Написать тренеру
+                                        </button>
+                                    </div>
+                                </TechCard>
                                 <button
                                     onClick={() => initiateWorkoutStart(nextWorkout.name)}
                                     className="w-full bg-neutral-800 text-gray-400 font-bold py-3 rounded-2xl flex items-center justify-center gap-2 hover:bg-neutral-700 hover:text-white transition active:scale-95 text-sm border border-white/5"
@@ -740,28 +767,28 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, program, logs, telegramU
                 <div className="col-span-2 grid grid-cols-3 gap-3 mt-2">
 
                     {/* Streak */}
-                    <div className="bg-neutral-900/50 border border-white/5 rounded-2xl p-3 flex flex-col items-center justify-center text-center gap-1">
+                    <TechCard className="p-3 flex flex-col items-center justify-center text-center gap-1">
                         <Flame size={20} className="text-orange-500 mb-1" fill="currentColor" fillOpacity={0.2} />
                         <span className="text-xl font-black text-white leading-none">{currentStreak}</span>
                         <span className="text-[10px] text-gray-500 font-bold uppercase">Дней подряд</span>
-                    </div>
+                    </TechCard>
 
                     {/* Level */}
-                    <div className="bg-neutral-900/50 border border-white/5 rounded-2xl p-3 flex flex-col items-center justify-center text-center gap-1 relative overflow-hidden">
+                    <TechCard className="p-3 flex flex-col items-center justify-center text-center gap-1 relative overflow-hidden">
                         <div className="absolute inset-x-0 bottom-0 h-1 bg-neutral-800">
                             <div className="h-full bg-yellow-500" style={{ width: `${userLevel.levelProgress}%` }}></div>
                         </div>
                         <Crown size={20} className="text-yellow-500 mb-1" fill="currentColor" fillOpacity={0.2} />
                         <span className="text-xl font-black text-white leading-none">{userLevel.level}</span>
                         <span className="text-[10px] text-gray-500 font-bold uppercase">Уровень</span>
-                    </div>
+                    </TechCard>
 
                     {/* Last Volume */}
-                    <div className="bg-neutral-900/50 border border-white/5 rounded-2xl p-3 flex flex-col items-center justify-center text-center gap-1">
+                    <TechCard className="p-3 flex flex-col items-center justify-center text-center gap-1">
                         <Dumbbell size={20} className="text-emerald-500 mb-1" />
                         <span className="text-xl font-black text-white leading-none">{(lastWorkoutVolume / 1000).toFixed(1)}т</span>
                         <span className="text-[10px] text-gray-500 font-bold uppercase">Поднято</span>
-                    </div>
+                    </TechCard>
                 </div>
             </div>
         );
@@ -779,66 +806,27 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, program, logs, telegramU
                     icon={<LayoutGrid size={24} strokeWidth={activeView === 'today' ? 2.5 : 2} />}
                     label="Главная"
                     isActive={activeView === 'today'}
-                    onClick={() => setActiveView('today')}
+                    onClick={() => { setActiveView('today'); hapticFeedback.selectionChanged(); }}
                 />
                 <NavButton
                     icon={<Dumbbell size={24} strokeWidth={activeView === 'plan' ? 2.5 : 2} />}
                     label="План"
                     isActive={activeView === 'plan'}
-                    onClick={() => setActiveView('plan')}
+                    onClick={() => { setActiveView('plan'); hapticFeedback.selectionChanged(); }}
                 />
                 <NavButton
                     icon={<BarChart2 size={24} strokeWidth={activeView === 'progress' ? 2.5 : 2} />}
                     label="Прогресс"
                     isActive={activeView === 'progress'}
-                    onClick={() => setActiveView('progress')}
+                    onClick={() => { setActiveView('progress'); hapticFeedback.selectionChanged(); }}
                 />
                 <NavButton
                     icon={<Settings size={24} strokeWidth={activeView === 'settings' ? 2.5 : 2} />}
                     label="Настройки"
                     isActive={activeView === 'settings'}
-                    onClick={() => setActiveView('settings')}
+                    onClick={() => { setActiveView('settings'); hapticFeedback.selectionChanged(); }}
                 />
             </nav>
-
-            {/* Welcome / First Login Modal */}
-            {showWelcomeGuide && (
-                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-6">
-                    <div className="bg-neutral-900 border border-white/10 rounded-3xl p-6 max-w-sm w-full animate-scale-in relative overflow-hidden">
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/20 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none"></div>
-
-                        <div className="flex justify-center mb-6">
-                            <div className="w-20 h-20 bg-indigo-500/10 rounded-full flex items-center justify-center text-indigo-400 relative">
-                                <Bot size={40} />
-                                <div className="absolute top-0 right-0 w-4 h-4 bg-indigo-500 rounded-full border-2 border-neutral-900 animate-pulse"></div>
-                            </div>
-                        </div>
-
-                        <h2 className="text-2xl font-black text-center text-white mb-2">Я — твой ИИ тренер!</h2>
-                        <p className="text-gray-400 text-center text-sm leading-relaxed mb-6">
-                            Я не просто выдаю план. Ты можешь написать мне в чат:
-                        </p>
-
-                        <div className="space-y-3 mb-8">
-                            <div className="flex items-start gap-3 bg-neutral-800/50 p-3 rounded-xl border border-white/5">
-                                <Sparkles size={18} className="text-yellow-400 mt-0.5" />
-                                <p className="text-xs text-gray-300">"Слишком легко, добавь нагрузку"</p>
-                            </div>
-                            <div className="flex items-start gap-3 bg-neutral-800/50 p-3 rounded-xl border border-white/5">
-                                <Activity size={18} className="text-red-400 mt-0.5" />
-                                <p className="text-xs text-gray-300">"Болит плечо, замени жим лежа"</p>
-                            </div>
-                        </div>
-
-                        <button
-                            onClick={() => setShowWelcomeGuide(false)}
-                            className="w-full py-4 bg-white text-black font-bold rounded-2xl hover:scale-[1.02] transition shadow-lg"
-                        >
-                            Понял, спасибо!
-                        </button>
-                    </div>
-                </div>
-            )}
 
             {workoutToPreview && (
                 <WorkoutPreviewModal

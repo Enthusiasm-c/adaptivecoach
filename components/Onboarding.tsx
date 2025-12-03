@@ -2,6 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import { OnboardingProfile, Gender, ExperienceLevel, Goal, Location, Intensity, ActivityLevel, LastWorkout, KnownWeight } from '../types';
 import { calculateProjectedOutcome } from '../utils/progressUtils';
+import { hapticFeedback } from '../utils/hapticUtils';
+import SkeletonLoader from './SkeletonLoader';
 import { ChevronLeft, ArrowRight, Check, Dumbbell, User, Heart, MapPin, Target, CalendarDays, Zap, ShieldAlert, Thermometer, Activity, Ruler, Weight, Laptop, Footprints, Flame, Trophy } from 'lucide-react';
 
 interface OnboardingProps {
@@ -141,17 +143,19 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete, isLoading, error })
                 {step > 0 && !isAnalyzing && (
                     <div className="mt-6 pt-4 animate-slide-up">
                         <div className="flex items-center gap-4">
-                            <button
-                                onClick={prevStep}
-                                disabled={isLoading}
-                                className="p-4 rounded-2xl bg-neutral-900 border border-white/5 text-gray-400 hover:text-white hover:bg-neutral-800 transition active:scale-95"
-                            >
-                                <ChevronLeft size={24} />
-                            </button>
+                            {step > 0 && (
+                                <button
+                                    onClick={() => { prevStep(); hapticFeedback.selectionChanged(); }}
+                                    disabled={isLoading}
+                                    className="p-4 rounded-2xl bg-neutral-900 border border-white/5 text-gray-400 hover:text-white hover:bg-neutral-800 transition active:scale-95"
+                                >
+                                    <ChevronLeft size={24} />
+                                </button>
+                            )}
 
                             {!showPrediction ? (
                                 <button
-                                    onClick={nextStep}
+                                    onClick={() => { nextStep(); hapticFeedback.impactOccurred('light'); }}
                                     disabled={isLoading || (step === 6 && (!profile.preferredDays || profile.preferredDays.length === 0))}
                                     className="flex-1 py-4 bg-white text-black rounded-2xl hover:bg-gray-200 transition disabled:opacity-50 disabled:bg-neutral-800 disabled:text-gray-500 font-bold text-lg flex items-center justify-center gap-2 shadow-lg shadow-white/10 active:scale-[0.98]"
                                 >
@@ -165,8 +169,8 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete, isLoading, error })
                                 >
                                     {isLoading ? (
                                         <div className="flex items-center gap-2 text-sm">
-                                            <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                                            Генерация...
+                                            <div className="w-4 h-4 bg-white/20 rounded-sm animate-pulse"></div>
+                                            <span className="animate-pulse">Генерация...</span>
                                         </div>
                                     ) : "Получить план"}
                                 </button>
@@ -180,20 +184,23 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete, isLoading, error })
 };
 
 const SelectionCard = ({ selected, onClick, children, className = "" }: any) => (
-    <button
-        onClick={onClick}
-        className={`w-full text-left p-5 rounded-2xl border transition-all duration-200 relative overflow-hidden active:scale-[0.98] ${selected
-            ? 'bg-indigo-600/20 border-indigo-500 shadow-[0_0_20px_rgba(99,102,241,0.15)]'
-            : 'bg-neutral-900 border-neutral-800 hover:bg-neutral-800 hover:border-neutral-700'
-            } ${className}`}
+    <div
+        onClick={() => { onClick(); hapticFeedback.selectionChanged(); }}
+        className={`
+            relative p-6 rounded-3xl border-2 transition-all duration-300 cursor-pointer overflow-hidden group
+            ${selected
+                ? 'border-indigo-500 bg-indigo-500/10 shadow-[0_0_30px_rgba(99,102,241,0.2)] scale-[1.02]'
+                : 'border-neutral-800 bg-neutral-900/50 hover:border-neutral-600 hover:bg-neutral-800'
+            }
+            ${className}
+        `}
     >
         <div className="relative z-10 flex items-center justify-between">
             {children}
             {selected && <div className="bg-indigo-500 p-1 rounded-full shadow-lg shadow-indigo-500/50"><Check size={14} className="text-white" strokeWidth={3} /></div>}
         </div>
-    </button>
+    </div>
 );
-
 
 const WelcomeStep = ({ onNext }: { onNext: () => void }) => (
     <div className="flex flex-col justify-end h-full pb-12 space-y-8">
@@ -605,17 +612,7 @@ const KnownWeightsStep = ({ profile, updateProfile, setProfile }: any) => {
                         <span className="text-xs text-gray-500 font-bold uppercase">Помню</span>
                     </button>
                 </div>
-            ) : !knowsWeights ? (
-                <div className="bg-neutral-900 border border-white/5 rounded-3xl p-6 text-center animate-fade-in">
-                    <p className="text-gray-400 mb-4">Ничего страшного! Мы подберем веса на первой тренировке.</p>
-                    <button
-                        onClick={() => setKnowsWeights(true)}
-                        className="text-indigo-400 font-bold text-sm hover:underline"
-                    >
-                        Вспомнил, хочу ввести
-                    </button>
-                </div>
-            ) : (
+            ) : knowsWeights ? (
                 <div className="space-y-4 animate-fade-in">
                     {exercises.map(ex => (
                         <div key={ex}>
@@ -637,6 +634,16 @@ const KnownWeightsStep = ({ profile, updateProfile, setProfile }: any) => {
                         className="text-gray-500 text-xs font-bold hover:text-white mt-2 block text-center"
                     >
                         Сбросить выбор
+                    </button>
+                </div>
+            ) : (
+                <div className="bg-neutral-900 border border-white/5 rounded-3xl p-6 text-center animate-fade-in">
+                    <p className="text-gray-400 mb-4">Ничего страшного! Мы подберем веса на первой тренировке.</p>
+                    <button
+                        onClick={() => setKnowsWeights(true)}
+                        className="text-indigo-400 font-bold text-sm hover:underline"
+                    >
+                        Вспомнил, хочу ввести
                     </button>
                 </div>
             )}

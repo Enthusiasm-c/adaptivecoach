@@ -8,6 +8,8 @@ import ExerciseSwapModal from './ExerciseSwapModal';
 import PlateCalculatorModal from './PlateCalculatorModal';
 import RestTimer from './RestTimer';
 import Stopwatch from './Stopwatch';
+import { hapticFeedback } from '../utils/hapticUtils';
+import TechCard from './TechCard';
 import { getCoachFeedback } from '../services/geminiService';
 import { generateWarmupSets, getLastPerformance, getExerciseHistory } from '../utils/progressUtils';
 
@@ -138,6 +140,18 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
         });
       }
     }
+    setCompletedExercises(newExercises);
+  };
+
+  const toggleSetComplete = (exIndex: number, setIndex: number) => {
+    const newExercises = [...completedExercises];
+    const set = newExercises[exIndex].completedSets[setIndex];
+    set.isCompleted = !set.isCompleted;
+
+    if (set.isCompleted) {
+      hapticFeedback.impactOccurred('light');
+    }
+
     setCompletedExercises(newExercises);
   };
 
@@ -325,72 +339,124 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
               </div>
             </div>
           )}
-        </div>
+        </div> */}
 
         {/* Sets Container */}
         <div className="space-y-3">
-          {currentExercise.completedSets.map((set, setIndex) => (
-            <div key={setIndex} className="bg-neutral-900/50 border border-white/5 p-4 rounded-3xl flex items-center justify-between gap-4">
-              <div className="flex items-center gap-4">
-                <div className="flex flex-col items-center justify-center w-8">
-                  <span className="text-xs text-gray-500 font-bold uppercase">Подход</span>
-                  <span className="text-lg font-bold text-white">{setIndex + 1}</span>
-                </div>
-
-                {/* Weight Input */}
-                <div className="flex flex-col gap-1">
-                  <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider pl-1">Вес (кг)</span>
-                  <div className="relative w-24">
-                    <input
-                      type="number"
-                      value={set.weight}
-                      onChange={(e) => handleValueChange(currentExerciseIndex, setIndex, 'weight', parseInt(e.target.value))}
-                      className="w-full bg-neutral-800 text-white text-xl font-bold p-3 rounded-xl text-center focus:bg-indigo-900/20 focus:text-indigo-400 outline-none transition-colors"
-                    />
-                    {!currentExercise.isWarmup && set.weight > 20 && (
-                      <button
-                        onClick={() => setPlateCalcWeight(set.weight)}
-                        className="absolute -top-2 -right-2 bg-neutral-700 text-white rounded-full p-1 hover:bg-indigo-600 transition shadow-md border border-neutral-600"
-                      >
-                        <Calculator size={10} />
-                      </button>
-                    )}
+          <TechCard className="mb-6">
+            <div className="p-5">
+              {/* Header */}
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-indigo-500/20 flex items-center justify-center text-indigo-400 font-bold">
+                    {currentExerciseIndex + 1}
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-lg text-white leading-tight">{currentExercise.name}</h3>
+                    <p className="text-xs text-gray-400 mt-0.5">{currentExercise.sets} подхода × {currentExercise.reps}</p>
                   </div>
                 </div>
-
-                {/* Reps Input */}
-                <div className="flex flex-col gap-1">
-                  <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider pl-1">Повт.</span>
-                  <input
-                    type="number"
-                    value={set.reps}
-                    onChange={(e) => handleValueChange(currentExerciseIndex, setIndex, 'reps', parseInt(e.target.value))}
-                    className="w-full w-20 bg-neutral-800 text-white text-xl font-bold p-3 rounded-xl text-center focus:bg-indigo-900/20 focus:text-indigo-400 outline-none transition-colors"
-                  />
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setShowHistory(!showHistory)}
+                    className={`p-2 rounded-lg transition ${showHistory ? 'bg-indigo-600 text-white' : 'bg-neutral-800 text-gray-400 hover:text-white'}`}
+                  >
+                    <History size={18} />
+                  </button>
+                  <button
+                    onClick={() => openSwapModal(currentExercise)}
+                    className="p-2 rounded-lg bg-neutral-800 text-gray-400 hover:text-white transition"
+                  >
+                    <Replace size={18} />
+                  </button>
                 </div>
               </div>
 
-              {/* Action / RIR */}
-              <div className="flex items-center">
-                {!currentExercise.isWarmup ? (
-                  <div className="flex flex-col gap-1 w-16">
-                    <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider pl-1 text-center">Запас</span>
-                    <input
-                      type="number"
-                      value={set.rir ?? ''}
-                      placeholder="-"
-                      onChange={(e) => handleValueChange(currentExerciseIndex, setIndex, 'rir', parseInt(e.target.value))}
-                      className="w-full bg-neutral-800 text-gray-300 text-xl font-bold p-3 rounded-xl text-center focus:bg-indigo-900/20 focus:text-indigo-400 outline-none transition-colors placeholder-gray-600"
-                    />
+              {/* Description and YouTube button */}
+              {currentExercise.description && (
+                <p className="text-sm text-gray-400 mt-2 leading-relaxed mb-4">
+                  {currentExercise.description}
+                </p>
+              )}
+              {!currentExercise.isWarmup && (
+                <button
+                  onClick={() => openYouTubeSearch()}
+                  className="mt-3 flex items-center gap-2 text-xs font-bold text-red-400 bg-red-500/10 px-3 py-2 rounded-lg hover:bg-red-500/20 transition mb-4"
+                >
+                  <Video size={14} /> Смотреть технику (YouTube)
+                </button>
+              )}
+
+              {/* Contextual History Section (if applicable for this exercise) */}
+              {showHistory && !currentExercise.isWarmup && (
+                <div className="mt-4 bg-neutral-900 rounded-xl border border-indigo-500/30 p-4 animate-slide-up mb-4">
+                  <h4 className="text-xs font-bold text-indigo-400 uppercase mb-3 flex items-center gap-2">
+                    <History size={12} /> Прошлые тренировки
+                  </h4>
+                  <div className="space-y-3">
+                    {exerciseHistory.map((h, i) => (
+                      <div key={i} className="text-sm">
+                        <div className="flex justify-between text-gray-500 text-xs mb-1">
+                          <span>{new Date(h.date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })}</span>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {h.sets.map((s, idx) => (
+                            <span key={idx} className="px-2 py-1 bg-neutral-800 rounded text-white font-mono text-xs border border-white/5">
+                              {s.weight}кг x {s.reps}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                ) : (
-                  <button onClick={() => handleSetComplete(currentExercise.rest)} className="w-12 h-12 bg-neutral-800 rounded-full flex items-center justify-center text-green-500 hover:bg-green-500 hover:text-white transition-colors">
-                    <CheckCircle2 size={24} />
-                  </button>
-                )}
+                </div>
+              )}
+
+              {/* Sets */}
+              <div className="space-y-3">
+                {currentExercise.completedSets.map((set, setIndex) => (
+                  <div key={setIndex} className={`grid grid-cols-[auto_1fr_1fr_1fr] gap-3 items-center p-3 rounded-xl transition-all ${set.isCompleted
+                      ? 'bg-emerald-500/10 border border-emerald-500/20'
+                      : 'bg-neutral-900/50 border border-white/5'
+                    }`}>
+                    <div className="w-8 text-center font-mono text-gray-500 text-sm">#{setIndex + 1}</div>
+
+                    <div className="relative">
+                      <input
+                        type="number"
+                        value={set.weight || ''}
+                        onChange={(e) => handleValueChange(currentExerciseIndex, setIndex, 'weight', parseInt(e.target.value))}
+                        placeholder={currentExercise.weight?.toString() || "kg"}
+                        className="w-full bg-transparent text-center font-mono font-bold text-white outline-none border-b border-gray-700 focus:border-indigo-500 transition py-1"
+                      />
+                      <span className="absolute right-0 top-1/2 -translate-y-1/2 text-[10px] text-gray-600 pointer-events-none">KG</span>
+                    </div>
+
+                    <div className="relative">
+                      <input
+                        type="number"
+                        value={set.reps || ''}
+                        onChange={(e) => handleValueChange(currentExerciseIndex, setIndex, 'reps', parseInt(e.target.value))}
+                        placeholder={currentExercise.reps.split('-')[0]}
+                        className="w-full bg-transparent text-center font-mono font-bold text-white outline-none border-b border-gray-700 focus:border-indigo-500 transition py-1"
+                      />
+                      <span className="absolute right-0 top-1/2 -translate-y-1/2 text-[10px] text-gray-600 pointer-events-none">REPS</span>
+                    </div>
+
+                    <button
+                      onClick={() => toggleSetComplete(currentExerciseIndex, setIndex)}
+                      className={`w-full h-10 rounded-lg flex items-center justify-center transition-all active:scale-95 ${set.isCompleted
+                          ? 'bg-emerald-500 text-white shadow-[0_0_15px_rgba(16,185,129,0.3)]'
+                          : 'bg-neutral-800 text-gray-400 hover:bg-neutral-700'
+                        }`}
+                    >
+                      <CheckCircle2 size={20} />
+                    </button>
+                  </div>
+                ))}
               </div>
             </div>
-          ))}
+          </TechCard>
         </div>
 
         {/* Timer Trigger */}
