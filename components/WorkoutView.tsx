@@ -269,77 +269,7 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
       {/* Main Scroll Area */}
       <div ref={scrollRef} className="flex-grow overflow-y-auto px-4 pb-32 no-scrollbar overscroll-contain">
 
-        {/* Exercise Title Card */}
-        <div className="mb-6">
-          {currentExercise.isWarmup && (
-            <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-yellow-500/10 text-yellow-500 text-xs font-bold uppercase tracking-wider mb-2">
-              <Info size={12} /> Разминка
-            </span>
-          )}
-          <div className="flex justify-between items-start gap-2">
-            <div className="flex-1">
-              <div className="flex items-center gap-2">
-                <h2 className={`text-2xl font-black leading-tight ${currentExercise.isWarmup ? 'text-gray-400' : 'text-white'}`}>
-                  {currentExercise.name}
-                </h2>
-                {!currentExercise.isWarmup && exerciseHistory.length > 0 && (
-                  <button
-                    onClick={() => setShowHistory(!showHistory)}
-                    className={`p-2 rounded-full transition-colors ${showHistory ? 'bg-indigo-600 text-white' : 'bg-neutral-800 text-gray-400 hover:bg-neutral-700'}`}
-                  >
-                    <History size={18} />
-                  </button>
-                )}
-              </div>
 
-              {currentExercise.description && (
-                <p className="text-sm text-gray-400 mt-2 leading-relaxed">
-                  {currentExercise.description}
-                </p>
-              )}
-
-              {!currentExercise.isWarmup && (
-                <button
-                  onClick={openYouTubeSearch}
-                  className="mt-3 flex items-center gap-2 text-xs font-bold text-red-400 bg-red-500/10 px-3 py-2 rounded-lg hover:bg-red-500/20 transition"
-                >
-                  <Video size={14} /> Смотреть технику (YouTube)
-                </button>
-              )}
-            </div>
-
-            {!currentExercise.isWarmup && (
-              <button onClick={() => openSwapModal(currentExercise)} className="shrink-0 text-gray-500 hover:text-indigo-400 transition p-2 bg-neutral-900 rounded-xl border border-white/5">
-                <Replace size={20} />
-              </button>
-            )}
-          </div>
-
-          {/* Contextual History Section */}
-          {showHistory && !currentExercise.isWarmup && (
-            <div className="mt-4 bg-neutral-900 rounded-xl border border-indigo-500/30 p-4 animate-slide-up">
-              <h4 className="text-xs font-bold text-indigo-400 uppercase mb-3 flex items-center gap-2">
-                <History size={12} /> Прошлые тренировки
-              </h4>
-              <div className="space-y-3">
-                {exerciseHistory.map((h, i) => (
-                  <div key={i} className="text-sm">
-                    <div className="flex justify-between text-gray-500 text-xs mb-1">
-                      <span>{new Date(h.date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })}</span>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {h.sets.map((s, idx) => (
-                        <span key={idx} className="px-2 py-1 bg-neutral-800 rounded text-white font-mono text-xs border border-white/5">
-                          {s.weight}кг x {s.reps}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div> */}
 
         {/* Sets Container */}
         <div className="space-y-3">
@@ -416,8 +346,8 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
               <div className="space-y-3">
                 {currentExercise.completedSets.map((set, setIndex) => (
                   <div key={setIndex} className={`grid grid-cols-[auto_1fr_1fr_1fr] gap-3 items-center p-3 rounded-xl transition-all ${set.isCompleted
-                      ? 'bg-emerald-500/10 border border-emerald-500/20'
-                      : 'bg-neutral-900/50 border border-white/5'
+                    ? 'bg-emerald-500/10 border border-emerald-500/20'
+                    : 'bg-neutral-900/50 border border-white/5'
                     }`}>
                     <div className="w-8 text-center font-mono text-gray-500 text-sm">#{setIndex + 1}</div>
 
@@ -446,8 +376,8 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
                     <button
                       onClick={() => toggleSetComplete(currentExerciseIndex, setIndex)}
                       className={`w-full h-10 rounded-lg flex items-center justify-center transition-all active:scale-95 ${set.isCompleted
-                          ? 'bg-emerald-500 text-white shadow-[0_0_15px_rgba(16,185,129,0.3)]'
-                          : 'bg-neutral-800 text-gray-400 hover:bg-neutral-700'
+                        ? 'bg-emerald-500 text-white shadow-[0_0_15px_rgba(16,185,129,0.3)]'
+                        : 'bg-neutral-800 text-gray-400 hover:bg-neutral-700'
                         }`}
                     >
                       <CheckCircle2 size={20} />
