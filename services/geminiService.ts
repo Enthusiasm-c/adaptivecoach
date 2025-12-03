@@ -19,7 +19,14 @@ export const currentProxyUrl = PROXY_URL;
 
 // Types for Gemini API
 interface GenerateContentRequest {
-    contents: string | { role: string; parts: { text: string }[] }[];
+    contents: string | {
+        role: string;
+        parts: {
+            text?: string;
+            functionCall?: { name: string; args: any };
+            functionResponse?: { name: string; response: any };
+        }[]
+    }[];
     generationConfig?: {
         responseMimeType?: string;
         responseSchema?: any;
@@ -165,9 +172,14 @@ function buildInitialPrompt(profile: OnboardingProfile): string {
         .map(d => dayNames[d])
         .join(', ');
 
+    const knownWeightsStr = profile.knownWeights && profile.knownWeights.length > 0
+        ? profile.knownWeights.map(w => `${w.exercise}: ${w.weight}кг`).join(', ')
+        : 'Нет данных';
+
     return `
     Ты опытный "ИИ тренер". Создай персонализированную программу тренировок на основе детального профиля.
-    Программа должна быть структурированной, простой и эффективной, учитывая физические параметры.
+    Обращайся к пользователю на "Ты". Будь дружелюбным, но требовательным.
+    Программа должна быть структурированной, простой и эффективной.
 
     Профиль пользователя:
     - Пол: ${profile.gender}
@@ -176,6 +188,8 @@ function buildInitialPrompt(profile: OnboardingProfile): string {
     - Цель (вес): ${profile.targetWeight ? `${profile.targetWeight} кг` : 'Не указан'} (${goalContext})
     - Уровень активности (вне зала): ${profile.activityLevel}
     - Опыт: ${profile.experience}
+    - Последняя тренировка: ${profile.lastWorkout || 'Неизвестно'}
+    - Известные рабочие веса: ${knownWeightsStr}
     - Главная цель: ${profile.goals.primary}
     - Планирует тренироваться в дни: ${preferredDaysStr} (Всего ${profile.daysPerWeek} раз в неделю)
     - Время на тренировку: ${profile.timePerWorkout} минут
@@ -184,12 +198,14 @@ function buildInitialPrompt(profile: OnboardingProfile): string {
 
     ВАЖНО:
     1. Учти выбранные дни недели при составлении сплита.
-       - Если дни идут подряд (например, Пн и Вт), используй сплит Верх/Низ или разные группы мышц, чтобы избежать переутомления.
+       - Если дни идут подряд (например, Пн и Вт), используй сплит Верх/Низ или разные группы мышц.
        - Если между днями есть отдых (Пн, Ср, Пт), подойдет Фулбоди.
-    2. Если активность "Сидячая", добавь больше упражнений на осанку и core (ядро).
+    2. Если активность "Сидячая", добавь больше упражнений на осанку и core.
     3. Если цель похудение, увеличь плотность тренировки (суперсеты или короткий отдых).
     4. Используй естественный русский язык. Избегай кальки с английского.
     5. Для каждого упражнения добавь поле "description" с коротким описанием техники.
+    6. Если указаны "Известные рабочие веса", используй их как ориентир для стартовых весов в похожих упражнениях (например, если Жим лежа 80кг, то Жим гантелей ~30-32кг).
+    7. Если "Последняя тренировка" была давно (> 3 месяцев), снизь интенсивность и веса для втягивания (Intro week).
 
     Правила составления:
     1. Сплит (структура):
@@ -210,6 +226,7 @@ function buildAdaptationPrompt(currentProgram: TrainingProgram, logs: WorkoutLog
     const recentLogs = logs.slice(-3);
     return `
     Ты эксперт "ИИ тренер". Адаптируй текущую программу пользователя на основе его последних тренировок.
+    Обращайся к пользователю на "Ты".
     Используй принцип прогрессивной перегрузки.
     Ответ должен быть JSON объектом (вся обновленная программа) на РУССКОМ языке.
     Не забудь сохранить или обновить поле "description" для упражнений.
@@ -229,6 +246,7 @@ function buildAdaptationPrompt(currentProgram: TrainingProgram, logs: WorkoutLog
        - Если пользователь отметил боль, замени упражнение на биомеханически более комфортный аналог.
     3. Структура:
        - Не меняй название дней без причины, корректируй нагрузку.
+    4. Если пользователь увеличил веса вручную в логах, обязательно обнови программу, чтобы следующий раз веса были актуальными.
 
     Сгенерируй адаптированную программу JSON на русском.
     `;
@@ -258,19 +276,25 @@ function buildCoachFeedbackPrompt(profile: OnboardingProfile, log: WorkoutLog): 
     return `
     Ты "ИИ тренер" - умный помощник.
     Пользователь закончил тренировку. Дай короткий, живой комментарий (2-3 предложения) на РУССКОМ языке.
+    Обращайся на "Ты".
 
     Контекст:
     - Цель: ${profile.goals.primary}
     - Вес: ${profile.weight}
     - Тренировка: ${log.sessionId}
+    - Время тренировки: ${log.duration ? Math.round(log.duration / 60) + ' мин' : 'Неизвестно'}
     - Выполнение: ${log.feedback.completion}
     - Боль/Дискомфорт: ${log.feedback.pain.hasPain ? `Да - ${log.feedback.pain.details}` : 'Нет'}
     - Запас сил (RIR): ${log.completedExercises.some(e => e.completedSets.some(s => s.rir === 0)) ? 'Работал в отказ' : 'Остался запас'}
 
+    Задание:
+    1. Сравни План и Факт. Если пользователь поднял больше, чем было в плане - похвали за прогресс.
+    2. Если тренировка заняла слишком мало времени (<20 мин) - спроси, не халтурил ли он.
+    3. Если была боль - посоветуй отдых.
+    
     Стиль:
-    - Профессиональный, но дружелюбный.
-    - Используй правильную терминологию.
-    - Если была боль, посоветуй быть осторожнее и прислушиваться к телу.
+    - Дружелюбный, мотивирующий, как реальный бро-тренер.
+    - Используй эмодзи.
     `;
 }
 
@@ -296,8 +320,8 @@ function buildDashboardInsightPrompt(profile: OnboardingProfile, logs: WorkoutLo
     Данные:
     - Цель: ${profile.goals.primary}
     - Тренировок всего: ${logs.length}
-    - Последняя активность: ${recentLogs.length > 0 ? recentLogs[recentLogs.length-1].date : 'Давно'}
-    - Оценка готовности (Readiness): ${recentLogs.length > 0 ? recentLogs[recentLogs.length-1].feedback.readiness?.score : 'Нет данных'}
+    - Последняя активность: ${recentLogs.length > 0 ? recentLogs[recentLogs.length - 1].date : 'Давно'}
+    - Оценка готовности (Readiness): ${recentLogs.length > 0 ? recentLogs[recentLogs.length - 1].feedback.readiness?.score : 'Нет данных'}
 
     Задача:
     1. Если пользователь тренируется регулярно -> Похвали за ритм.
@@ -410,6 +434,7 @@ export const getChatbotResponse = async (history: ChatMessage[], currentProgram:
     const systemInstruction = `
     Ты дружелюбный "ИИ тренер". Твоя задача - помогать пользователю с тренировками, питанием и мотивацией.
     Ты имеешь доступ к текущей программе тренировок пользователя.
+    Обращайся к пользователю на "Ты".
 
     ВАЖНО: Если пользователь жалуется на боль, травму (например, "болит спина") или просит изменить упражнения ("убери приседания"),
     ТЫ ОБЯЗАН использовать инструмент 'update_workout_plan'.

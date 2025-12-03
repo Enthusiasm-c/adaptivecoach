@@ -36,6 +36,18 @@ export enum Intensity {
   Hard = "Высокая (работа на отказ)",
 }
 
+export enum LastWorkout {
+  LessThanWeek = "Менее недели назад",
+  OneMonth = "Около месяца назад",
+  ThreeMonths = "3-6 месяцев назад",
+  YearOrMore = "Год и более",
+}
+
+export interface KnownWeight {
+  exercise: string; // e.g., "Bench Press"
+  weight: number;
+}
+
 export interface OnboardingProfile {
   gender: Gender;
   age: number;
@@ -50,19 +62,21 @@ export interface OnboardingProfile {
     primary: Goal;
     secondary?: Goal;
   };
-  daysPerWeek: number; 
+  daysPerWeek: number;
   preferredDays: number[]; // 0=Sun, 1=Mon, etc.
   location: Location;
   timePerWorkout: number;
   intensity: Intensity;
+  lastWorkout?: LastWorkout;
+  knownWeights?: KnownWeight[];
 }
 
 export interface TelegramUser {
-    id: number;
-    first_name: string;
-    last_name?: string;
-    username?: string;
-    photo_url?: string;
+  id: number;
+  first_name: string;
+  last_name?: string;
+  username?: string;
+  photo_url?: string;
 }
 
 export interface Exercise {
@@ -113,8 +127,17 @@ export interface WorkoutFeedback {
 export interface WorkoutLog {
   sessionId: string; // e.g., "Day 1 - Full Body A"
   date: string; // ISO string
+  startTime?: number; // Timestamp when workout started
+  duration?: number; // Duration in seconds
   feedback: WorkoutFeedback;
   completedExercises: CompletedExercise[];
+}
+
+export interface ActiveWorkoutState {
+  session: WorkoutSession;
+  completedExercises: CompletedExercise[];
+  startTime: number;
+  readiness: ReadinessData | null;
 }
 
 export interface ChatMessage {
@@ -123,14 +146,14 @@ export interface ChatMessage {
 }
 
 export interface ChatResponse {
-    text: string;
-    updatedProgram?: TrainingProgram;
+  text: string;
+  updatedProgram?: TrainingProgram;
 }
 
 export interface PersonalRecord {
-    exerciseName: string;
-    e1rm: number;
-    date: string;
+  exerciseName: string;
+  e1rm: number;
+  date: string;
 }
 
 // --- Readiness ---
