@@ -10,7 +10,6 @@ import ReadinessModal from './ReadinessModal';
 import { calculateStreaks, calculateWorkoutVolume, calculateWeeklyProgress, getMuscleFocus, calculateLevel } from '../utils/progressUtils';
 import { getDashboardInsight } from '../services/geminiService';
 import { hapticFeedback } from '../utils/hapticUtils';
-import TechCard from './TechCard';
 import SkeletonLoader from './SkeletonLoader';
 
 
@@ -716,7 +715,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, program, logs, telegramU
                                     </div>
                                 </div>
                                 {/* Coach Insight */}
-                                <TechCard className="mb-6">
+                                <div className="mb-6 bg-neutral-900/50 border border-white/5 rounded-3xl overflow-hidden">
                                     <div className="p-5">
                                         <div className="flex items-center gap-3 mb-3">
                                             <div className="w-10 h-10 rounded-xl bg-indigo-500/20 flex items-center justify-center">
@@ -751,7 +750,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, program, logs, telegramU
                                             Написать тренеру
                                         </button>
                                     </div>
-                                </TechCard>
+                                </div>
                                 <button
                                     onClick={() => initiateWorkoutStart(nextWorkout.name)}
                                     className="w-full bg-neutral-800 text-gray-400 font-bold py-3 rounded-2xl flex items-center justify-center gap-2 hover:bg-neutral-700 hover:text-white transition active:scale-95 text-sm border border-white/5"
@@ -767,28 +766,28 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, program, logs, telegramU
                 <div className="col-span-2 grid grid-cols-3 gap-3 mt-2">
 
                     {/* Streak */}
-                    <TechCard className="p-3 flex flex-col items-center justify-center text-center gap-1">
+                    <div className="bg-neutral-900/50 border border-white/5 rounded-2xl p-3 flex flex-col items-center justify-center text-center gap-1">
                         <Flame size={20} className="text-orange-500 mb-1" fill="currentColor" fillOpacity={0.2} />
                         <span className="text-xl font-black text-white leading-none">{currentStreak}</span>
                         <span className="text-[10px] text-gray-500 font-bold uppercase">Дней подряд</span>
-                    </TechCard>
+                    </div>
 
                     {/* Level */}
-                    <TechCard className="p-3 flex flex-col items-center justify-center text-center gap-1 relative overflow-hidden">
+                    <div className="bg-neutral-900/50 border border-white/5 rounded-2xl p-3 flex flex-col items-center justify-center text-center gap-1 relative overflow-hidden">
                         <div className="absolute inset-x-0 bottom-0 h-1 bg-neutral-800">
                             <div className="h-full bg-yellow-500" style={{ width: `${userLevel.levelProgress}%` }}></div>
                         </div>
                         <Crown size={20} className="text-yellow-500 mb-1" fill="currentColor" fillOpacity={0.2} />
                         <span className="text-xl font-black text-white leading-none">{userLevel.level}</span>
                         <span className="text-[10px] text-gray-500 font-bold uppercase">Уровень</span>
-                    </TechCard>
+                    </div>
 
                     {/* Last Volume */}
-                    <TechCard className="p-3 flex flex-col items-center justify-center text-center gap-1">
+                    <div className="bg-neutral-900/50 border border-white/5 rounded-2xl p-3 flex flex-col items-center justify-center text-center gap-1">
                         <Dumbbell size={20} className="text-emerald-500 mb-1" />
                         <span className="text-xl font-black text-white leading-none">{(lastWorkoutVolume / 1000).toFixed(1)}т</span>
                         <span className="text-[10px] text-gray-500 font-bold uppercase">Поднято</span>
-                    </TechCard>
+                    </div>
                 </div>
             </div>
         );

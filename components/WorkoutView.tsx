@@ -9,7 +9,6 @@ import PlateCalculatorModal from './PlateCalculatorModal';
 import RestTimer from './RestTimer';
 import Stopwatch from './Stopwatch';
 import { hapticFeedback } from '../utils/hapticUtils';
-import TechCard from './TechCard';
 import { getCoachFeedback } from '../services/geminiService';
 import { generateWarmupSets, getLastPerformance, getExerciseHistory } from '../utils/progressUtils';
 
@@ -273,7 +272,7 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
 
         {/* Sets Container */}
         <div className="space-y-3">
-          <TechCard className="mb-6">
+          <div className="mb-6 bg-neutral-900/50 border border-white/5 rounded-3xl overflow-hidden">
             <div className="p-5">
               {/* Header */}
               <div className="flex items-start justify-between mb-4">
@@ -386,7 +385,7 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
                 ))}
               </div>
             </div>
-          </TechCard>
+          </div>
         </div>
 
         {/* Timer Trigger */}
