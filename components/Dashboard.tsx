@@ -1,4 +1,3 @@
-```javascript
 import React, { useState, useEffect } from 'react';
 import { OnboardingProfile, TrainingProgram, WorkoutLog, WorkoutSession, ReadinessData, TelegramUser, ActiveWorkoutState } from '../types';
 import WorkoutView from './WorkoutView';
@@ -388,7 +387,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, program, logs, telegramU
                             <div className="flex-1 bg-green-500 rounded-full"></div>
                             <div className="flex-1 bg-green-500 rounded-full"></div>
                             <div className="flex-1 bg-green-500 rounded-full"></div>
-                            <div className={`flex - 1 rounded - full ${ isTodayWorkoutDay ? 'bg-neutral-700' : 'bg-green-500' } `}></div>
+                            <div className={`flex-1 rounded-full ${isTodayWorkoutDay ? 'bg-neutral-700' : 'bg-green-500'}`}></div>
                         </div>
 
                         <p className="text-xs text-gray-400 line-clamp-2 leading-relaxed">
@@ -554,7 +553,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, program, logs, telegramU
                     {/* Level */}
                     <div className="bg-neutral-900/50 border border-white/5 rounded-2xl p-3 flex flex-col items-center justify-center text-center gap-1 relative overflow-hidden">
                         <div className="absolute inset-x-0 bottom-0 h-1 bg-neutral-800">
-                            <div className="h-full bg-yellow-500" style={{ width: `${ userLevel.levelProgress }% ` }}></div>
+                            <div className="h-full bg-yellow-500" style={{ width: `${userLevel.levelProgress}%` }}></div>
                         </div>
                         <Crown size={20} className="text-yellow-500 mb-1" fill="currentColor" fillOpacity={0.2} />
                         <span className="text-xl font-black text-white leading-none">{userLevel.level}</span>
@@ -627,15 +626,15 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, program, logs, telegramU
 const NavButton = ({ icon, label, isActive, onClick }: any) => (
     <button
         onClick={onClick}
-        className={`relative flex flex - col items - center justify - center gap - 1 w - 16 py - 1 transition - all duration - 300 group ${ isActive ? 'text-white' : 'text-gray-500 hover:text-gray-300' } `}
+        className={`relative flex flex-col items-center justify-center gap-1 w-16 py-1 transition-all duration-300 group ${isActive ? 'text-white' : 'text-gray-500 hover:text-gray-300'}`}
     >
-        <div className={`relative p - 1 transition - transform duration - 300 ${ isActive ? '-translate-y-1' : '' } `}>
+        <div className={`relative p-1 transition-transform duration-300 ${isActive ? '-translate-y-1' : ''}`}>
             {icon}
             {isActive && (
                 <div className="absolute inset-0 bg-indigo-500/30 blur-lg rounded-full opacity-60"></div>
             )}
         </div>
-        <span className={`text - [10px] font - medium tracking - wider transition - opacity duration - 300 ${ isActive ? 'opacity-100 text-indigo-300' : 'opacity-70' } `}>
+        <span className={`text-[10px] font-medium tracking-wider transition-opacity duration-300 ${isActive ? 'opacity-100 text-indigo-300' : 'opacity-70'}`}>
             {label}
         </span>
 
