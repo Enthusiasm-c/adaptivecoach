@@ -1,7 +1,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { ChatMessage } from '../types';
-import { MessageSquare, Send, X, Bot, Zap, ShieldAlert, Clock, ArrowRight } from 'lucide-react';
+import { Send, X, Bot, Zap, ShieldAlert, Clock, ArrowRight } from 'lucide-react';
 
 interface ChatbotProps {
     isOpen: boolean;
@@ -30,33 +30,25 @@ const Chatbot: React.FC<ChatbotProps> = ({ isOpen, onToggle, messages, onSendMes
     };
 
     const suggestions = [
-        { 
-            label: "🥵 Слишком легко", 
+        {
+            label: "🥵 Слишком легко",
             text: "Мне слишком легко заниматься. Можешь усложнить программу?",
-            icon: <Zap size={16} className="text-yellow-400"/>
+            icon: <Zap size={16} className="text-yellow-400" />
         },
-        { 
-            label: "🤕 Болит спина", 
+        {
+            label: "🤕 Болит спина",
             text: "У меня болит спина при нагрузках. Замени опасные упражнения.",
-            icon: <ShieldAlert size={16} className="text-red-400"/>
+            icon: <ShieldAlert size={16} className="text-red-400" />
         },
-        { 
-            label: "⏳ Мало времени", 
+        {
+            label: "⏳ Мало времени",
             text: "Сократи тренировки до 30 минут, я не успеваю.",
-            icon: <Clock size={16} className="text-blue-400"/>
+            icon: <Clock size={16} className="text-blue-400" />
         }
     ];
 
     return (
         <>
-            <button
-                onClick={onToggle}
-                className="fixed bottom-[calc(6rem+env(safe-area-inset-bottom))] right-4 bg-indigo-600 text-white p-4 rounded-full shadow-lg hover:bg-indigo-500 transition transform hover:scale-110 z-50"
-                aria-label="Toggle Chatbot"
-            >
-                <MessageSquare size={24} />
-            </button>
-
             {isOpen && (
                 <div className="fixed bottom-[calc(1rem+env(safe-area-inset-bottom))] right-4 w-[calc(100%-2rem)] max-w-sm h-[60vh] max-h-[600px] bg-gray-800 rounded-2xl shadow-2xl flex flex-col z-50 animate-fade-in-up border border-gray-700">
                     <header className="flex items-center justify-between p-4 border-b border-gray-700">
@@ -71,18 +63,18 @@ const Chatbot: React.FC<ChatbotProps> = ({ isOpen, onToggle, messages, onSendMes
 
                     <div className="flex-1 p-4 overflow-y-auto space-y-4">
                         {messages.length === 0 && (
-                             <div className="h-full flex flex-col justify-center items-center text-center space-y-6">
+                            <div className="h-full flex flex-col justify-center items-center text-center space-y-6">
                                 <div className="p-4 bg-indigo-500/10 rounded-full">
-                                    <Bot size={32} className="text-indigo-400"/>
+                                    <Bot size={32} className="text-indigo-400" />
                                 </div>
                                 <div>
                                     <h4 className="text-white font-bold text-lg mb-1">Привет!</h4>
                                     <p className="text-gray-400 text-sm max-w-[250px] mx-auto">Я могу изменить твою программу, дать совет по питанию или технике.</p>
                                 </div>
-                                
+
                                 <div className="grid gap-2 w-full">
                                     {suggestions.map((s, idx) => (
-                                        <button 
+                                        <button
                                             key={idx}
                                             onClick={() => onSendMessage(s.text)}
                                             className="flex items-center gap-3 p-3 bg-gray-700 hover:bg-gray-600 rounded-xl transition text-left group"
@@ -91,11 +83,11 @@ const Chatbot: React.FC<ChatbotProps> = ({ isOpen, onToggle, messages, onSendMes
                                                 {s.icon}
                                             </div>
                                             <span className="flex-1 text-sm font-medium text-gray-200">{s.label}</span>
-                                            <ArrowRight size={14} className="text-gray-500 group-hover:text-white"/>
+                                            <ArrowRight size={14} className="text-gray-500 group-hover:text-white" />
                                         </button>
                                     ))}
                                 </div>
-                             </div>
+                            </div>
                         )}
                         {messages.map((msg, index) => (
                             <div key={index} className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
@@ -104,17 +96,17 @@ const Chatbot: React.FC<ChatbotProps> = ({ isOpen, onToggle, messages, onSendMes
                                 </div>
                             </div>
                         ))}
-                         {isLoading && (
+                        {isLoading && (
                             <div className="flex gap-3 justify-start">
-                               <div className="max-w-xs md:max-w-sm rounded-2xl p-3 bg-gray-700 rounded-bl-lg">
+                                <div className="max-w-xs md:max-w-sm rounded-2xl p-3 bg-gray-700 rounded-bl-lg">
                                     <div className="flex items-center gap-2">
                                         <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
                                         <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
                                         <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce"></div>
                                     </div>
-                               </div>
+                                </div>
                             </div>
-                         )}
+                        )}
                         <div ref={messagesEndRef} />
                     </div>
 
