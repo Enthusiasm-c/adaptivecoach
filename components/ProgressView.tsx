@@ -1,38 +1,40 @@
 
 import React, { useMemo } from 'react';
 import { WorkoutLog, TrainingProgram, ReadinessData, WorkoutCompletion } from '../types';
-import { 
-    BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
+import {
+    BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
     AreaChart, Area, Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
     LineChart, Line, PieChart, Pie, Cell, Legend
 } from 'recharts';
-import { 
-    calculateStreaks, calculateTotalVolume, calculateWeeklyVolume, 
+import {
+    calculateStreaks, calculateTotalVolume, calculateWeeklyVolume,
     calculatePersonalRecords, calculateReadinessHistory, calculateMovementPatterns, getHeatmapData,
     calculateLevel, getStrengthProgression, getVolumeDistribution
 } from '../utils/progressUtils';
-import { Dumbbell, Flame, TrendingUp, Trophy, Battery, PieChart as PieIcon, Calendar, Eye, Crown, Star, Activity, HeartPulse } from 'lucide-react';
+import { Dumbbell, Flame, TrendingUp, Trophy, Battery, PieChart as PieIcon, Calendar, Eye, Crown, Star, Activity, HeartPulse, ChevronLeft, ChevronRight, Check } from 'lucide-react';
+import { hapticFeedback } from '../utils/hapticUtils';
 
 interface ProgressViewProps {
-  logs: WorkoutLog[];
-  program: TrainingProgram;
+    logs: WorkoutLog[];
+    program: TrainingProgram;
+    onUpdateProgram?: (program: TrainingProgram) => void;
 }
 
 // --- Mock Data Generator ---
 const generateMockLogs = (): WorkoutLog[] => {
     const logs: WorkoutLog[] = [];
     const today = new Date();
-    
+
     // Create 12 workouts over the last 4 weeks (3 per week)
     for (let i = 11; i >= 0; i--) {
         const date = new Date(today);
         date.setDate(date.getDate() - (i * 2.5)); // Every 2-3 days
 
         // Fluctuate volume and readiness for realistic charts
-        const isStrongDay = i % 3 !== 0; 
+        const isStrongDay = i % 3 !== 0;
         const volumeMultiplier = isStrongDay ? 1.1 : 0.9;
         const strengthProgression = (12 - i) * 1.5; // Gradual increase
-        
+
         const readinessScore = isStrongDay ? 18 : 10; // Mix of Green and Red days
 
         logs.push({
@@ -88,7 +90,7 @@ const generateMockLogs = (): WorkoutLog[] => {
                     sets: 3,
                     reps: "10",
                     rest: 60,
-                    completedSets: [{reps: 10, weight: 0}, {reps: 10, weight: 0}, {reps: 8, weight: 0}]
+                    completedSets: [{ reps: 10, weight: 0 }, { reps: 10, weight: 0 }, { reps: 8, weight: 0 }]
                 }] : [])
             ]
         });
@@ -97,279 +99,475 @@ const generateMockLogs = (): WorkoutLog[] => {
 };
 
 const ProgressView: React.FC<ProgressViewProps> = ({ logs, program }) => {
-  const isDemoMode = logs.length === 0;
-  
-  const displayLogs = useMemo(() => {
-      return isDemoMode ? generateMockLogs() : logs;
-  }, [logs, isDemoMode]);
+    const isDemoMode = logs.length === 0;
 
-  const { currentStreak, bestStreak } = calculateStreaks(displayLogs);
-  const totalVolume = calculateTotalVolume(displayLogs);
-  const weeklyVolumeData = calculateWeeklyVolume(displayLogs);
-  const personalRecords = calculatePersonalRecords(displayLogs);
-  const readinessData = calculateReadinessHistory(displayLogs);
-  const movementData = calculateMovementPatterns(displayLogs);
-  const heatmapData = getHeatmapData(displayLogs);
-  
-  // New Analytics
-  const userLevel = calculateLevel(displayLogs);
-  const strengthData = getStrengthProgression(displayLogs);
-  const volumeDistData = getVolumeDistribution(displayLogs);
+    const displayLogs = useMemo(() => {
+        return isDemoMode ? generateMockLogs() : logs;
+    }, [logs, isDemoMode]);
 
-  const chartTheme = {
-      grid: "#404040", 
-      text: "#737373", 
-  };
+    const { currentStreak, bestStreak } = calculateStreaks(displayLogs);
+    const totalVolume = calculateTotalVolume(displayLogs);
+    const weeklyVolumeData = calculateWeeklyVolume(displayLogs);
+    const personalRecords = calculatePersonalRecords(displayLogs);
+    const readinessData = calculateReadinessHistory(displayLogs);
+    const movementData = calculateMovementPatterns(displayLogs);
+    const heatmapData = getHeatmapData(displayLogs);
 
-  const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ec4899']; // Indigo, Emerald, Amber, Pink
+    // New Analytics
+    const userLevel = calculateLevel(displayLogs);
+    const strengthData = getStrengthProgression(displayLogs);
+    const volumeDistData = getVolumeDistribution(displayLogs);
 
-  return (
-    <div className="pb-40 space-y-6 animate-fade-in px-1 relative pt-[env(safe-area-inset-top)]">
-      
-      <h2 className="text-2xl font-bold text-white mb-4 px-2">Мой Прогресс</h2>
+    // --- Calendar Logic ---
+    const [currentDate, setCurrentDate] = React.useState(new Date());
+    const [selectedDateToMove, setSelectedDateToMove] = React.useState<Date | null>(null);
+    const [isEditingSchedule, setIsEditingSchedule] = React.useState(false);
 
-      {/* Demo Mode Banner */}
-      {isDemoMode && (
-          <div className="bg-indigo-500/10 border border-indigo-500/50 rounded-2xl p-4 flex items-start gap-3 animate-slide-up">
-              <div className="p-2 bg-indigo-500 text-white rounded-lg mt-0.5">
-                  <Eye size={20} />
-              </div>
-              <div>
-                  <h3 className="font-bold text-white">Демонстрационный режим</h3>
-                  <p className="text-xs text-gray-400 mt-1 leading-relaxed">
-                      Показываем пример статистики. Начните тренироваться, чтобы увидеть свой реальный прогресс!
-                  </p>
-              </div>
-          </div>
-      )}
+    const getDaysInMonth = (date: Date) => {
+        const year = date.getFullYear();
+        const month = date.getMonth();
+        const days = [];
+        const firstDay = new Date(year, month, 1);
+        const lastDay = new Date(year, month + 1, 0);
 
-      {/* Gamification Header */}
-      <div className="bg-gradient-to-br from-neutral-900 to-neutral-900/50 border border-white/10 rounded-3xl p-6 shadow-2xl relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full blur-3xl -mr-10 -mt-10"></div>
-          
-          <div className="flex items-center gap-4 mb-4 relative z-10">
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-600 to-violet-600 flex items-center justify-center text-white font-black text-2xl shadow-lg shadow-indigo-500/30 transform rotate-3 border border-white/10">
-                  {userLevel.level}
-              </div>
-              <div>
-                  <div className="flex items-center gap-2">
-                     <h2 className="text-2xl font-black text-white">{userLevel.title}</h2>
-                     <Crown size={18} className="text-yellow-400 fill-yellow-400" />
-                  </div>
-                  <p className="text-sm text-gray-400 font-medium">{userLevel.xp} XP</p>
-              </div>
-          </div>
+        // Add empty slots for days before the first day of the month
+        // Adjust for Monday start (0 = Sunday, 1 = Monday, etc.)
+        let firstDayIndex = firstDay.getDay() - 1;
+        if (firstDayIndex < 0) firstDayIndex = 6;
 
-          <div className="relative z-10">
-              <div className="flex justify-between text-xs font-bold text-gray-500 mb-1.5 uppercase tracking-wider">
-                  <span>Прогресс уровня</span>
-                  <span>{userLevel.levelProgress.toFixed(0)}%</span>
-              </div>
-              <div className="h-3 bg-neutral-800 rounded-full overflow-hidden border border-white/5">
-                  <div 
-                    className="h-full bg-indigo-500 rounded-full relative"
-                    style={{ width: `${userLevel.levelProgress}%` }}
-                  >
-                      <div className="absolute inset-0 bg-white/20 animate-pulse"></div>
-                  </div>
-              </div>
-          </div>
-      </div>
-      
-      {/* Top Stats Grid */}
-      <div className="grid grid-cols-2 gap-3">
-        <StatCard 
-            label="Веса поднято" 
-            value={`${totalVolume.toLocaleString('ru-RU')} кг`} 
-            sub="За все время" 
-            icon={<Dumbbell size={16}/>}
-            color="text-indigo-400"
-            bg="bg-indigo-500/10"
-        />
-        <StatCard 
-            label="Регулярность" 
-            value={`${currentStreak} Дн`} 
-            sub={`Рекорд: ${bestStreak}`} 
-            icon={<Flame size={16}/>}
-            color="text-orange-400"
-            bg="bg-orange-500/10"
-        />
-      </div>
+        for (let i = 0; i < firstDayIndex; i++) {
+            days.push(null);
+        }
 
-      {/* Strength Progression Chart */}
-      <div className="bg-neutral-900 border border-white/5 rounded-3xl p-5 shadow-lg">
-          <div className="flex items-center gap-2 mb-4 text-gray-300 font-bold text-sm">
-              <TrendingUp size={16} className="text-indigo-400"/>
-              Динамика Силы (e1RM)
-          </div>
-          <div className="h-56 -ml-2">
-             <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={strengthData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
-                    <CartesianGrid stroke={chartTheme.grid} vertical={false} strokeDasharray="3 3" />
-                    <XAxis dataKey="date" stroke={chartTheme.text} fontSize={10} tickLine={false} axisLine={false} dy={10} />
-                    <YAxis stroke={chartTheme.text} fontSize={10} tickLine={false} axisLine={false} domain={['auto', 'auto']} />
-                    <Tooltip 
-                        contentStyle={{ backgroundColor: '#171717', border: '1px solid #333', borderRadius: '8px', color: '#fff' }}
-                    />
-                    <Legend wrapperStyle={{ fontSize: '10px', paddingTop: '10px' }} iconType="circle" />
-                    <Line type="monotone" dataKey="squat" name="Присед" stroke="#6366f1" strokeWidth={3} dot={false} connectNulls />
-                    <Line type="monotone" dataKey="bench" name="Жим" stroke="#10b981" strokeWidth={3} dot={false} connectNulls />
-                    <Line type="monotone" dataKey="deadlift" name="Тяга" stroke="#f59e0b" strokeWidth={3} dot={false} connectNulls />
-                </LineChart>
-             </ResponsiveContainer>
-          </div>
-      </div>
+        for (let i = 1; i <= lastDay.getDate(); i++) {
+            days.push(new Date(year, month, i));
+        }
 
-      {/* Detailed Readiness Trends (Health & Recovery) */}
-      <div className="bg-neutral-900 border border-white/5 rounded-3xl p-5 shadow-lg overflow-hidden relative">
-        <div className="flex items-center gap-2 mb-4 text-gray-300 font-bold text-sm z-10 relative">
-            <HeartPulse size={16} className="text-pink-400"/>
-            Здоровье и Восстановление
-        </div>
-        <div className="h-48 -ml-2">
-            <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={readinessData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                    <CartesianGrid stroke={chartTheme.grid} vertical={false} strokeDasharray="3 3" />
-                    <XAxis dataKey="date" stroke={chartTheme.text} fontSize={10} tickLine={false} axisLine={false} dy={10} />
-                    <YAxis stroke={chartTheme.text} fontSize={10} tickLine={false} axisLine={false} domain={[0, 6]} hide />
-                    <Tooltip contentStyle={{ backgroundColor: '#171717', border: '1px solid #333', borderRadius: '8px', color: '#fff' }} />
-                    <Legend wrapperStyle={{ fontSize: '10px', paddingTop: '10px' }} iconType="circle" />
-                    
-                    <Line type="monotone" dataKey="sleep" name="Сон" stroke="#818cf8" strokeWidth={2} dot={false} />
-                    <Line type="monotone" dataKey="food" name="Еда" stroke="#34d399" strokeWidth={2} dot={false} />
-                    <Line type="monotone" dataKey="stress" name="Стресс" stroke="#f472b6" strokeWidth={2} dot={false} />
-                </LineChart>
-            </ResponsiveContainer>
-        </div>
-      </div>
+        return days;
+    };
 
-      {/* Total Readiness Score Area Chart */}
-      <div className="bg-neutral-900 border border-white/5 rounded-3xl p-5 shadow-lg overflow-hidden relative">
-        <div className="flex items-center gap-2 mb-4 text-gray-300 font-bold text-sm z-10 relative">
-            <Battery size={16} className="text-blue-400"/>
-            Общий уровень энергии
-        </div>
-        <div className="h-48 -ml-2">
-            <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={readinessData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <defs>
-                    <linearGradient id="colorScore" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#60a5fa" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#60a5fa" stopOpacity={0}/>
-                    </linearGradient>
-                </defs>
-                <CartesianGrid stroke={chartTheme.grid} vertical={false} strokeDasharray="3 3" />
-                <XAxis dataKey="date" stroke={chartTheme.text} fontSize={10} tickLine={false} axisLine={false} dy={10} />
-                <YAxis stroke={chartTheme.text} fontSize={10} tickLine={false} axisLine={false} domain={[0, 25]} />
-                <Tooltip contentStyle={{ backgroundColor: '#171717', border: '1px solid #333', borderRadius: '8px', color: '#fff' }} />
-                <Area type="monotone" dataKey="score" stroke="#60a5fa" fillOpacity={1} fill="url(#colorScore)" strokeWidth={3} />
-                </AreaChart>
-            </ResponsiveContainer>
-        </div>
-      </div>
+    const handleDateClick = (date: Date, status: any) => {
+        hapticFeedback.selectionChanged();
 
-      {/* Split & Volume Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Volume Bar Chart */}
-          <div className="bg-neutral-900 border border-white/5 rounded-3xl p-5 shadow-lg">
-            <div className="flex items-center gap-2 mb-4 text-gray-300 font-bold text-sm">
-                <Activity size={16} className="text-emerald-400"/>
-                Объем за неделю
-            </div>
-            <div className="h-48 -ml-2">
-                <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={weeklyVolumeData.length > 0 ? weeklyVolumeData : [{name: 'Нет данных', volume: 0}]} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
-                    <CartesianGrid stroke={chartTheme.grid} vertical={false} strokeDasharray="3 3" />
-                    <XAxis 
-                        dataKey="name" 
-                        stroke={chartTheme.text} 
-                        fontSize={10} 
-                        tickLine={false} 
-                        axisLine={false}
-                        tickFormatter={(val) => val.includes('-W') ? val.split('-W')[1] : val} 
-                        dy={10}
-                    />
-                    <YAxis stroke={chartTheme.text} fontSize={10} tickLine={false} axisLine={false} tickFormatter={(val) => `${(val/1000).toFixed(0)} т`} />
-                    <Bar dataKey="volume" fill="#10b981" radius={[4, 4, 0, 0]} barSize={30} />
-                    <Tooltip 
-                        cursor={{fill: 'rgba(255,255,255,0.05)'}}
-                        contentStyle={{ backgroundColor: '#171717', border: '1px solid #333', borderRadius: '8px', color: '#fff' }}
-                        formatter={(value: any) => [`${(value/1000).toFixed(2)} тонн`, 'Объем']}
-                    />
-                    </BarChart>
-                </ResponsiveContainer>
-            </div>
-          </div>
+        if (isEditingSchedule) {
+            if (!selectedDateToMove) {
+                // Select session to move
+                if (status?.type === 'planned') {
+                    setSelectedDateToMove(date);
+                    hapticFeedback.impactLight();
+                }
+            } else {
+                // Move to new date
+                moveSession(selectedDateToMove, date);
+                setSelectedDateToMove(null);
+                setIsEditingSchedule(false);
+                hapticFeedback.notificationSuccess();
+            }
+        } else {
+            // Toggle day status (Rest <-> Planned)
+            // Only allow toggling future dates or today
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            if (date >= today) {
+                toggleDayStatus(date, status);
+            }
+        }
+    };
 
-          {/* Split Distribution Pie */}
-          <div className="bg-neutral-900 border border-white/5 rounded-3xl p-5 shadow-lg">
-            <div className="flex items-center gap-2 mb-2 text-gray-300 font-bold text-sm">
-                <PieIcon size={16} className="text-pink-400"/>
-                Акцент Нагрузки
-            </div>
-            <div className="h-48 flex items-center justify-center">
-                <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                        <Pie
-                            data={volumeDistData}
-                            innerRadius={40}
-                            outerRadius={70}
-                            paddingAngle={5}
-                            dataKey="value"
+    const moveSession = (from: Date, to: Date) => {
+        if (!program || !onUpdateProgram) return;
+
+        const newSchedule = [...program.schedule];
+        const fromDateStr = from.toISOString().split('T')[0];
+        const toDateStr = to.toISOString().split('T')[0];
+
+        // Find session at 'from' date
+        const sessionIndex = newSchedule.findIndex(s => s.day === fromDateStr);
+        if (sessionIndex === -1) return;
+
+        // Update date
+        newSchedule[sessionIndex] = { ...newSchedule[sessionIndex], day: toDateStr };
+
+        onUpdateProgram({ ...program, schedule: newSchedule });
+    };
+
+    const toggleDayStatus = (date: Date, status: any) => {
+        if (!program || !onUpdateProgram) return;
+
+        const dateStr = date.toISOString().split('T')[0];
+        let newSchedule = [...program.schedule];
+
+        if (status?.type === 'planned') {
+            // Remove session
+            newSchedule = newSchedule.filter(s => s.day !== dateStr);
+        } else {
+            // Add session (find next available workout type or default)
+            // For simplicity, just cycling through available workouts or picking first
+            const nextWorkout = program.workouts[0];
+            newSchedule.push({ day: dateStr, workoutId: nextWorkout.id, isCompleted: false });
+        }
+
+        onUpdateProgram({ ...program, schedule: newSchedule });
+    };
+
+    const onUpdateProgram = props.onUpdateProgram; // Access from props
+
+    const renderCalendar = () => {
+        const days = getDaysInMonth(currentDate);
+        const monthName = currentDate.toLocaleString('ru-RU', { month: 'long', year: 'numeric' });
+
+        return (
+            <div className="bg-neutral-900 border border-white/5 rounded-3xl p-5 shadow-lg animate-fade-in">
+                <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-xl font-bold text-white capitalize flex items-center gap-2">
+                        <Calendar size={20} className="text-indigo-500" />
+                        {monthName}
+                    </h2>
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={() => setIsEditingSchedule(!isEditingSchedule)}
+                            className={`p-2 rounded-xl transition ${isEditingSchedule ? 'bg-indigo-500 text-white' : 'bg-neutral-800 text-gray-400'}`}
                         >
-                            {volumeDistData.map((entry, index) => (
-                                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} stroke="rgba(0,0,0,0)" />
-                            ))}
-                        </Pie>
-                        <Tooltip contentStyle={{ backgroundColor: '#171717', border: '1px solid #333', borderRadius: '8px', color: '#fff' }} />
-                        <Legend iconType="circle" layout="vertical" verticalAlign="middle" align="right" wrapperStyle={{ fontSize: '10px', color: '#a3a3a3' }}/>
-                    </PieChart>
-                </ResponsiveContainer>
-            </div>
-          </div>
-      </div>
-
-      {/* Consistency Heatmap */}
-      <div className="bg-neutral-900 border border-white/5 rounded-3xl p-5 shadow-lg">
-          <div className="flex items-center gap-2 mb-4 text-gray-300 font-bold text-sm">
-              <Calendar size={16} className="text-green-400"/>
-              Календарь Активности
-          </div>
-          <div className="flex justify-between gap-1">
-              {heatmapData.map((day, idx) => (
-                  <div key={idx} className="flex flex-col items-center gap-1 flex-1">
-                      <div 
-                        className={`w-full aspect-[4/5] rounded-md transition-all duration-500 ${
-                            day.hasWorkout 
-                            ? (day.intensity > 1 ? 'bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.4)]' : 'bg-green-500/60') 
-                            : 'bg-neutral-800'
-                        }`}
-                        title={day.date.toDateString()}
-                      ></div>
-                  </div>
-              ))}
-          </div>
-      </div>
-
-      {/* PR List */}
-      {personalRecords.length > 0 && (
-        <div className="space-y-3">
-          <h3 className="font-bold text-white text-lg flex items-center gap-2"><Trophy size={18} className="text-yellow-500"/> Личные Рекорды (e1RM)</h3>
-          <div className="grid gap-2">
-            {personalRecords.map(pr => (
-                <div key={pr.exerciseName} className="flex justify-between items-center bg-neutral-900 border border-white/5 p-4 rounded-2xl">
-                    <span className="font-bold text-gray-300 text-sm">{pr.exerciseName}</span>
-                    <div className="text-right">
-                        <span className="font-black text-xl text-white">{pr.e1rm.toFixed(0)}</span>
-                        <span className="text-xs text-gray-500 font-bold ml-1">КГ</span>
+                            <Activity size={18} />
+                        </button>
+                        <div className="flex bg-neutral-800 rounded-xl p-1">
+                            <button onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() - 1)))} className="p-2 hover:bg-white/10 rounded-lg text-gray-400">
+                                <ChevronLeft size={18} />
+                            </button>
+                            <button onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() + 1)))} className="p-2 hover:bg-white/10 rounded-lg text-gray-400">
+                                <ChevronRight size={18} />
+                            </button>
+                        </div>
                     </div>
                 </div>
-            ))}
-          </div>
+
+                <div className="grid grid-cols-7 gap-2 mb-2">
+                    {['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'].map(d => (
+                        <div key={d} className="text-center text-[10px] font-bold text-gray-500 uppercase">{d}</div>
+                    ))}
+                </div>
+
+                <div className="grid grid-cols-7 gap-2">
+                    {days.map((day, idx) => {
+                        if (!day) return <div key={idx} className="aspect-square"></div>;
+
+                        const dateStr = day.toISOString().split('T')[0];
+
+                        // Check status
+                        let status = null;
+                        const scheduled = program?.schedule.find(s => s.day === dateStr);
+                        const log = logs.find(l => l.date.split('T')[0] === dateStr);
+
+                        if (log) {
+                            status = { type: 'completed', data: log };
+                        } else if (scheduled) {
+                            status = { type: 'planned', data: scheduled };
+                        }
+
+                        const isToday = day.toDateString() === new Date().toDateString();
+                        const isSelected = selectedDateToMove?.toDateString() === day.toDateString();
+
+                        return (
+                            <button
+                                key={idx}
+                                onClick={() => handleDateClick(day, status)}
+                                disabled={!status && !isEditingSchedule}
+                                className={`aspect-square rounded-xl flex flex-col items-center justify-center relative transition-all duration-300 
+                              ${isToday ? 'bg-white/10 border border-white/20' : ''} 
+                              ${(status || isEditingSchedule) ? 'hover:bg-white/5' : 'opacity-30'}
+                              ${isSelected ? 'bg-indigo-600/40 border-indigo-500 ring-2 ring-indigo-500 scale-95' : ''}
+                              ${isEditingSchedule && !isSelected ? 'animate-pulse bg-neutral-800/50' : ''}
+                          `}
+                            >
+                                <span className={`text-xs font-medium ${isToday ? 'text-white font-bold' : 'text-gray-400'}`}>{day.getDate()}</span>
+
+                                {status?.type === 'completed' && (
+                                    <div className="mt-1 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center shadow-lg shadow-green-500/20">
+                                        <Check size={10} className="text-black" strokeWidth={4} />
+                                    </div>
+                                )}
+
+                                {status?.type === 'planned' && (
+                                    <div className="mt-1 w-2 h-2 bg-indigo-500 rounded-full shadow-[0_0_8px_rgba(99,102,241,0.8)]"></div>
+                                )}
+
+                                {/* Empty slot visual for editing */}
+                                {isEditingSchedule && !status && (
+                                    <div className="mt-1 w-1.5 h-1.5 border border-gray-600 rounded-full"></div>
+                                )}
+                            </button>
+                        );
+                    })}
+                </div>
+
+                <div className="mt-6 pt-4 border-t border-white/5 flex justify-center gap-6 text-xs text-gray-400">
+                    <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 bg-indigo-500 rounded-full"></div> По плану
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 bg-green-500 rounded-full"></div> Выполнено
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
+    const chartTheme = {
+        grid: "#404040",
+        text: "#737373",
+    };
+
+    const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ec4899']; // Indigo, Emerald, Amber, Pink
+
+    return (
+        <div className="pb-40 space-y-6 animate-fade-in px-1 relative pt-[env(safe-area-inset-top)]">
+
+            <h2 className="text-2xl font-bold text-white mb-4 px-2">Мой Прогресс</h2>
+
+            {/* Calendar Section */}
+            {renderCalendar()}
+
+            {/* Demo Mode Banner */}
+            {isDemoMode && (
+                <div className="bg-indigo-500/10 border border-indigo-500/50 rounded-2xl p-4 flex items-start gap-3 animate-slide-up">
+                    <div className="p-2 bg-indigo-500 text-white rounded-lg mt-0.5">
+                        <Eye size={20} />
+                    </div>
+                    <div>
+                        <h3 className="font-bold text-white">Демонстрационный режим</h3>
+                        <p className="text-xs text-gray-400 mt-1 leading-relaxed">
+                            Показываем пример статистики. Начните тренироваться, чтобы увидеть свой реальный прогресс!
+                        </p>
+                    </div>
+                </div>
+            )}
+
+            {/* Gamification Header */}
+            <div className="bg-gradient-to-br from-neutral-900 to-neutral-900/50 border border-white/10 rounded-3xl p-6 shadow-2xl relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full blur-3xl -mr-10 -mt-10"></div>
+
+                <div className="flex items-center gap-4 mb-4 relative z-10">
+                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-600 to-violet-600 flex items-center justify-center text-white font-black text-2xl shadow-lg shadow-indigo-500/30 transform rotate-3 border border-white/10">
+                        {userLevel.level}
+                    </div>
+                    <div>
+                        <div className="flex items-center gap-2">
+                            <h2 className="text-2xl font-black text-white">{userLevel.title}</h2>
+                            <Crown size={18} className="text-yellow-400 fill-yellow-400" />
+                        </div>
+                        <p className="text-sm text-gray-400 font-medium">{userLevel.xp} XP</p>
+                    </div>
+                </div>
+
+                <div className="relative z-10">
+                    <div className="flex justify-between text-xs font-bold text-gray-500 mb-1.5 uppercase tracking-wider">
+                        <span>Прогресс уровня</span>
+                        <span>{userLevel.levelProgress.toFixed(0)}%</span>
+                    </div>
+                    <div className="h-3 bg-neutral-800 rounded-full overflow-hidden border border-white/5">
+                        <div
+                            className="h-full bg-indigo-500 rounded-full relative"
+                            style={{ width: `${userLevel.levelProgress}%` }}
+                        >
+                            <div className="absolute inset-0 bg-white/20 animate-pulse"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Top Stats Grid */}
+            <div className="grid grid-cols-2 gap-3">
+                <StatCard
+                    label="Веса поднято"
+                    value={`${totalVolume.toLocaleString('ru-RU')} кг`}
+                    sub="За все время"
+                    icon={<Dumbbell size={16} />}
+                    color="text-indigo-400"
+                    bg="bg-indigo-500/10"
+                />
+                <StatCard
+                    label="Регулярность"
+                    value={`${currentStreak} Дн`}
+                    sub={`Рекорд: ${bestStreak}`}
+                    icon={<Flame size={16} />}
+                    color="text-orange-400"
+                    bg="bg-orange-500/10"
+                />
+            </div>
+
+            {/* Strength Progression Chart */}
+            <div className="bg-neutral-900 border border-white/5 rounded-3xl p-5 shadow-lg">
+                <div className="flex items-center gap-2 mb-4 text-gray-300 font-bold text-sm">
+                    <TrendingUp size={16} className="text-indigo-400" />
+                    Динамика Силы (e1RM)
+                </div>
+                <div className="h-56 -ml-2">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={strengthData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+                            <CartesianGrid stroke={chartTheme.grid} vertical={false} strokeDasharray="3 3" />
+                            <XAxis dataKey="date" stroke={chartTheme.text} fontSize={10} tickLine={false} axisLine={false} dy={10} />
+                            <YAxis stroke={chartTheme.text} fontSize={10} tickLine={false} axisLine={false} domain={['auto', 'auto']} />
+                            <Tooltip
+                                contentStyle={{ backgroundColor: '#171717', border: '1px solid #333', borderRadius: '8px', color: '#fff' }}
+                            />
+                            <Legend wrapperStyle={{ fontSize: '10px', paddingTop: '10px' }} iconType="circle" />
+                            <Line type="monotone" dataKey="squat" name="Присед" stroke="#6366f1" strokeWidth={3} dot={false} connectNulls />
+                            <Line type="monotone" dataKey="bench" name="Жим" stroke="#10b981" strokeWidth={3} dot={false} connectNulls />
+                            <Line type="monotone" dataKey="deadlift" name="Тяга" stroke="#f59e0b" strokeWidth={3} dot={false} connectNulls />
+                        </LineChart>
+                    </ResponsiveContainer>
+                </div>
+            </div>
+
+            {/* Detailed Readiness Trends (Health & Recovery) */}
+            <div className="bg-neutral-900 border border-white/5 rounded-3xl p-5 shadow-lg overflow-hidden relative">
+                <div className="flex items-center gap-2 mb-4 text-gray-300 font-bold text-sm z-10 relative">
+                    <HeartPulse size={16} className="text-pink-400" />
+                    Здоровье и Восстановление
+                </div>
+                <div className="h-48 -ml-2">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={readinessData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                            <CartesianGrid stroke={chartTheme.grid} vertical={false} strokeDasharray="3 3" />
+                            <XAxis dataKey="date" stroke={chartTheme.text} fontSize={10} tickLine={false} axisLine={false} dy={10} />
+                            <YAxis stroke={chartTheme.text} fontSize={10} tickLine={false} axisLine={false} domain={[0, 6]} hide />
+                            <Tooltip contentStyle={{ backgroundColor: '#171717', border: '1px solid #333', borderRadius: '8px', color: '#fff' }} />
+                            <Legend wrapperStyle={{ fontSize: '10px', paddingTop: '10px' }} iconType="circle" />
+
+                            <Line type="monotone" dataKey="sleep" name="Сон" stroke="#818cf8" strokeWidth={2} dot={false} />
+                            <Line type="monotone" dataKey="food" name="Еда" stroke="#34d399" strokeWidth={2} dot={false} />
+                            <Line type="monotone" dataKey="stress" name="Стресс" stroke="#f472b6" strokeWidth={2} dot={false} />
+                        </LineChart>
+                    </ResponsiveContainer>
+                </div>
+            </div>
+
+            {/* Total Readiness Score Area Chart */}
+            <div className="bg-neutral-900 border border-white/5 rounded-3xl p-5 shadow-lg overflow-hidden relative">
+                <div className="flex items-center gap-2 mb-4 text-gray-300 font-bold text-sm z-10 relative">
+                    <Battery size={16} className="text-blue-400" />
+                    Общий уровень энергии
+                </div>
+                <div className="h-48 -ml-2">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={readinessData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                            <defs>
+                                <linearGradient id="colorScore" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="5%" stopColor="#60a5fa" stopOpacity={0.3} />
+                                    <stop offset="95%" stopColor="#60a5fa" stopOpacity={0} />
+                                </linearGradient>
+                            </defs>
+                            <CartesianGrid stroke={chartTheme.grid} vertical={false} strokeDasharray="3 3" />
+                            <XAxis dataKey="date" stroke={chartTheme.text} fontSize={10} tickLine={false} axisLine={false} dy={10} />
+                            <YAxis stroke={chartTheme.text} fontSize={10} tickLine={false} axisLine={false} domain={[0, 25]} />
+                            <Tooltip contentStyle={{ backgroundColor: '#171717', border: '1px solid #333', borderRadius: '8px', color: '#fff' }} />
+                            <Area type="monotone" dataKey="score" stroke="#60a5fa" fillOpacity={1} fill="url(#colorScore)" strokeWidth={3} />
+                        </AreaChart>
+                    </ResponsiveContainer>
+                </div>
+            </div>
+
+            {/* Split & Volume Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Volume Bar Chart */}
+                <div className="bg-neutral-900 border border-white/5 rounded-3xl p-5 shadow-lg">
+                    <div className="flex items-center gap-2 mb-4 text-gray-300 font-bold text-sm">
+                        <Activity size={16} className="text-emerald-400" />
+                        Объем за неделю
+                    </div>
+                    <div className="h-48 -ml-2">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={weeklyVolumeData.length > 0 ? weeklyVolumeData : [{ name: 'Нет данных', volume: 0 }]} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
+                                <CartesianGrid stroke={chartTheme.grid} vertical={false} strokeDasharray="3 3" />
+                                <XAxis
+                                    dataKey="name"
+                                    stroke={chartTheme.text}
+                                    fontSize={10}
+                                    tickLine={false}
+                                    axisLine={false}
+                                    tickFormatter={(val) => val.includes('-W') ? val.split('-W')[1] : val}
+                                    dy={10}
+                                />
+                                <YAxis stroke={chartTheme.text} fontSize={10} tickLine={false} axisLine={false} tickFormatter={(val) => `${(val / 1000).toFixed(0)} т`} />
+                                <Bar dataKey="volume" fill="#10b981" radius={[4, 4, 0, 0]} barSize={30} />
+                                <Tooltip
+                                    cursor={{ fill: 'rgba(255,255,255,0.05)' }}
+                                    contentStyle={{ backgroundColor: '#171717', border: '1px solid #333', borderRadius: '8px', color: '#fff' }}
+                                    formatter={(value: any) => [`${(value / 1000).toFixed(2)} тонн`, 'Объем']}
+                                />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </div>
+                </div>
+
+                {/* Split Distribution Pie */}
+                <div className="bg-neutral-900 border border-white/5 rounded-3xl p-5 shadow-lg">
+                    <div className="flex items-center gap-2 mb-2 text-gray-300 font-bold text-sm">
+                        <PieIcon size={16} className="text-pink-400" />
+                        Акцент Нагрузки
+                    </div>
+                    <div className="h-48 flex items-center justify-center">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                                <Pie
+                                    data={volumeDistData}
+                                    innerRadius={40}
+                                    outerRadius={70}
+                                    paddingAngle={5}
+                                    dataKey="value"
+                                >
+                                    {volumeDistData.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} stroke="rgba(0,0,0,0)" />
+                                    ))}
+                                </Pie>
+                                <Tooltip contentStyle={{ backgroundColor: '#171717', border: '1px solid #333', borderRadius: '8px', color: '#fff' }} />
+                                <Legend iconType="circle" layout="vertical" verticalAlign="middle" align="right" wrapperStyle={{ fontSize: '10px', color: '#a3a3a3' }} />
+                            </PieChart>
+                        </ResponsiveContainer>
+                    </div>
+                </div>
+            </div>
+
+            {/* Consistency Heatmap */}
+            <div className="bg-neutral-900 border border-white/5 rounded-3xl p-5 shadow-lg">
+                <div className="flex items-center gap-2 mb-4 text-gray-300 font-bold text-sm">
+                    <Calendar size={16} className="text-green-400" />
+                    Календарь Активности
+                </div>
+                <div className="flex justify-between gap-1">
+                    {heatmapData.map((day, idx) => (
+                        <div key={idx} className="flex flex-col items-center gap-1 flex-1">
+                            <div
+                                className={`w-full aspect-[4/5] rounded-md transition-all duration-500 ${day.hasWorkout
+                                        ? (day.intensity > 1 ? 'bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.4)]' : 'bg-green-500/60')
+                                        : 'bg-neutral-800'
+                                    }`}
+                                title={day.date.toDateString()}
+                            ></div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            {/* PR List */}
+            {personalRecords.length > 0 && (
+                <div className="space-y-3">
+                    <h3 className="font-bold text-white text-lg flex items-center gap-2"><Trophy size={18} className="text-yellow-500" /> Личные Рекорды (e1RM)</h3>
+                    <div className="grid gap-2">
+                        {personalRecords.map(pr => (
+                            <div key={pr.exerciseName} className="flex justify-between items-center bg-neutral-900 border border-white/5 p-4 rounded-2xl">
+                                <span className="font-bold text-gray-300 text-sm">{pr.exerciseName}</span>
+                                <div className="text-right">
+                                    <span className="font-black text-xl text-white">{pr.e1rm.toFixed(0)}</span>
+                                    <span className="text-xs text-gray-500 font-bold ml-1">КГ</span>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
         </div>
-      )}
-    </div>
-  );
+    );
 };
 
 const StatCard = ({ label, value, sub, icon, color, bg }: any) => (
