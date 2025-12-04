@@ -250,17 +250,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, program, logs, telegramU
     // --- Calendar Logic --- (Removed all calendar-related functions)
 
     const handleUpdateProgram = (updatedProgram: TrainingProgram) => {
-        // This function will be passed to ProgressView to allow calendar updates
-        // In a real app, this would update the state in App.tsx or trigger a backend sync
-        // For now, we can't easily update App state from here without a callback prop from App
-        // But since we are just moving the logic, we might need to assume App handles it or pass a callback
-        // For this refactor, we'll assume read-only for now or that we need to lift state up later if editing is crucial
-        // EDIT: Actually, Dashboard receives 'program' as a prop, but can't mutate it directly up the tree without a callback.
-        // However, the original Dashboard didn't seem to have an onUpdateProgram prop from App.
-        // It seems the original code was missing the actual update logic propagation to App.tsx?
-        // Let's check App.tsx... App.tsx passes `program`.
-        // We should add `onUpdateProgram` to Dashboard props if we want to support editing.
-        // For now, let's keep it simple and just render.
+        // Placeholder for future update logic
     };
 
     const renderContent = () => {
