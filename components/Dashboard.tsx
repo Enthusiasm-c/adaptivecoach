@@ -174,6 +174,43 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
     // Calculate muscle focus based on the *next* workout, even if not today
     const muscleFocus = getMuscleFocus(nextWorkout);
 
+    // Check if workout was completed today
+    const todayStr = new Date().toDateString();
+    const todaysWorkout = logs.find(l => new Date(l.date).toDateString() === todayStr);
+    const hasCompletedToday = !!todaysWorkout;
+
+    // Calculate improvements from today's workout
+    const getTodayImprovements = () => {
+        if (!todaysWorkout) return [];
+        const improvements: string[] = [];
+
+        // Compare with previous workouts to find PRs
+        const prevLogs = logs.filter(l => new Date(l.date).toDateString() !== todayStr);
+
+        todaysWorkout.completedExercises?.forEach(ex => {
+            const maxWeightToday = Math.max(...(ex.completedSets?.map(s => s.weight || 0) || [0]));
+
+            // Find previous max for this exercise
+            let prevMax = 0;
+            prevLogs.forEach(log => {
+                log.completedExercises?.forEach(prevEx => {
+                    if (prevEx.name === ex.name) {
+                        const prevWeight = Math.max(...(prevEx.completedSets?.map(s => s.weight || 0) || [0]));
+                        if (prevWeight > prevMax) prevMax = prevWeight;
+                    }
+                });
+            });
+
+            if (maxWeightToday > prevMax && prevMax > 0) {
+                improvements.push(`${ex.name}: +${(maxWeightToday - prevMax).toFixed(1)} кг`);
+            }
+        });
+
+        return improvements.slice(0, 3); // Max 3 improvements
+    };
+
+    const todayImprovements = getTodayImprovements();
+
 
     if (activeWorkout) {
         const workout = program.sessions.find(s => s.name === activeWorkout);
@@ -323,24 +360,9 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
                     </div>
                 </div>
 
-                {/* Quick Action Grid (New Feature for Richness) */}
+                {/* Quick Action Grid */}
                 <div className="col-span-2 overflow-x-auto no-scrollbar -mx-4 px-4 pb-2">
                     <div className="flex gap-3 w-max">
-                        <button
-                            onClick={onOpenChat}
-                            className="flex items-center gap-2 bg-neutral-900 border border-white/10 rounded-xl px-4 py-3 whitespace-nowrap active:scale-95 transition"
-                        >
-                            <MessageSquarePlus size={16} className="text-indigo-400" />
-                            <span className="text-xs font-bold text-gray-300">Чат с тренером</span>
-                        </button>
-
-                        <button
-                            onClick={() => setActiveView('plan')}
-                            className="flex items-center gap-2 bg-neutral-900 border border-white/10 rounded-xl px-4 py-3 whitespace-nowrap active:scale-95 transition"
-                        >
-                            <CalendarIcon size={16} className="text-violet-400" />
-                            <span className="text-xs font-bold text-gray-300">Изменить график</span>
-                        </button>
                         {isTodayWorkoutDay && (
                             <button
                                 onClick={() => setWorkoutToPreview(nextWorkout)}
@@ -350,6 +372,20 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
                                 <span className="text-xs font-bold text-gray-300">Обзор тренировки</span>
                             </button>
                         )}
+                        <button
+                            onClick={() => setActiveView('progress')}
+                            className="flex items-center gap-2 bg-neutral-900 border border-white/10 rounded-xl px-4 py-3 whitespace-nowrap active:scale-95 transition"
+                        >
+                            <BarChart2 size={16} className="text-violet-400" />
+                            <span className="text-xs font-bold text-gray-300">Статистика</span>
+                        </button>
+                        <button
+                            onClick={() => setActiveView('squad')}
+                            className="flex items-center gap-2 bg-neutral-900 border border-white/10 rounded-xl px-4 py-3 whitespace-nowrap active:scale-95 transition"
+                        >
+                            <Users size={16} className="text-pink-400" />
+                            <span className="text-xs font-bold text-gray-300">Команда</span>
+                        </button>
                     </div>
                 </div>
 
@@ -446,6 +482,84 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
                                         Обзор
                                     </button>
                                 </div>
+                            </div>
+                        </div>
+                    </div>
+                ) : hasCompletedToday && todaysWorkout ? (
+                    /* COMPLETED WORKOUT CARD */
+                    <div className="col-span-2 relative group mt-2">
+                        <div className="absolute inset-0 bg-gradient-to-r from-green-600 to-emerald-600 rounded-[2rem] blur-xl opacity-20"></div>
+                        <div className="relative bg-[#111] border border-white/10 rounded-[2rem] p-6 overflow-hidden">
+
+                            <div className="relative z-10">
+                                <div className="flex justify-between items-start mb-4">
+                                    <div>
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-green-500/20 text-green-300 text-[10px] font-bold uppercase tracking-wider">
+                                                <Check size={10} /> Тренировка завершена
+                                            </span>
+                                        </div>
+                                        <h2 className="text-3xl font-black text-white leading-tight mb-2">{todaysWorkout.sessionId}</h2>
+                                        <p className="text-gray-400 text-sm mb-2">
+                                            Отличная работа! Ты стал сильнее.
+                                        </p>
+                                    </div>
+                                    <div className="w-16 h-16 bg-green-500/10 rounded-full flex items-center justify-center">
+                                        <Trophy size={32} className="text-green-500" />
+                                    </div>
+                                </div>
+
+                                {/* Workout Stats */}
+                                <div className="flex gap-2 mb-4 overflow-x-auto no-scrollbar">
+                                    <div className="bg-neutral-900 border border-white/5 rounded-xl p-3 min-w-[100px]">
+                                        <Clock size={16} className="text-blue-400 mb-2" />
+                                        <p className="text-xs font-bold text-white">
+                                            {todaysWorkout.duration ? `${Math.round(todaysWorkout.duration / 60)} мин` : '—'}
+                                        </p>
+                                        <p className="text-[10px] text-gray-500">Время</p>
+                                    </div>
+                                    <div className="bg-neutral-900 border border-white/5 rounded-xl p-3 min-w-[100px]">
+                                        <Dumbbell size={16} className="text-violet-400 mb-2" />
+                                        <p className="text-xs font-bold text-white">
+                                            {todaysWorkout.completedExercises?.length || 0}
+                                        </p>
+                                        <p className="text-[10px] text-gray-500">Упражнений</p>
+                                    </div>
+                                    <div className="bg-neutral-900 border border-white/5 rounded-xl p-3 min-w-[100px]">
+                                        <TrendingUp size={16} className="text-green-400 mb-2" />
+                                        <p className="text-xs font-bold text-white">
+                                            {(calculateWorkoutVolume(todaysWorkout) / 1000).toFixed(1)}т
+                                        </p>
+                                        <p className="text-[10px] text-gray-500">Объём</p>
+                                    </div>
+                                </div>
+
+                                {/* Improvements */}
+                                {todayImprovements.length > 0 && (
+                                    <div className="mb-4 bg-green-500/10 border border-green-500/20 rounded-xl p-3">
+                                        <p className="text-xs font-bold text-green-400 mb-2 flex items-center gap-1">
+                                            <Sparkles size={12} /> Прогресс сегодня
+                                        </p>
+                                        <div className="space-y-1">
+                                            {todayImprovements.map((imp, idx) => (
+                                                <p key={idx} className="text-xs text-green-300">{imp}</p>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Feedback Summary */}
+                                {todaysWorkout.feedback && (
+                                    <div className="mb-4 bg-neutral-900/50 border border-white/5 rounded-xl p-3">
+                                        <p className="text-xs text-gray-400">
+                                            Самочувствие: <span className="text-white font-bold">
+                                                {todaysWorkout.feedback.perceivedEffort === 'easy' ? 'Легко' :
+                                                 todaysWorkout.feedback.perceivedEffort === 'moderate' ? 'Умеренно' :
+                                                 todaysWorkout.feedback.perceivedEffort === 'hard' ? 'Тяжело' : '—'}
+                                            </span>
+                                        </p>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>
