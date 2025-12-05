@@ -75,7 +75,7 @@ const SquadView: React.FC<SquadViewProps> = ({ telegramUser }) => {
 
     const handleAddFriend = async () => {
         if (!searchResult) return;
-        hapticFeedback.impactMedium();
+        hapticFeedback.impactOccurred('medium');
         await socialService.addFriend(searchResult);
         setShowAddFriend(false);
         setSearchQuery('');
@@ -90,7 +90,7 @@ const SquadView: React.FC<SquadViewProps> = ({ telegramUser }) => {
     };
 
     const handleNudge = async (memberId: string, memberName: string) => {
-        hapticFeedback.impactMedium();
+        hapticFeedback.impactOccurred('medium');
         await socialService.nudgeFriend(memberId);
 
         if (window.Telegram?.WebApp) {
@@ -101,7 +101,7 @@ const SquadView: React.FC<SquadViewProps> = ({ telegramUser }) => {
     };
 
     const handleInvite = () => {
-        hapticFeedback.impactLight();
+        hapticFeedback.impactOccurred('light');
         const inviteLink = "https://t.me/AdaptiveCoachBot?start=squad_123";
         if (window.Telegram?.WebApp) {
             window.Telegram.WebApp.openTelegramLink(`https://t.me/share/url?url=${inviteLink}&text=Вступай в мой отряд в Adaptive Coach!`);
@@ -299,7 +299,10 @@ const SquadView: React.FC<SquadViewProps> = ({ telegramUser }) => {
 
                             {/* Search Result */}
                             {searchResult ? (
-                                <div className="bg-neutral-800/50 rounded-xl p-3 border border-white/10 flex items-center justify-between animate-fade-in">
+                                <div
+                                    onClick={handleAddFriend}
+                                    className="bg-neutral-800/50 rounded-xl p-3 border border-white/10 flex items-center justify-between animate-fade-in cursor-pointer hover:bg-neutral-800 transition active:scale-95"
+                                >
                                     <div className="flex items-center gap-3">
                                         <div className="w-10 h-10 rounded-full bg-indigo-500/20 flex items-center justify-center text-indigo-400 font-bold">
                                             {searchResult.name[0]}
@@ -310,7 +313,6 @@ const SquadView: React.FC<SquadViewProps> = ({ telegramUser }) => {
                                         </div>
                                     </div>
                                     <button
-                                        onClick={handleAddFriend}
                                         className="bg-green-600 text-white p-2 rounded-lg hover:bg-green-500 transition"
                                     >
                                         <UserPlus size={18} />
