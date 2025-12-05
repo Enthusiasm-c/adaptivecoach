@@ -134,9 +134,14 @@ const SquadView: React.FC<SquadViewProps> = ({ telegramUser }) => {
 
     const handleInvite = () => {
         hapticFeedback.impactOccurred('light');
-        const inviteLink = "https://t.me/sensei_training_bot?start=squad_123";
+        const telegramUserId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id;
+        const inviteLink = `https://t.me/sensei_training_bot?start=ref_${telegramUserId || 'unknown'}`;
+        const text = 'Присоединяйся к Sensei Training! Тренируемся вместе 💪';
+
         if (window.Telegram?.WebApp) {
-            window.Telegram.WebApp.openTelegramLink(`https://t.me/share/url?url=${inviteLink}&text=Вступай в мой отряд в Sensei Training!`);
+            window.Telegram.WebApp.openTelegramLink(
+                `https://t.me/share/url?url=${encodeURIComponent(inviteLink)}&text=${encodeURIComponent(text)}`
+            );
         } else {
             navigator.clipboard.writeText(inviteLink);
             alert("Ссылка скопирована!");
@@ -458,8 +463,17 @@ const SquadView: React.FC<SquadViewProps> = ({ telegramUser }) => {
                                     ))}
                                 </div>
                             ) : searchQuery && !isSearching && (
-                                <div className="text-center text-gray-500 text-sm py-4">
-                                    Пользователи не найдены
+                                <div className="text-center py-6">
+                                    <p className="text-gray-400 mb-2">Пользователь не найден</p>
+                                    <p className="text-sm text-gray-500 mb-4">
+                                        Возможно, друг ещё не использует Sensei Training
+                                    </p>
+                                    <button
+                                        onClick={handleInvite}
+                                        className="px-5 py-2.5 bg-indigo-600 text-white rounded-xl font-bold text-sm hover:bg-indigo-500 transition"
+                                    >
+                                        Пригласить друга
+                                    </button>
                                 </div>
                             )}
 
