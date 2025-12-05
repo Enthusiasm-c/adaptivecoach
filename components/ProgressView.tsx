@@ -1,6 +1,6 @@
 
-import React, { useMemo } from 'react';
-import { WorkoutLog, TrainingProgram, ReadinessData, WorkoutCompletion } from '../types';
+import React, { useMemo, useState } from 'react';
+import { WorkoutLog, TrainingProgram, ReadinessData, WorkoutCompletion, OnboardingProfile } from '../types';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
     AreaChart, Area, Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
@@ -11,14 +11,17 @@ import {
     calculatePersonalRecords, calculateReadinessHistory, calculateMovementPatterns, getHeatmapData,
     calculateLevel, getStrengthProgression, getVolumeDistribution
 } from '../utils/progressUtils';
-import { Dumbbell, Flame, TrendingUp, Trophy, Battery, PieChart as PieIcon, Calendar, Eye, Crown, Star, Activity, HeartPulse, ChevronLeft, ChevronRight, Check } from 'lucide-react';
+import { Dumbbell, Flame, TrendingUp, Trophy, Battery, PieChart as PieIcon, Calendar, Eye, Crown, Star, Activity, HeartPulse, ChevronLeft, ChevronRight, Check, Target, BarChart2 } from 'lucide-react';
 import { hapticFeedback } from '../utils/hapticUtils';
+import StrengthAnalysisView from './StrengthAnalysisView';
 
 interface ProgressViewProps {
     logs: WorkoutLog[];
     program: TrainingProgram;
     onUpdateProgram?: (program: TrainingProgram) => void;
     preferredDays?: number[];
+    profile?: OnboardingProfile;
+    onOpenPremium?: () => void;
 }
 
 // --- Mock Data Generator ---
@@ -99,8 +102,9 @@ const generateMockLogs = (): WorkoutLog[] => {
     return logs;
 };
 
-const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProgram, preferredDays = [] }) => {
+const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProgram, preferredDays = [], profile, onOpenPremium }) => {
     const isDemoMode = logs.length === 0;
+    const [activeTab, setActiveTab] = useState<'stats' | 'analysis'>('stats');
 
     const displayLogs = useMemo(() => {
         return isDemoMode ? generateMockLogs() : logs;
@@ -312,8 +316,46 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
 
             <h2 className="text-2xl font-bold text-white mb-4 px-2">Мой Прогресс</h2>
 
-            {/* Calendar Section */}
-            {renderCalendar()}
+            {/* Tab Switcher */}
+            <div className="flex p-1 bg-neutral-900 rounded-xl border border-white/5 mx-1">
+                <button
+                    onClick={() => {
+                        hapticFeedback.selectionChanged();
+                        setActiveTab('stats');
+                    }}
+                    className={`flex-1 py-2.5 rounded-lg font-bold text-xs transition-all flex items-center justify-center gap-1.5 ${activeTab === 'stats' ? 'bg-neutral-800 text-white shadow-lg' : 'text-gray-500'
+                        }`}
+                >
+                    <BarChart2 size={14} /> Статистика
+                </button>
+                <button
+                    onClick={() => {
+                        hapticFeedback.selectionChanged();
+                        setActiveTab('analysis');
+                    }}
+                    className={`flex-1 py-2.5 rounded-lg font-bold text-xs transition-all flex items-center justify-center gap-1.5 ${activeTab === 'analysis' ? 'bg-indigo-600 text-white shadow-lg' : 'text-gray-500'
+                        }`}
+                >
+                    <Target size={14} /> Анализ
+                    {!profile?.isPro && <Crown size={10} className="text-yellow-400" />}
+                </button>
+            </div>
+
+            {/* Analysis Tab */}
+            {activeTab === 'analysis' && profile && (
+                <StrengthAnalysisView
+                    profile={profile}
+                    logs={logs}
+                    isPro={profile.isPro || false}
+                    onUpgrade={onOpenPremium || (() => {})}
+                />
+            )}
+
+            {/* Stats Tab Content */}
+            {activeTab === 'stats' && (
+                <>
+                    {/* Calendar Section */}
+                    {renderCalendar()}
 
             {/* Demo Mode Banner */}
             {isDemoMode && (
@@ -561,6 +603,8 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
                         ))}
                     </div>
                 </div>
+            )}
+                </>
             )}
         </div>
     );

@@ -210,3 +210,68 @@ export interface ReadinessData {
   score: number; // Calculated total
   status: 'Green' | 'Yellow' | 'Red';
 }
+
+// --- Strength Analysis (Pro Feature) ---
+
+export type StrengthLevel = 'untrained' | 'beginner' | 'intermediate' | 'advanced' | 'elite';
+
+export interface StrengthAnalysis {
+  exerciseName: string;
+  exerciseNameRu: string;
+  e1rm: number;
+  relativeStrength: number; // e1rm / bodyweight
+  level: StrengthLevel;
+  percentile: number; // 0-100
+  nextLevelTarget: number; // weight needed for next level
+  trend: 'improving' | 'stable' | 'declining';
+}
+
+export interface ImbalanceReport {
+  type: 'ratio' | 'push_pull' | 'anterior_posterior';
+  description: string;
+  severity: 'minor' | 'moderate' | 'severe';
+  recommendation: string;
+  relatedExercises: string[];
+}
+
+export interface PainPattern {
+  location: string;
+  frequency: number;
+  lastOccurrence: string;
+  associatedExercises: string[];
+  movementPattern: string;
+}
+
+export interface PlateauDetection {
+  exerciseName: string;
+  weeksStuck: number;
+  lastPR: string;
+  currentE1rm: number;
+}
+
+export interface ExerciseSubstitution {
+  original: string;
+  replacement: string;
+  count: number;
+  lastDate: string;
+}
+
+export interface ReadinessPattern {
+  chronicLowSleep: boolean;
+  highStress: boolean;
+  averageSleep: number;
+  averageStress: number;
+  averageSoreness: number;
+}
+
+export interface StrengthInsightsData {
+  strengthAnalysis: StrengthAnalysis[];
+  imbalances: ImbalanceReport[];
+  painPatterns: PainPattern[];
+  plateaus: PlateauDetection[];
+  substitutions: ExerciseSubstitution[];
+  readinessPatterns: ReadinessPattern;
+  overallLevel: StrengthLevel;
+  aiInsights?: string;
+  lastUpdated: string;
+}

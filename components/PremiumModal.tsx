@@ -152,12 +152,12 @@ const PremiumModal: React.FC<PremiumModalProps> = ({ onClose, onSuccess, isPro =
                     <div className="bg-neutral-900/50 rounded-2xl p-4 border border-white/5 text-center mb-4">
                         <p className="text-gray-400 text-xs uppercase font-bold mb-1">Специальная цена</p>
                         <div className="flex items-center justify-center gap-2">
-                            <span className="text-3xl font-black text-white">250</span>
+                            <span className="text-3xl font-black text-white">500</span>
                             <div className="flex items-center gap-1 bg-indigo-500/20 px-2 py-0.5 rounded text-indigo-300 text-xs font-bold">
                                 <Crown size={12} fill="currentColor" /> Stars
                             </div>
                         </div>
-                        <p className="text-xs text-gray-500 mt-1">~ $5.00 / месяц</p>
+                        <p className="text-xs text-gray-500 mt-1">~ $10.00 / месяц</p>
                     </div>
 
                     <button

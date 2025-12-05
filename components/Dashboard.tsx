@@ -288,7 +288,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
         }
 
         if (activeView === 'progress') {
-            return <ProgressView logs={logs} program={program} preferredDays={profile.preferredDays} />;
+            return <ProgressView logs={logs} program={program} preferredDays={profile.preferredDays} profile={profile} onOpenPremium={() => setShowPremiumModal(true)} />;
         }
 
         if (activeView === 'settings') {

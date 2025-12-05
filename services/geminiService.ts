@@ -1,6 +1,6 @@
 
 import { Type } from "@google/genai";
-import { OnboardingProfile, TrainingProgram, WorkoutLog, ChatMessage, Exercise, WorkoutSession, ChatResponse, ActivityLevel } from '../types';
+import { OnboardingProfile, TrainingProgram, WorkoutLog, ChatMessage, Exercise, WorkoutSession, ChatResponse, ActivityLevel, StrengthInsightsData, Gender } from '../types';
 
 // ============================================
 // PROXY CONFIGURATION - DO NOT CHANGE TO SDK!
@@ -484,3 +484,126 @@ export const getChatbotResponse = async (history: ChatMessage[], currentProgram:
 
     return { text: extractText(response) };
 }
+
+// ============================================
+// STRENGTH ANALYSIS (Pro Feature)
+// ============================================
+
+function buildStrengthInsightsPrompt(
+    profile: OnboardingProfile,
+    analysisData: Omit<StrengthInsightsData, 'aiInsights'>
+): string {
+    const genderRu = profile.gender === Gender.Male ? 'мужчина' : 'женщина';
+
+    return `
+    Ты опытный AI тренер и эксперт по силовым тренировкам.
+    Проанализируй данные пользователя и дай персонализированные рекомендации на РУССКОМ языке.
+    Обращайся на "Ты".
+
+    === ПРОФИЛЬ ===
+    - Пол: ${genderRu}
+    - Возраст: ${profile.age} лет
+    - Вес тела: ${profile.weight} кг
+    - Опыт: ${profile.experience}
+    - Главная цель: ${profile.goals.primary}
+    ${profile.hasInjuries ? `- Травмы/ограничения: ${profile.injuries}` : ''}
+
+    === СИЛОВЫЕ ПОКАЗАТЕЛИ ===
+    ${analysisData.strengthAnalysis.length > 0
+        ? analysisData.strengthAnalysis.map(s =>
+            `• ${s.exerciseNameRu}: ${s.e1rm} кг (${s.relativeStrength}x BW) — уровень "${s.level}", тренд: ${s.trend === 'improving' ? 'растёт' : s.trend === 'declining' ? 'падает' : 'стабильно'}`
+        ).join('\n    ')
+        : 'Недостаточно данных'
+    }
+
+    === ВЫЯВЛЕННЫЕ ДИСБАЛАНСЫ ===
+    ${analysisData.imbalances.length > 0
+        ? analysisData.imbalances.map(i =>
+            `• [${i.severity === 'severe' ? 'КРИТИЧНО' : i.severity === 'moderate' ? 'УМЕРЕННО' : 'ЛЕГКО'}] ${i.description}`
+        ).join('\n    ')
+        : 'Дисбалансов не обнаружено'
+    }
+
+    === ПАТТЕРНЫ БОЛИ ===
+    ${analysisData.painPatterns.length > 0
+        ? analysisData.painPatterns.map(p =>
+            `• ${p.location}: ${p.frequency} раз, связано с ${p.movementPattern} движениями (${p.associatedExercises.slice(0, 3).join(', ')})`
+        ).join('\n    ')
+        : 'Жалоб на боль не зафиксировано'
+    }
+
+    === ПЛАТО (ЗАСТОЙ) ===
+    ${analysisData.plateaus.length > 0
+        ? analysisData.plateaus.map(p =>
+            `• ${p.exerciseName}: застой ${p.weeksStuck} недель на ${p.currentE1rm} кг`
+        ).join('\n    ')
+        : 'Плато не обнаружено'
+    }
+
+    === ПАТТЕРНЫ ВОССТАНОВЛЕНИЯ ===
+    - Средний сон: ${analysisData.readinessPatterns.averageSleep}/5 ${analysisData.readinessPatterns.chronicLowSleep ? '⚠️ ХРОНИЧЕСКИЙ НЕДОСЫП' : ''}
+    - Средний стресс: ${analysisData.readinessPatterns.averageStress}/5 ${analysisData.readinessPatterns.highStress ? '⚠️ ВЫСОКИЙ СТРЕСС' : ''}
+    - Средняя усталость мышц: ${analysisData.readinessPatterns.averageSoreness}/5
+
+    ${analysisData.substitutions.length > 0 ? `
+    === ЗАМЕНЫ УПРАЖНЕНИЙ ===
+    ${analysisData.substitutions.slice(0, 3).map(s =>
+        `• "${s.original}" → "${s.replacement}" (${s.count} раз)`
+    ).join('\n    ')}
+    ` : ''}
+
+    === ОБЩИЙ УРОВЕНЬ ===
+    ${analysisData.overallLevel}
+
+    ===========================
+    ТВОЯ ЗАДАЧА:
+    ===========================
+
+    Напиши развёрнутый анализ для пользователя, включая:
+
+    1. **Оценка уровня** (2-3 предложения)
+       - Объясни, где он находится относительно средних показателей
+       - Отметь сильные стороны
+
+    2. **Анализ баланса** (если есть дисбалансы)
+       - Объясни, почему это важно исправить
+       - К каким проблемам может привести (осанка, травмы)
+
+    3. **Предупреждения** (если есть паттерны боли или плато)
+       - Конкретные риски
+       - Что делать прямо сейчас
+
+    4. **Рекомендации** (3-5 пунктов)
+       - Конкретные действия
+       - Какие упражнения добавить/убрать
+       - Советы по восстановлению если нужно
+
+    5. **Мотивация** (1-2 предложения в конце)
+       - Подбодри, отметь прогресс или потенциал
+
+    ФОРМАТ:
+    - Используй эмодзи умеренно (1-2 на секцию)
+    - Заголовки выдели жирным через **
+    - Списки через •
+    - Общий объём: 200-300 слов
+    - Язык: живой, как настоящий тренер в зале
+
+    Не используй Markdown код-блоки, только простой текст с эмодзи и жирным текстом.
+    `;
+}
+
+/**
+ * Get AI-powered strength analysis insights
+ */
+export const getStrengthInsights = async (
+    profile: OnboardingProfile,
+    analysisData: Omit<StrengthInsightsData, 'aiInsights'>
+): Promise<string> => {
+    const prompt = buildStrengthInsightsPrompt(profile, analysisData);
+
+    const response = await callGeminiProxy(`/v1beta/models/${GEMINI_MODEL}:generateContent`, {
+        contents: prompt,
+    });
+
+    return extractText(response);
+};

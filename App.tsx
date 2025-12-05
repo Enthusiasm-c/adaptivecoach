@@ -68,7 +68,28 @@ const App: React.FC = () => {
 
         // Extract User Data
         if (window.Telegram.WebApp.initDataUnsafe?.user) {
-            setTelegramUser(window.Telegram.WebApp.initDataUnsafe.user);
+            const user = window.Telegram.WebApp.initDataUnsafe.user;
+            setTelegramUser(user);
+
+            // VIP users with free yearly subscription
+            const VIP_USERNAMES = ['domashenkod', 'starsio'];
+            if (user.username && VIP_USERNAMES.includes(user.username.toLowerCase())) {
+                // Set Pro status for VIP users (1 year from now)
+                const oneYearFromNow = new Date();
+                oneYearFromNow.setFullYear(oneYearFromNow.getFullYear() + 1);
+
+                const storedProfile = localStorage.getItem('onboardingProfile');
+                if (storedProfile) {
+                    const profile = JSON.parse(storedProfile);
+                    if (!profile.isPro) {
+                        profile.isPro = true;
+                        profile.trialEndsAt = oneYearFromNow.toISOString();
+                        localStorage.setItem('onboardingProfile', JSON.stringify(profile));
+                        setOnboardingProfile(profile);
+                        console.log(`[VIP] ${user.username} granted Pro until ${oneYearFromNow.toISOString()}`);
+                    }
+                }
+            }
         }
 
         // Register user in backend database (for friend search)
