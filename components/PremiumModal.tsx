@@ -157,7 +157,7 @@ const PremiumModal: React.FC<PremiumModalProps> = ({ onClose, onSuccess, isPro =
                                 <Crown size={12} fill="currentColor" /> Stars
                             </div>
                         </div>
-                        <p className="text-xs text-gray-500 mt-1">~ $10.00 / месяц</p>
+                        <p className="text-xs text-gray-500 mt-1">за 30 дней</p>
                     </div>
 
                     <button
@@ -165,7 +165,7 @@ const PremiumModal: React.FC<PremiumModalProps> = ({ onClose, onSuccess, isPro =
                         className="w-full py-4 bg-gradient-to-r from-indigo-600 to-violet-600 rounded-xl font-bold text-white shadow-lg shadow-indigo-500/20 active:scale-95 transition-transform flex items-center justify-center gap-2"
                     >
                         <Crown size={18} fill="currentColor" />
-                        Подключить Pro
+                        Подключить Pro на 30 дней
                     </button>
 
                     <p className="text-[10px] text-gray-600 text-center mt-3">
