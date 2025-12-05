@@ -48,6 +48,30 @@ export interface KnownWeight {
   weight: number;
 }
 
+export interface FriendProfile {
+  id: string;
+  name: string;
+  photoUrl?: string;
+  level: number;
+  streak: number;
+  totalVolume: number; // kg
+  lastActive: string; // ISO date
+  isOnline?: boolean;
+}
+
+export interface ActivityFeedItem {
+  id: string;
+  userId: string;
+  userName: string;
+  userPhoto?: string;
+  type: 'workout_finish' | 'level_up' | 'badge_earned' | 'challenge_join';
+  title: string;
+  description: string;
+  timestamp: number;
+  likes: number;
+  likedByMe?: boolean;
+}
+
 export interface OnboardingProfile {
   gender: Gender;
   age: number;
