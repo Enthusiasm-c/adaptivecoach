@@ -118,8 +118,15 @@ export interface WorkoutSession {
   exercises: Exercise[];
 }
 
+export interface ScheduleItem {
+  day: string;
+  workoutId: string;
+  isCompleted: boolean;
+}
+
 export interface TrainingProgram {
   sessions: WorkoutSession[];
+  schedule?: ScheduleItem[];
 }
 
 export interface CompletedSet {

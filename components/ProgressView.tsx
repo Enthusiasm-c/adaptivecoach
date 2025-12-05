@@ -177,7 +177,7 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
     const moveSession = (from: Date, to: Date) => {
         if (!program || !onUpdateProgram) return;
 
-        const newSchedule = [...program.schedule];
+        const newSchedule = [...(program.schedule || [])];
         const fromDateStr = from.toISOString().split('T')[0];
         const toDateStr = to.toISOString().split('T')[0];
 
@@ -195,7 +195,7 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
         if (!program || !onUpdateProgram) return;
 
         const dateStr = date.toISOString().split('T')[0];
-        let newSchedule = [...program.schedule];
+        let newSchedule = [...(program.schedule || [])];
 
         if (status?.type === 'planned') {
             // Remove session
@@ -203,8 +203,8 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
         } else {
             // Add session (find next available workout type or default)
             // For simplicity, just cycling through available workouts or picking first
-            const nextWorkout = program.workouts[0];
-            newSchedule.push({ day: dateStr, workoutId: nextWorkout.id, isCompleted: false });
+            const nextWorkout = program.sessions[0];
+            newSchedule.push({ day: dateStr, workoutId: nextWorkout.name, isCompleted: false });
         }
 
         onUpdateProgram({ ...program, schedule: newSchedule });
@@ -255,7 +255,7 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
 
                         // Check status
                         let status = null;
-                        const scheduled = program?.schedule.find(s => s.day === dateStr);
+                        const scheduled = (program?.schedule || []).find(s => s.day === dateStr);
                         const log = logs.find(l => l.date.split('T')[0] === dateStr);
 
                         if (log) {
