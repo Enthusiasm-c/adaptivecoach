@@ -1,7 +1,8 @@
 
 import React, { useState } from 'react';
 import { OnboardingProfile, TelegramUser, Goal } from '../types';
-import { Trash2, Save, User, LogOut, Target, Calendar, Clock, CreditCard, Star, Check } from 'lucide-react';
+import { Trash2, Save, User, LogOut, Target, Calendar, Clock, CreditCard, Star, Check, Award } from 'lucide-react';
+import BadgesView from './BadgesView';
 
 interface SettingsViewProps {
     profile: OnboardingProfile;
@@ -17,9 +18,10 @@ const SettingsView: React.FC<SettingsViewProps> = ({ profile, telegramUser, onUp
     const [timePerWorkout, setTimePerWorkout] = useState(profile.timePerWorkout);
     const [primaryGoal, setPrimaryGoal] = useState(profile.goals.primary);
     
-    const [activeTab, setActiveTab] = useState<'profile' | 'subscription'>('profile');
-    
+    const [activeTab, setActiveTab] = useState<'profile' | 'badges' | 'subscription'>('profile');
+
     const [isConfirmingReset, setIsConfirmingReset] = useState(false);
+    const [showBadgesModal, setShowBadgesModal] = useState(false);
 
     const handleSave = () => {
         onUpdateProfile({
@@ -40,17 +42,23 @@ const SettingsView: React.FC<SettingsViewProps> = ({ profile, telegramUser, onUp
 
             {/* Tab Switcher */}
             <div className="flex p-1 bg-neutral-900 rounded-2xl mb-6 border border-white/5">
-                <button 
+                <button
                     onClick={() => setActiveTab('profile')}
                     className={`flex-1 py-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 ${activeTab === 'profile' ? 'bg-neutral-800 text-white shadow-lg' : 'text-gray-500'}`}
                 >
                     <User size={16} /> Профиль
                 </button>
-                <button 
+                <button
+                    onClick={() => setActiveTab('badges')}
+                    className={`flex-1 py-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 ${activeTab === 'badges' ? 'bg-amber-600 text-white shadow-lg' : 'text-gray-500'}`}
+                >
+                    <Award size={16} /> Бейджи
+                </button>
+                <button
                     onClick={() => setActiveTab('subscription')}
                     className={`flex-1 py-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 ${activeTab === 'subscription' ? 'bg-indigo-600 text-white shadow-lg' : 'text-gray-500'}`}
                 >
-                    <Star size={16} /> Подписка
+                    <Star size={16} /> Pro
                 </button>
             </div>
 
@@ -210,6 +218,25 @@ const SettingsView: React.FC<SettingsViewProps> = ({ profile, telegramUser, onUp
                         )}
                     </section>
                 </div>
+            )}
+
+            {/* Badges Content */}
+            {activeTab === 'badges' && (
+                <div className="animate-slide-up">
+                    <button
+                        onClick={() => setShowBadgesModal(true)}
+                        className="w-full bg-gradient-to-r from-amber-600 to-orange-600 text-white font-bold py-4 rounded-2xl flex items-center justify-center gap-2 hover:scale-[1.02] transition-transform shadow-lg mb-6"
+                    >
+                        <Award size={20} /> Открыть все достижения
+                    </button>
+                    <p className="text-center text-gray-500 text-sm">
+                        Выполняйте тренировки и получайте уникальные бейджи за ваши достижения!
+                    </p>
+                </div>
+            )}
+
+            {showBadgesModal && (
+                <BadgesView onClose={() => setShowBadgesModal(false)} />
             )}
 
             {/* Subscription Content */}
