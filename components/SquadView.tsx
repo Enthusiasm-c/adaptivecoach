@@ -4,6 +4,7 @@ import { hapticFeedback } from '../utils/hapticUtils';
 import { TelegramUser, FriendProfile, ActivityFeedItem } from '../types';
 import { socialService } from '../services/socialService';
 import SkeletonLoader from './SkeletonLoader';
+import FriendProfileModal from './FriendProfileModal';
 
 interface SquadViewProps {
     telegramUser: TelegramUser | null;
@@ -114,6 +115,15 @@ const SquadView: React.FC<SquadViewProps> = ({ telegramUser }) => {
     // Sort members by Total Volume (as a proxy for progress score for now)
     const sortedMembers = [...friends].sort((a, b) => b.totalVolume - a.totalVolume);
 
+    // Friend Profile Modal State
+    const [selectedFriend, setSelectedFriend] = useState<FriendProfile | null>(null);
+
+    const handleFriendClick = (friend: FriendProfile) => {
+        if (friend.id === 'me') return; // Don't open for self (or maybe open own profile later)
+        hapticFeedback.selectionChanged();
+        setSelectedFriend(friend);
+    };
+
     return (
         <div className="pb-32 animate-fade-in px-4 pt-[env(safe-area-inset-top)] relative">
 
@@ -160,7 +170,11 @@ const SquadView: React.FC<SquadViewProps> = ({ telegramUser }) => {
                         </div>
                     ) : (
                         sortedMembers.map((member, index) => (
-                            <div key={member.id} className="p-4 flex items-center gap-4 hover:bg-white/5 transition">
+                            <div
+                                key={member.id}
+                                onClick={() => handleFriendClick(member)}
+                                className={`p-4 flex items-center gap-4 hover:bg-white/5 transition ${member.id !== 'me' ? 'cursor-pointer active:bg-white/10' : ''}`}
+                            >
                                 {/* Rank */}
                                 <div className={`w-6 text-center font-black text-lg ${index === 0 ? 'text-yellow-500' : index === 1 ? 'text-gray-300' : index === 2 ? 'text-amber-700' : 'text-gray-600'}`}>
                                     {index + 1}
@@ -200,7 +214,10 @@ const SquadView: React.FC<SquadViewProps> = ({ telegramUser }) => {
                                 {/* Action (Nudge) */}
                                 {member.id !== 'me' && (
                                     <button
-                                        onClick={() => handleNudge(member.id, member.name)}
+                                        onClick={(e) => {
+                                            e.stopPropagation(); // Prevent opening modal
+                                            handleNudge(member.id, member.name);
+                                        }}
                                         className="p-2 rounded-full bg-neutral-800 text-gray-400 hover:text-yellow-400 hover:bg-yellow-400/10 transition active:scale-95"
                                         title="Пнуть!"
                                     >
@@ -224,7 +241,14 @@ const SquadView: React.FC<SquadViewProps> = ({ telegramUser }) => {
                         </>
                     ) : feed.length > 0 ? (
                         feed.map(item => (
-                            <div key={item.id} className="bg-neutral-900/50 border border-white/5 rounded-2xl p-4 flex gap-3">
+                            <div
+                                key={item.id}
+                                onClick={() => {
+                                    const friend = friends.find(f => f.id === item.userId);
+                                    if (friend) handleFriendClick(friend);
+                                }}
+                                className="bg-neutral-900/50 border border-white/5 rounded-2xl p-4 flex gap-3 cursor-pointer hover:bg-neutral-800 transition active:scale-[0.98]"
+                            >
                                 <div className="shrink-0">
                                     <div className="w-10 h-10 rounded-full bg-neutral-800 border border-white/10 flex items-center justify-center text-lg">
                                         {item.type === 'workout_finish' ? '💪' : item.type === 'level_up' ? '🆙' : '🏆'}
@@ -326,6 +350,16 @@ const SquadView: React.FC<SquadViewProps> = ({ telegramUser }) => {
                         </div>
                     </div>
                 </div>
+            )}
+
+            {/* Friend Profile Modal */}
+            {selectedFriend && (
+                <FriendProfileModal
+                    friend={selectedFriend}
+                    feed={feed}
+                    onClose={() => setSelectedFriend(null)}
+                    onNudge={handleNudge}
+                />
             )}
 
         </div>
