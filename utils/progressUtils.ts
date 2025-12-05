@@ -377,8 +377,12 @@ export const getHeatmapData = (logs: WorkoutLog[]) => {
     for (let i = 27; i >= 0; i--) {
         const d = new Date(today);
         d.setDate(d.getDate() - i);
-        const dateStr = d.toDateString();
-        const logFound = logs.find(l => new Date(l.date).toDateString() === dateStr);
+        const dateStr = d.toLocaleDateString('sv-SE'); // YYYY-MM-DD in local timezone
+        // Support both new format (YYYY-MM-DD) and old ISO format
+        const logFound = logs.find(l => {
+            const logDate = l.date.includes('T') ? l.date.split('T')[0] : l.date;
+            return logDate === dateStr;
+        });
 
         days.push({
             date: d,

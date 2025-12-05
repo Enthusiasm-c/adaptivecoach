@@ -251,12 +251,16 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
                     {days.map((day, idx) => {
                         if (!day) return <div key={idx} className="aspect-square"></div>;
 
-                        const dateStr = day.toISOString().split('T')[0];
+                        const dateStr = day.toLocaleDateString('sv-SE'); // YYYY-MM-DD in local timezone
 
                         // Check status
                         let status = null;
                         const scheduled = (program?.schedule || []).find(s => s.day === dateStr);
-                        const log = logs.find(l => l.date.split('T')[0] === dateStr);
+                        // Support both new format (YYYY-MM-DD) and old ISO format
+                        const log = logs.find(l => {
+                            const logDate = l.date.includes('T') ? l.date.split('T')[0] : l.date;
+                            return logDate === dateStr;
+                        });
 
                         if (log) {
                             status = { type: 'completed', data: log };

@@ -418,7 +418,7 @@ const SquadView: React.FC<SquadViewProps> = ({ telegramUser }) => {
                                         value={searchQuery}
                                         onChange={(e) => setSearchQuery(e.target.value)}
                                         onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                                        placeholder="@username"
+                                        placeholder="username"
                                         className="w-full bg-neutral-800 border border-white/10 rounded-xl py-3 pl-10 pr-4 text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500 transition"
                                     />
                                     <Search size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500" />

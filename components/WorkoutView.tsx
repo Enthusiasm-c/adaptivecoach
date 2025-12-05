@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { WorkoutSession, CompletedExercise, WorkoutLog, OnboardingProfile, Exercise, ReadinessData } from '../types';
 import FeedbackModal from './FeedbackModal';
-import { ChevronLeft, Timer, Replace, AlertTriangle, Info, Calculator, History, CheckCircle2, ExternalLink, Video, ChevronDown, ChevronUp } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Timer, Replace, AlertTriangle, Info, Calculator, History, CheckCircle2, ExternalLink, Video, ChevronDown, ChevronUp } from 'lucide-react';
 import CoachFeedbackModal from './CoachFeedbackModal';
 import ExerciseSwapModal from './ExerciseSwapModal';
 import PlateCalculatorModal from './PlateCalculatorModal';
@@ -46,7 +46,7 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
 
   // History State
   const [exerciseHistory, setExerciseHistory] = useState<{ date: string, sets: { weight: number, reps: number }[] }[]>([]);
-  const [showHistory, setShowHistory] = useState(false);
+  const [showHistory, setShowHistory] = useState(true);
 
   useEffect(() => {
     if (initialState) {
@@ -105,7 +105,6 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
   // Fetch history on exercise change
   useEffect(() => {
     const currentEx = completedExercises[currentExerciseIndex];
-    setShowHistory(false); // Reset history view
 
     if (currentEx) {
       try {
@@ -130,13 +129,15 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
     } else {
       (newExercises[exIndex].completedSets[setIndex] as any)[field] = value;
 
-      // Auto-fill logic: If changing weight of first set, apply to all subsequent empty sets
-      if (field === 'weight' && setIndex === 0) {
-        newExercises[exIndex].completedSets.forEach((set, idx) => {
-          if (idx > 0 && (set.weight === 0 || set.weight === undefined)) {
-            set.weight = value;
+      // Auto-fill logic: Copy weight or reps to next empty set
+      if (field === 'weight' || field === 'reps') {
+        const nextSetIndex = setIndex + 1;
+        if (nextSetIndex < newExercises[exIndex].completedSets.length) {
+          const nextSet = newExercises[exIndex].completedSets[nextSetIndex];
+          if (!nextSet[field] || nextSet[field] === 0) {
+            (nextSet as any)[field] = value;
           }
-        });
+        }
       }
     }
     setCompletedExercises(newExercises);
@@ -159,7 +160,46 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
     setShowRestTimer(true);
   }
 
+  // Navigation functions
+  const findNextIncomplete = (fromIndex: number): number => {
+    const total = completedExercises.length;
+    for (let i = 1; i <= total; i++) {
+      const idx = (fromIndex + i) % total;
+      const ex = completedExercises[idx];
+      const allSetsComplete = ex.completedSets.every(s => s.reps > 0 && s.weight > 0);
+      if (!allSetsComplete) return idx;
+    }
+    return -1; // all complete
+  };
+
+  const goNext = () => {
+    hapticFeedback.impactOccurred('light');
+    if (currentExerciseIndex < completedExercises.length - 1) {
+      setCurrentExerciseIndex(i => i + 1);
+    } else {
+      // Loop to next incomplete
+      const next = findNextIncomplete(currentExerciseIndex);
+      if (next !== -1) setCurrentExerciseIndex(next);
+    }
+  };
+
+  const goPrev = () => {
+    hapticFeedback.impactOccurred('light');
+    if (currentExerciseIndex > 0) {
+      setCurrentExerciseIndex(i => i - 1);
+    }
+  };
+
+  // Check if all exercises are complete
+  const canFinish = completedExercises.every(ex =>
+    ex.completedSets.every(s => s.reps > 0 && s.weight > 0)
+  );
+
   const finishWorkout = () => {
+    if (!canFinish) {
+      hapticFeedback.notificationOccurred('warning');
+      return;
+    }
     setIsFeedbackModalOpen(true);
   };
 
@@ -172,7 +212,7 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
 
     const log: WorkoutLog = {
       sessionId: session.name,
-      date: new Date().toISOString(),
+      date: new Date().toLocaleDateString('sv-SE'), // YYYY-MM-DD format in local timezone
       startTime: startTimeRef.current,
       duration: Math.floor((Date.now() - startTimeRef.current) / 1000),
       feedback: { ...feedback, readiness },
@@ -274,6 +314,26 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
         <div className="space-y-3">
           <div className="mb-6 bg-neutral-900/50 border border-white/5 rounded-3xl overflow-hidden">
             <div className="p-5">
+              {/* Navigation Arrows */}
+              <div className="flex items-center justify-between mb-4">
+                <button
+                  onClick={goPrev}
+                  disabled={currentExerciseIndex === 0}
+                  className="p-2 rounded-lg bg-neutral-800 text-gray-400 hover:text-white transition disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  <ChevronLeft size={20} />
+                </button>
+                <span className="text-xs text-gray-500 font-bold">
+                  {currentExerciseIndex + 1} / {completedExercises.length}
+                </span>
+                <button
+                  onClick={goNext}
+                  className="p-2 rounded-lg bg-neutral-800 text-gray-400 hover:text-white transition"
+                >
+                  <ChevronRight size={20} />
+                </button>
+              </div>
+
               {/* Header */}
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center gap-3">
@@ -285,20 +345,12 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
                     <p className="text-xs text-gray-400 mt-0.5">{currentExercise.sets} подхода × {currentExercise.reps}</p>
                   </div>
                 </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setShowHistory(!showHistory)}
-                    className={`p-2 rounded-lg transition ${showHistory ? 'bg-indigo-600 text-white' : 'bg-neutral-800 text-gray-400 hover:text-white'}`}
-                  >
-                    <History size={18} />
-                  </button>
-                  <button
-                    onClick={() => openSwapModal(currentExercise)}
-                    className="p-2 rounded-lg bg-neutral-800 text-gray-400 hover:text-white transition"
-                  >
-                    <Replace size={18} />
-                  </button>
-                </div>
+                <button
+                  onClick={() => openSwapModal(currentExercise)}
+                  className="p-2 rounded-lg bg-neutral-800 text-gray-400 hover:text-white transition"
+                >
+                  <Replace size={18} />
+                </button>
               </div>
 
               {/* Description and YouTube button */}
@@ -412,23 +464,23 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
       <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black via-black to-transparent pt-10 z-20 pb-[max(1rem,env(safe-area-inset-bottom))]">
         <div className="max-w-lg mx-auto flex gap-4">
           <button
-            onClick={() => setCurrentExerciseIndex(i => Math.max(0, i - 1))}
+            onClick={goPrev}
             disabled={currentExerciseIndex === 0}
             className="px-6 py-4 bg-neutral-900 rounded-2xl font-bold disabled:opacity-30 text-gray-400 hover:text-white border border-white/10 transition"
           >
             <ChevronLeft size={24} />
           </button>
 
-          {currentExerciseIndex < completedExercises.length - 1 ? (
-            <button
-              onClick={() => setCurrentExerciseIndex(i => Math.min(completedExercises.length - 1, i + 1))}
-              className="flex-grow py-4 bg-white text-black rounded-2xl font-bold hover:bg-gray-200 transition shadow-[0_0_20px_rgba(255,255,255,0.2)] text-lg"
-            >
-              Дальше
-            </button>
-          ) : (
+          {canFinish ? (
             <button onClick={finishWorkout} className="flex-grow py-4 bg-emerald-500 text-white rounded-2xl font-bold hover:bg-emerald-400 transition shadow-[0_0_20px_rgba(16,185,129,0.4)] text-lg">
               Закончить
+            </button>
+          ) : (
+            <button
+              onClick={goNext}
+              className="flex-grow py-4 bg-white text-black rounded-2xl font-bold hover:bg-gray-200 transition shadow-[0_0_20px_rgba(255,255,255,0.2)] text-lg"
+            >
+              {currentExerciseIndex < completedExercises.length - 1 ? 'Дальше' : 'К незаполненным'}
             </button>
           )}
         </div>
