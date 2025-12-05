@@ -3,6 +3,7 @@ import { Users, Zap, Trophy, Crown, Share2, Activity, UserPlus, X, Search, Heart
 import { hapticFeedback } from '../utils/hapticUtils';
 import { TelegramUser, FriendProfile, ActivityFeedItem, FriendRequest } from '../types';
 import { socialService } from '../services/socialService';
+import { apiService } from '../services/apiService';
 import SkeletonLoader from './SkeletonLoader';
 import FriendProfileModal from './FriendProfileModal';
 
@@ -129,6 +130,36 @@ const SquadView: React.FC<SquadViewProps> = ({ telegramUser }) => {
             if (window.Telegram?.WebApp) {
                 window.Telegram.WebApp.showAlert(`Вы пнули ${memberName}!`);
             }
+        }
+    };
+
+    const handleKudos = async (item: ActivityFeedItem) => {
+        if (!item.workoutLogId) return;
+
+        hapticFeedback.impactOccurred('light');
+
+        try {
+            if (item.likedByMe) {
+                // Remove kudos
+                await apiService.kudos.remove(item.workoutLogId);
+                setFeed(prev => prev.map(f =>
+                    f.id === item.id
+                        ? { ...f, likedByMe: false, likes: f.likes - 1 }
+                        : f
+                ));
+            } else {
+                // Give kudos
+                await apiService.kudos.give(item.workoutLogId);
+                setFeed(prev => prev.map(f =>
+                    f.id === item.id
+                        ? { ...f, likedByMe: true, likes: f.likes + 1 }
+                        : f
+                ));
+                hapticFeedback.notificationOccurred('success');
+            }
+        } catch (e) {
+            console.error('Kudos error:', e);
+            hapticFeedback.notificationOccurred('error');
         }
     };
 
@@ -378,8 +409,20 @@ const SquadView: React.FC<SquadViewProps> = ({ telegramUser }) => {
                                     <p className="text-xs text-gray-400 mt-1">{item.description}</p>
 
                                     <div className="flex items-center gap-4 mt-3">
-                                        <button className="flex items-center gap-1 text-xs text-gray-500 hover:text-pink-500 transition">
-                                            <Heart size={14} /> {item.likes}
+                                        <button
+                                            onClick={() => handleKudos(item)}
+                                            disabled={!item.workoutLogId}
+                                            className={`flex items-center gap-1 text-xs transition ${
+                                                item.likedByMe
+                                                    ? 'text-pink-500'
+                                                    : 'text-gray-500 hover:text-pink-500'
+                                            } ${!item.workoutLogId ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                        >
+                                            <Heart
+                                                size={14}
+                                                fill={item.likedByMe ? 'currentColor' : 'none'}
+                                            />
+                                            {item.likes}
                                         </button>
                                     </div>
                                 </div>

@@ -71,6 +71,7 @@ export interface FriendRequest {
 
 export interface ActivityFeedItem {
   id: string;
+  workoutLogId?: number; // For kudos linking
   userId: string;
   userName: string;
   userPhoto?: string;
