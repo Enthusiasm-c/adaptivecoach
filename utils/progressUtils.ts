@@ -13,84 +13,85 @@ const getWeekNumber = (d: Date): [number, number] => {
 export const calculateStreaks = (logs: WorkoutLog[]): { currentStreak: number; bestStreak: number } => {
     if (logs.length === 0) return { currentStreak: 0, bestStreak: 0 };
 
-    const sortedLogs = [...logs].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    // Получаем уникальные даты тренировок (без времени)
+    const workoutDates = [...new Set(logs.map(l => {
+        const d = new Date(l.date);
+        return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+    }))];
 
-    const uniqueWeeks = new Set<string>();
-    sortedLogs.forEach(log => {
-        const [year, week] = getWeekNumber(new Date(log.date));
-        uniqueWeeks.add(`${year}-${week}`);
-    });
+    // Преобразуем в объекты Date для сравнения
+    const sortedDates = workoutDates
+        .map(str => {
+            const [y, m, d] = str.split('-').map(Number);
+            return new Date(y, m, d);
+        })
+        .sort((a, b) => b.getTime() - a.getTime()); // От новых к старым
 
-    const sortedWeeks = Array.from(uniqueWeeks).sort();
-    if (sortedWeeks.length === 0) return { currentStreak: 0, bestStreak: 0 };
-
-    let currentStreak = 0;
-    let bestStreak = 0;
-
-    // Check if the current week has a workout
-    const [currentYear, currentWeekNum] = getWeekNumber(new Date());
-    const [lastWorkoutYear, lastWorkoutWeekNum] = getWeekNumber(new Date(sortedLogs[sortedLogs.length - 1].date));
-
-    // Also check previous week for continuity
     const today = new Date();
-    const lastWeek = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 7);
-    const [prevYear, prevWeekNum] = getWeekNumber(lastWeek);
+    today.setHours(0, 0, 0, 0);
 
-    if (`${lastWorkoutYear}-${lastWorkoutWeekNum}` === `${currentYear}-${currentWeekNum}` ||
-        `${lastWorkoutYear}-${lastWorkoutWeekNum}` === `${prevYear}-${prevWeekNum}`) {
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    // Проверяем текущий streak
+    let currentStreak = 0;
+    let checkDate = new Date(today);
+
+    // Если сегодня нет тренировки, начинаем со вчера
+    const todayStr = `${today.getFullYear()}-${today.getMonth()}-${today.getDate()}`;
+    const hasTodayWorkout = workoutDates.includes(todayStr);
+
+    if (!hasTodayWorkout) {
+        checkDate = new Date(yesterday);
+    }
+
+    // Считаем последовательные дни назад
+    for (let i = 0; i < 365; i++) {
+        const checkStr = `${checkDate.getFullYear()}-${checkDate.getMonth()}-${checkDate.getDate()}`;
+        if (workoutDates.includes(checkStr)) {
+            currentStreak++;
+            checkDate.setDate(checkDate.getDate() - 1);
+        } else {
+            break;
+        }
+    }
+
+    // Если сегодня была тренировка, добавляем её к стрику
+    if (hasTodayWorkout && currentStreak === 0) {
         currentStreak = 1;
     }
 
-    for (let i = sortedWeeks.length - 1; i > 0; i--) {
-        const [year1, week1] = sortedWeeks[i].split('-').map(Number);
-        const [year2, week2] = sortedWeeks[i - 1].split('-').map(Number);
+    // Вычисляем лучший streak
+    let bestStreak = currentStreak;
+    let tempStreak = 1;
 
-        let isConsecutive = false;
-        if (year1 === year2) {
-            isConsecutive = week1 === week2 + 1;
-        } else if (year1 === year2 + 1) {
-            // Handle year-end transition, check if week 52/53 is followed by week 1
-            isConsecutive = week1 === 1 && (week2 === 52 || week2 === 53);
-        }
+    for (let i = 0; i < sortedDates.length - 1; i++) {
+        const curr = sortedDates[i];
+        const next = sortedDates[i + 1];
 
-        if (isConsecutive) {
-            if (currentStreak > 0) currentStreak++; // only increment current streak if it's "live"
+        const diffDays = Math.round((curr.getTime() - next.getTime()) / (1000 * 60 * 60 * 24));
+
+        if (diffDays === 1) {
+            tempStreak++;
         } else {
-            break; // break the current streak count
+            bestStreak = Math.max(bestStreak, tempStreak);
+            tempStreak = 1;
         }
     }
-
-    // Calculate best streak
-    if (sortedWeeks.length > 0) {
-        let longest = 1;
-        let current = 1;
-        for (let i = 1; i < sortedWeeks.length; i++) {
-            const [year1, week1] = sortedWeeks[i].split('-').map(Number);
-            const [year2, week2] = sortedWeeks[i - 1].split('-').map(Number);
-            let isConsecutive = false;
-            if (year1 === year2) {
-                isConsecutive = week1 === week2 + 1;
-            } else if (year1 === year2 + 1) {
-                isConsecutive = week1 === 1 && (week2 === 52 || week2 === 53);
-            }
-
-            if (isConsecutive) {
-                current++;
-            } else {
-                longest = Math.max(longest, current);
-                current = 1;
-            }
-        }
-        bestStreak = Math.max(longest, current);
-    }
-
+    bestStreak = Math.max(bestStreak, tempStreak);
 
     return { currentStreak, bestStreak };
 };
 
 export const calculateWorkoutVolume = (log: WorkoutLog): number => {
+    if (!log || !log.completedExercises || log.completedExercises.length === 0) return 0;
     return log.completedExercises.reduce((totalVol, ex) => {
-        const exerciseVol = ex.completedSets.reduce((vol, set) => vol + set.reps * set.weight, 0);
+        if (!ex || !ex.completedSets) return totalVol;
+        const exerciseVol = ex.completedSets.reduce((vol, set) => {
+            const reps = set?.reps || 0;
+            const weight = set?.weight || 0;
+            return vol + reps * weight;
+        }, 0);
         return totalVol + exerciseVol;
     }, 0);
 }
@@ -422,35 +423,57 @@ export const calculateLevel = (logs: WorkoutLog[]) => {
     return { level, title, xp, levelProgress, nextLevelBaseXp: Math.floor(nextLevelBaseXp) };
 };
 
-export const getStrengthProgression = (logs: WorkoutLog[]) => {
+export const getStrengthProgression = (logs: WorkoutLog[]): { data: any[], exercises: string[] } => {
+    if (!logs || logs.length === 0) return { data: [], exercises: [] };
+
+    // Собираем статистику по упражнениям: сколько раз выполнялось и макс вес
+    const exerciseStats: Map<string, { count: number, maxWeight: number }> = new Map();
+
+    logs.forEach(log => {
+        if (!log.completedExercises) return;
+        log.completedExercises.forEach(ex => {
+            if (!ex.completedSets || ex.isWarmup) return;
+            const maxWeight = Math.max(...ex.completedSets.map(s => s?.weight || 0));
+            if (maxWeight > 0) {
+                const current = exerciseStats.get(ex.name) || { count: 0, maxWeight: 0 };
+                exerciseStats.set(ex.name, {
+                    count: current.count + 1,
+                    maxWeight: Math.max(current.maxWeight, maxWeight)
+                });
+            }
+        });
+    });
+
+    // Берем TOP-3 упражнения (по частоте, потом по весу)
+    const topExercises = [...exerciseStats.entries()]
+        .filter(([_, stats]) => stats.count >= 2) // Минимум 2 раза для показа прогресса
+        .sort((a, b) => {
+            if (b[1].count !== a[1].count) return b[1].count - a[1].count;
+            return b[1].maxWeight - a[1].maxWeight;
+        })
+        .slice(0, 3)
+        .map(([name]) => name);
+
+    if (topExercises.length === 0) return { data: [], exercises: [] };
+
+    // Строим progression для выбранных упражнений
     const result: any[] = [];
+    const sortedLogs = [...logs].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-    // Only track main lifts
-    const lifts = ['squat', 'bench', 'deadlift'];
-
-    [...logs].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()).forEach(log => {
+    sortedLogs.forEach(log => {
+        if (!log.completedExercises) return;
         const entry: any = { date: new Date(log.date).toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) };
         let hasData = false;
 
-        lifts.forEach(lift => {
-            // Find the best set for this lift in this log
-            // Mapping for Russian
-            let searchTerms = [lift];
-            if (lift === 'squat') searchTerms.push('присед');
-            if (lift === 'bench') searchTerms.push('жим');
-            if (lift === 'deadlift') searchTerms.push('тяга');
-
-            const exercise = log.completedExercises.find(ex =>
-                searchTerms.some(term => ex.name.toLowerCase().includes(term))
-            );
-
-            if (exercise) {
+        topExercises.forEach((exName, idx) => {
+            const exercise = log.completedExercises.find(ex => ex.name === exName);
+            if (exercise && exercise.completedSets) {
                 const bestSet = exercise.completedSets.reduce((best, curr) =>
-                    (curr.weight > best.weight) ? curr : best
+                    ((curr?.weight || 0) > (best?.weight || 0)) ? curr : best
                     , { weight: 0, reps: 0 });
 
-                if (bestSet.weight > 0) {
-                    entry[lift] = calculateE1RM(bestSet.weight, bestSet.reps).toFixed(0);
+                if (bestSet && bestSet.weight > 0 && bestSet.reps > 0) {
+                    entry[`ex${idx}`] = Math.round(calculateE1RM(bestSet.weight, bestSet.reps));
                     hasData = true;
                 }
             }
@@ -459,7 +482,7 @@ export const getStrengthProgression = (logs: WorkoutLog[]) => {
         if (hasData) result.push(entry);
     });
 
-    return result;
+    return { data: result, exercises: topExercises };
 };
 
 export const getVolumeDistribution = (logs: WorkoutLog[]) => {

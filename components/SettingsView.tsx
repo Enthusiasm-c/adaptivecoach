@@ -1,8 +1,8 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { OnboardingProfile, TelegramUser, Goal } from '../types';
-import { Trash2, Save, User, LogOut, Target, Calendar, Clock, CreditCard, Star, Check, Award } from 'lucide-react';
-import BadgesView from './BadgesView';
+import { Trash2, Save, User, LogOut, Target, Calendar, Clock, Star, Check, Award, Loader2 } from 'lucide-react';
+import { apiService, Badge } from '../services/apiService';
 
 interface SettingsViewProps {
     profile: OnboardingProfile;
@@ -11,17 +11,54 @@ interface SettingsViewProps {
     onResetAccount: () => void;
 }
 
+const tierColors: Record<string, string> = {
+    bronze: 'from-amber-700 to-amber-500',
+    silver: 'from-gray-400 to-gray-200',
+    gold: 'from-yellow-500 to-amber-300',
+    diamond: 'from-cyan-400 to-blue-300',
+};
+
+const tierBgColors: Record<string, string> = {
+    bronze: 'bg-amber-900/30 border-amber-700/50',
+    silver: 'bg-gray-700/30 border-gray-500/50',
+    gold: 'bg-yellow-900/30 border-yellow-600/50',
+    diamond: 'bg-cyan-900/30 border-cyan-500/50',
+};
+
 const SettingsView: React.FC<SettingsViewProps> = ({ profile, telegramUser, onUpdateProfile, onResetAccount }) => {
     const [weight, setWeight] = useState(profile.weight);
     const [age, setAge] = useState(profile.age);
     const [daysPerWeek, setDaysPerWeek] = useState(profile.daysPerWeek);
     const [timePerWorkout, setTimePerWorkout] = useState(profile.timePerWorkout);
     const [primaryGoal, setPrimaryGoal] = useState(profile.goals.primary);
-    
-    const [activeTab, setActiveTab] = useState<'profile' | 'badges' | 'subscription'>('profile');
+
+    const [activeTab, setActiveTab] = useState<'profile' | 'subscription'>('profile');
 
     const [isConfirmingReset, setIsConfirmingReset] = useState(false);
-    const [showBadgesModal, setShowBadgesModal] = useState(false);
+
+    // Badges state
+    const [allBadges, setAllBadges] = useState<Badge[]>([]);
+    const [myBadges, setMyBadges] = useState<Badge[]>([]);
+    const [loadingBadges, setLoadingBadges] = useState(true);
+
+    useEffect(() => {
+        const loadBadges = async () => {
+            try {
+                const userId = telegramUser?.id;
+                const [allBadgesRes, myBadgesRes] = await Promise.all([
+                    apiService.badges.getAll(),
+                    userId ? apiService.badges.getUserBadges(userId) : Promise.resolve({ badges: [] })
+                ]);
+                setAllBadges(allBadgesRes.badges || []);
+                setMyBadges(myBadgesRes.badges || []);
+            } catch (e) {
+                console.error('Failed to load badges:', e);
+            } finally {
+                setLoadingBadges(false);
+            }
+        };
+        loadBadges();
+    }, [telegramUser]);
 
     const handleSave = () => {
         onUpdateProfile({
@@ -47,12 +84,6 @@ const SettingsView: React.FC<SettingsViewProps> = ({ profile, telegramUser, onUp
                     className={`flex-1 py-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 ${activeTab === 'profile' ? 'bg-neutral-800 text-white shadow-lg' : 'text-gray-500'}`}
                 >
                     <User size={16} /> Профиль
-                </button>
-                <button
-                    onClick={() => setActiveTab('badges')}
-                    className={`flex-1 py-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 ${activeTab === 'badges' ? 'bg-amber-600 text-white shadow-lg' : 'text-gray-500'}`}
-                >
-                    <Award size={16} /> Бейджи
                 </button>
                 <button
                     onClick={() => setActiveTab('subscription')}
@@ -179,12 +210,74 @@ const SettingsView: React.FC<SettingsViewProps> = ({ profile, telegramUser, onUp
                             </div>
                         </div>
 
-                        <button 
+                        <button
                             onClick={handleSave}
                             className="w-full bg-white text-black font-bold py-4 rounded-2xl flex items-center justify-center gap-2 hover:bg-gray-200 transition shadow-lg shadow-white/10"
                         >
                             <Save size={18} /> Сохранить изменения
                         </button>
+                    </section>
+
+                    {/* Badges Section */}
+                    <section className="space-y-4">
+                        <h2 className="text-lg font-bold text-gray-300 px-2 flex items-center gap-2">
+                            <Award size={18} className="text-amber-500" /> Мои бейджи
+                        </h2>
+
+                        {loadingBadges ? (
+                            <div className="flex justify-center py-8">
+                                <Loader2 className="animate-spin text-amber-500" size={24} />
+                            </div>
+                        ) : (
+                            <>
+                                {/* Earned Badges */}
+                                {myBadges.length > 0 && (
+                                    <div className="grid grid-cols-4 gap-2">
+                                        {myBadges.map((badge) => (
+                                            <div
+                                                key={badge.id}
+                                                className={`aspect-square rounded-xl border p-2 flex flex-col items-center justify-center ${tierBgColors[badge.tier] || 'bg-neutral-800 border-white/10'}`}
+                                            >
+                                                <span className="text-2xl">{badge.icon}</span>
+                                                <span className={`text-[8px] font-bold mt-1 bg-gradient-to-r ${tierColors[badge.tier]} bg-clip-text text-transparent`}>
+                                                    {badge.name_ru.split(' ')[0]}
+                                                </span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+
+                                {/* No badges yet */}
+                                {myBadges.length === 0 && (
+                                    <div className="bg-neutral-900 border border-white/5 rounded-2xl p-6 text-center">
+                                        <div className="text-4xl mb-3">🏅</div>
+                                        <p className="text-gray-400 text-sm">
+                                            Пока нет бейджей. Тренируйся, чтобы получить первый!
+                                        </p>
+                                    </div>
+                                )}
+
+                                {/* Locked Badges Preview */}
+                                {allBadges.length > myBadges.length && (
+                                    <div className="mt-4">
+                                        <p className="text-xs text-gray-500 mb-2 px-2">Доступны для получения:</p>
+                                        <div className="grid grid-cols-6 gap-1.5">
+                                            {allBadges
+                                                .filter(b => !myBadges.some(mb => mb.id === b.id))
+                                                .slice(0, 12)
+                                                .map((badge) => (
+                                                    <div
+                                                        key={badge.id}
+                                                        className="aspect-square rounded-lg bg-neutral-900/50 border border-white/5 flex items-center justify-center opacity-40"
+                                                    >
+                                                        <span className="text-lg grayscale">{badge.icon}</span>
+                                                    </div>
+                                                ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </>
+                        )}
                     </section>
 
                     {/* Danger Zone */}
@@ -218,25 +311,6 @@ const SettingsView: React.FC<SettingsViewProps> = ({ profile, telegramUser, onUp
                         )}
                     </section>
                 </div>
-            )}
-
-            {/* Badges Content */}
-            {activeTab === 'badges' && (
-                <div className="animate-slide-up">
-                    <button
-                        onClick={() => setShowBadgesModal(true)}
-                        className="w-full bg-gradient-to-r from-amber-600 to-orange-600 text-white font-bold py-4 rounded-2xl flex items-center justify-center gap-2 hover:scale-[1.02] transition-transform shadow-lg mb-6"
-                    >
-                        <Award size={20} /> Открыть все достижения
-                    </button>
-                    <p className="text-center text-gray-500 text-sm">
-                        Выполняйте тренировки и получайте уникальные бейджи за ваши достижения!
-                    </p>
-                </div>
-            )}
-
-            {showBadgesModal && (
-                <BadgesView onClose={() => setShowBadgesModal(false)} />
             )}
 
             {/* Subscription Content */}

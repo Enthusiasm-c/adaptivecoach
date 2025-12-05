@@ -18,6 +18,7 @@ interface ProgressViewProps {
     logs: WorkoutLog[];
     program: TrainingProgram;
     onUpdateProgram?: (program: TrainingProgram) => void;
+    preferredDays?: number[];
 }
 
 // --- Mock Data Generator ---
@@ -98,7 +99,7 @@ const generateMockLogs = (): WorkoutLog[] => {
     return logs;
 };
 
-const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProgram }) => {
+const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProgram, preferredDays = [] }) => {
     const isDemoMode = logs.length === 0;
 
     const displayLogs = useMemo(() => {
@@ -121,7 +122,26 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
     // --- Calendar Logic ---
     const [currentDate, setCurrentDate] = React.useState(new Date());
     const [selectedDateToMove, setSelectedDateToMove] = React.useState<Date | null>(null);
-    const [isEditingSchedule, setIsEditingSchedule] = React.useState(false);
+
+    // Generate planned workouts based on preferredDays
+    const plannedDates = useMemo(() => {
+        const planned = new Set<string>();
+        if (preferredDays.length === 0 || !program) return planned;
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        // Generate for next 60 days
+        for (let i = 0; i < 60; i++) {
+            const date = new Date(today);
+            date.setDate(date.getDate() + i);
+            const dayOfWeek = date.getDay();
+            if (preferredDays.includes(dayOfWeek)) {
+                planned.add(date.toLocaleDateString('sv-SE'));
+            }
+        }
+        return planned;
+    }, [preferredDays, program]);
 
     const getDaysInMonth = (date: Date) => {
         const year = date.getFullYear();
@@ -148,30 +168,7 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
 
     const handleDateClick = (date: Date, status: any) => {
         hapticFeedback.selectionChanged();
-
-        if (isEditingSchedule) {
-            if (!selectedDateToMove) {
-                // Select session to move
-                if (status?.type === 'planned') {
-                    setSelectedDateToMove(date);
-                    hapticFeedback.impactOccurred('light');
-                }
-            } else {
-                // Move to new date
-                moveSession(selectedDateToMove, date);
-                setSelectedDateToMove(null);
-                setIsEditingSchedule(false);
-                hapticFeedback.notificationOccurred('success');
-            }
-        } else {
-            // Toggle day status (Rest <-> Planned)
-            // Only allow toggling future dates or today
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            if (date >= today) {
-                toggleDayStatus(date, status);
-            }
-        }
+        // Calendar is now view-only, just show info
     };
 
     const moveSession = (from: Date, to: Date) => {
@@ -224,12 +221,6 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
                         {monthName}
                     </h2>
                     <div className="flex items-center gap-2">
-                        <button
-                            onClick={() => setIsEditingSchedule(!isEditingSchedule)}
-                            className={`p-2 rounded-xl transition ${isEditingSchedule ? 'bg-indigo-500 text-white' : 'bg-neutral-800 text-gray-400'}`}
-                        >
-                            <Activity size={18} />
-                        </button>
                         <div className="flex bg-neutral-800 rounded-xl p-1">
                             <button onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() - 1)))} className="p-2 hover:bg-white/10 rounded-lg text-gray-400">
                                 <ChevronLeft size={18} />
@@ -255,32 +246,30 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
 
                         // Check status
                         let status = null;
-                        const scheduled = (program?.schedule || []).find(s => s.day === dateStr);
                         // Support both new format (YYYY-MM-DD) and old ISO format
                         const log = logs.find(l => {
                             const logDate = l.date.includes('T') ? l.date.split('T')[0] : l.date;
                             return logDate === dateStr;
                         });
 
+                        // Check if this is a planned workout day (from preferredDays)
+                        const isPlannedDay = plannedDates.has(dateStr);
+
                         if (log) {
                             status = { type: 'completed', data: log };
-                        } else if (scheduled) {
-                            status = { type: 'planned', data: scheduled };
+                        } else if (isPlannedDay) {
+                            status = { type: 'planned', data: null };
                         }
 
                         const isToday = day.toDateString() === new Date().toDateString();
                         const isSelected = selectedDateToMove?.toDateString() === day.toDateString();
 
                         return (
-                            <button
+                            <div
                                 key={idx}
-                                onClick={() => handleDateClick(day, status)}
-                                disabled={!status && !isEditingSchedule}
-                                className={`aspect-square rounded-xl flex flex-col items-center justify-center relative transition-all duration-300 
-                              ${isToday ? 'bg-white/10 border border-white/20' : ''} 
-                              ${(status || isEditingSchedule) ? 'hover:bg-white/5' : 'opacity-30'}
-                              ${isSelected ? 'bg-indigo-600/40 border-indigo-500 ring-2 ring-indigo-500 scale-95' : ''}
-                              ${isEditingSchedule && !isSelected ? 'animate-pulse bg-neutral-800/50' : ''}
+                                className={`aspect-square rounded-xl flex flex-col items-center justify-center relative transition-all duration-300
+                              ${isToday ? 'bg-white/10 border border-white/20' : ''}
+                              ${status ? '' : 'opacity-40'}
                           `}
                             >
                                 <span className={`text-xs font-medium ${isToday ? 'text-white font-bold' : 'text-gray-400'}`}>{day.getDate()}</span>
@@ -294,12 +283,7 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
                                 {status?.type === 'planned' && (
                                     <div className="mt-1 w-2 h-2 bg-indigo-500 rounded-full shadow-[0_0_8px_rgba(99,102,241,0.8)]"></div>
                                 )}
-
-                                {/* Empty slot visual for editing */}
-                                {isEditingSchedule && !status && (
-                                    <div className="mt-1 w-1.5 h-1.5 border border-gray-600 rounded-full"></div>
-                                )}
-                            </button>
+                            </div>
                         );
                     })}
                 </div>
@@ -400,28 +384,36 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
             </div>
 
             {/* Strength Progression Chart */}
-            <div className="bg-neutral-900 border border-white/5 rounded-3xl p-5 shadow-lg">
-                <div className="flex items-center gap-2 mb-4 text-gray-300 font-bold text-sm">
-                    <TrendingUp size={16} className="text-indigo-400" />
-                    Динамика Силы (e1RM)
+            {strengthData.data.length > 0 && strengthData.exercises.length > 0 && (
+                <div className="bg-neutral-900 border border-white/5 rounded-3xl p-5 shadow-lg">
+                    <div className="flex items-center gap-2 mb-4 text-gray-300 font-bold text-sm">
+                        <TrendingUp size={16} className="text-indigo-400" />
+                        Динамика Силы (e1RM)
+                    </div>
+                    <div className="h-56 -ml-2">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <LineChart data={strengthData.data} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+                                <CartesianGrid stroke={chartTheme.grid} vertical={false} strokeDasharray="3 3" />
+                                <XAxis dataKey="date" stroke={chartTheme.text} fontSize={10} tickLine={false} axisLine={false} dy={10} />
+                                <YAxis stroke={chartTheme.text} fontSize={10} tickLine={false} axisLine={false} domain={['auto', 'auto']} />
+                                <Tooltip
+                                    contentStyle={{ backgroundColor: '#171717', border: '1px solid #333', borderRadius: '8px', color: '#fff' }}
+                                />
+                                <Legend wrapperStyle={{ fontSize: '10px', paddingTop: '10px' }} iconType="circle" />
+                                {strengthData.exercises[0] && (
+                                    <Line type="monotone" dataKey="ex0" name={strengthData.exercises[0]} stroke="#6366f1" strokeWidth={3} dot={false} connectNulls />
+                                )}
+                                {strengthData.exercises[1] && (
+                                    <Line type="monotone" dataKey="ex1" name={strengthData.exercises[1]} stroke="#10b981" strokeWidth={3} dot={false} connectNulls />
+                                )}
+                                {strengthData.exercises[2] && (
+                                    <Line type="monotone" dataKey="ex2" name={strengthData.exercises[2]} stroke="#f59e0b" strokeWidth={3} dot={false} connectNulls />
+                                )}
+                            </LineChart>
+                        </ResponsiveContainer>
+                    </div>
                 </div>
-                <div className="h-56 -ml-2">
-                    <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={strengthData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
-                            <CartesianGrid stroke={chartTheme.grid} vertical={false} strokeDasharray="3 3" />
-                            <XAxis dataKey="date" stroke={chartTheme.text} fontSize={10} tickLine={false} axisLine={false} dy={10} />
-                            <YAxis stroke={chartTheme.text} fontSize={10} tickLine={false} axisLine={false} domain={['auto', 'auto']} />
-                            <Tooltip
-                                contentStyle={{ backgroundColor: '#171717', border: '1px solid #333', borderRadius: '8px', color: '#fff' }}
-                            />
-                            <Legend wrapperStyle={{ fontSize: '10px', paddingTop: '10px' }} iconType="circle" />
-                            <Line type="monotone" dataKey="squat" name="Присед" stroke="#6366f1" strokeWidth={3} dot={false} connectNulls />
-                            <Line type="monotone" dataKey="bench" name="Жим" stroke="#10b981" strokeWidth={3} dot={false} connectNulls />
-                            <Line type="monotone" dataKey="deadlift" name="Тяга" stroke="#f59e0b" strokeWidth={3} dot={false} connectNulls />
-                        </LineChart>
-                    </ResponsiveContainer>
-                </div>
-            </div>
+            )}
 
             {/* Detailed Readiness Trends (Health & Recovery) */}
             <div className="bg-neutral-900 border border-white/5 rounded-3xl p-5 shadow-lg overflow-hidden relative">

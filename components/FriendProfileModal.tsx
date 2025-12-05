@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Zap, Trash2, Award, TrendingUp, Dumbbell, Loader2, Swords } from 'lucide-react';
+import { X, Zap, Trash2, Award, TrendingUp, Dumbbell, Loader2 } from 'lucide-react';
 import { FriendProfile, ActivityFeedItem } from '../types';
 import { hapticFeedback } from '../utils/hapticUtils';
 import { socialService } from '../services/socialService';
@@ -144,7 +144,7 @@ const FriendProfileModal: React.FC<FriendProfileModalProps> = ({
                 </div>
 
                 {/* Content */}
-                <div className="px-6 flex-1 overflow-y-auto min-h-0 pb-4">
+                <div className="px-6 flex-1 overflow-y-auto min-h-[280px] pb-4">
                     {loading ? (
                         <div className="flex items-center justify-center py-8">
                             <Loader2 className="animate-spin text-indigo-500" size={24} />
@@ -216,17 +216,6 @@ const FriendProfileModal: React.FC<FriendProfileModalProps> = ({
                                         </div>
                                     </div>
 
-                                    {/* Challenge Button */}
-                                    <button
-                                        onClick={() => {
-                                            hapticFeedback.impactOccurred('medium');
-                                            // TODO: Open challenge modal
-                                            alert('Challenges coming soon!');
-                                        }}
-                                        className="w-full py-3 bg-gradient-to-r from-orange-600 to-red-600 rounded-xl font-bold text-white flex items-center justify-center gap-2 hover:scale-[1.02] transition-transform"
-                                    >
-                                        <Swords size={18} /> Вызвать на соревнование
-                                    </button>
                                 </div>
                             )}
 
