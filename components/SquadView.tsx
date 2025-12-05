@@ -103,9 +103,9 @@ const SquadView: React.FC<SquadViewProps> = ({ telegramUser }) => {
 
     const handleInvite = () => {
         hapticFeedback.impactOccurred('light');
-        const inviteLink = "https://t.me/AdaptiveCoachBot?start=squad_123";
+        const inviteLink = "https://t.me/sensei_training_bot?start=squad_123";
         if (window.Telegram?.WebApp) {
-            window.Telegram.WebApp.openTelegramLink(`https://t.me/share/url?url=${inviteLink}&text=Вступай в мой отряд в Adaptive Coach!`);
+            window.Telegram.WebApp.openTelegramLink(`https://t.me/share/url?url=${inviteLink}&text=Вступай в мой отряд в Sensei Training!`);
         } else {
             navigator.clipboard.writeText(inviteLink);
             alert("Ссылка скопирована!");

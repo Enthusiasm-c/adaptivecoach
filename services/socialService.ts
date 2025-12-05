@@ -1,7 +1,7 @@
 import { FriendProfile, ActivityFeedItem } from '../types';
 
-const STORAGE_KEY_FRIENDS = 'adaptive_coach_friends';
-const STORAGE_KEY_FEED = 'adaptive_coach_feed';
+const STORAGE_KEY_FRIENDS = 'sensei_training_friends';
+const STORAGE_KEY_FEED = 'sensei_training_feed';
 
 // Mock Database of Users
 const MOCK_USERS: FriendProfile[] = [

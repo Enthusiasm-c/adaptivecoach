@@ -1,5 +1,5 @@
 {
-  "name": "Adaptive Fitness Coach",
-  "description": "A smart, adaptive fitness coach that generates personalized workout plans, collects feedback after each session, and uses AI to adjust your program for optimal progress. Features an AI chatbot for fitness questions.",
+  "name": "Sensei Training",
+  "description": "Адаптивный AI-тренер, который генерирует персональные планы тренировок, собирает обратную связь после каждой сессии и использует ИИ для оптимизации прогресса. AI-чат для вопросов о технике и питании.",
   "requestFramePermissions": []
 }

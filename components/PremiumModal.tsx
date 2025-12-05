@@ -90,7 +90,7 @@ const PremiumModal: React.FC<PremiumModalProps> = ({ onClose, onSuccess }) => {
 
                     <div className="relative z-10 flex flex-col items-center">
                         <Crown size={48} className="text-yellow-400 drop-shadow-[0_0_15px_rgba(250,204,21,0.5)] mb-2" fill="currentColor" />
-                        <h2 className="text-2xl font-black text-white tracking-tight uppercase italic">Adaptive Pro</h2>
+                        <h2 className="text-2xl font-black text-white tracking-tight uppercase italic">Sensei Pro</h2>
                     </div>
                 </div>
 

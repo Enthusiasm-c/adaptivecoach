@@ -315,7 +315,7 @@ function buildExerciseSwapPrompt(exerciseToSwap: Exercise, session: WorkoutSessi
 function buildDashboardInsightPrompt(profile: OnboardingProfile, logs: WorkoutLog[]): string {
     const recentLogs = logs.slice(-5);
     return `
-    Ты персональный "ИИ тренер".
+    Ты адаптивный "ИИ тренер".
     Проанализируй прогресс пользователя и дай одну емкую фразу для главного экрана.
 
     Данные:

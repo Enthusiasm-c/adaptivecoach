@@ -1,4 +1,4 @@
-# AdaptiveCoach - Telegram Mini App
+# Sensei Training - Telegram Mini App
 
 ## КРИТИЧЕСКИ ВАЖНО: Proxy Architecture
 
