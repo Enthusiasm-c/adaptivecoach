@@ -49,7 +49,9 @@ export interface KnownWeight {
 }
 
 export interface FriendProfile {
-  id: string;
+  id: number;           // DB id
+  telegramId?: number;
+  username?: string;
   name: string;
   photoUrl?: string;
   level: number;
@@ -57,6 +59,14 @@ export interface FriendProfile {
   totalVolume: number; // kg
   lastActive: string; // ISO date
   isOnline?: boolean;
+  friendshipStatus?: 'pending' | 'accepted' | 'incoming' | null;
+  requestDirection?: 'outgoing' | 'incoming' | null;
+}
+
+export interface FriendRequest {
+  id: number;
+  requester: FriendProfile;
+  createdAt: string;
 }
 
 export interface ActivityFeedItem {

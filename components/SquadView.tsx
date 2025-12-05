@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Users, Zap, Trophy, Crown, Share2, Activity, UserPlus, X, Search, Heart, Clock } from 'lucide-react';
+import { Users, Zap, Trophy, Crown, Share2, Activity, UserPlus, X, Search, Heart, Clock, Check, UserX } from 'lucide-react';
 import { hapticFeedback } from '../utils/hapticUtils';
-import { TelegramUser, FriendProfile, ActivityFeedItem } from '../types';
+import { TelegramUser, FriendProfile, ActivityFeedItem, FriendRequest } from '../types';
 import { socialService } from '../services/socialService';
 import SkeletonLoader from './SkeletonLoader';
 import FriendProfileModal from './FriendProfileModal';
@@ -15,11 +15,12 @@ const SquadView: React.FC<SquadViewProps> = ({ telegramUser }) => {
     const [friends, setFriends] = useState<FriendProfile[]>([]);
     const [feed, setFeed] = useState<ActivityFeedItem[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [friendRequests, setFriendRequests] = useState<FriendRequest[]>([]);
 
     // Add Friend Modal State
     const [showAddFriend, setShowAddFriend] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
-    const [searchResult, setSearchResult] = useState<FriendProfile | null>(null);
+    const [searchResults, setSearchResults] = useState<FriendProfile[]>([]);
     const [isSearching, setIsSearching] = useState(false);
 
     useEffect(() => {
@@ -29,18 +30,19 @@ const SquadView: React.FC<SquadViewProps> = ({ telegramUser }) => {
     const loadData = async () => {
         setIsLoading(true);
         try {
-            const [squadData, feedData] = await Promise.all([
+            const [squadData, feedData, requestsData] = await Promise.all([
                 socialService.getSquad(),
-                socialService.getFeed()
+                socialService.getFeed(),
+                socialService.getFriendRequests()
             ]);
 
-            // Add current user to the list for leaderboard if not present
+            // Add current user to the list for leaderboard
             const currentUser: FriendProfile = {
-                id: 'me',
+                id: -1, // Special ID for current user
                 name: telegramUser?.first_name || "Вы",
-                level: 7, // Mock level for current user, should come from props/state
-                streak: 5, // Mock streak
-                totalVolume: 125000, // Mock volume
+                level: 7,
+                streak: 5,
+                totalVolume: 125000,
                 lastActive: new Date().toISOString(),
                 isOnline: true,
                 photoUrl: telegramUser?.photo_url
@@ -48,6 +50,7 @@ const SquadView: React.FC<SquadViewProps> = ({ telegramUser }) => {
 
             setFriends([currentUser, ...squadData]);
             setFeed(feedData);
+            setFriendRequests(requestsData);
         } catch (e) {
             console.error("Failed to load squad data", e);
         } finally {
@@ -60,44 +63,72 @@ const SquadView: React.FC<SquadViewProps> = ({ telegramUser }) => {
         setIsSearching(true);
         hapticFeedback.selectionChanged();
         try {
-            const result = await socialService.searchUser(searchQuery);
-            setSearchResult(result);
-            if (!result) {
+            const results = await socialService.searchUser(searchQuery);
+            setSearchResults(results);
+            if (results.length === 0) {
                 hapticFeedback.notificationOccurred('error');
             } else {
                 hapticFeedback.notificationOccurred('success');
             }
         } catch (e) {
             console.error(e);
+            setSearchResults([]);
         } finally {
             setIsSearching(false);
         }
     };
 
-    const handleAddFriend = async () => {
-        if (!searchResult) return;
+    const handleSendRequest = async (user: FriendProfile) => {
         hapticFeedback.impactOccurred('medium');
-        await socialService.addFriend(searchResult);
-        setShowAddFriend(false);
-        setSearchQuery('');
-        setSearchResult(null);
-        loadData(); // Reload list
-
-        if (window.Telegram?.WebApp) {
-            window.Telegram.WebApp.showAlert(`${searchResult.name} добавлен в отряд!`);
-        } else {
-            alert(`${searchResult.name} добавлен в отряд!`);
+        try {
+            await socialService.sendFriendRequest(user.id);
+            // Update local state
+            setSearchResults(prev => prev.map(u =>
+                u.id === user.id ? { ...u, friendshipStatus: 'pending', requestDirection: 'outgoing' } : u
+            ));
+            if (window.Telegram?.WebApp) {
+                window.Telegram.WebApp.showAlert(`Запрос отправлен ${user.name}!`);
+            }
+        } catch (e: any) {
+            console.error(e);
+            if (window.Telegram?.WebApp) {
+                window.Telegram.WebApp.showAlert(e.message || 'Ошибка отправки запроса');
+            }
         }
     };
 
-    const handleNudge = async (memberId: string, memberName: string) => {
+    const handleAcceptRequest = async (requestId: number) => {
         hapticFeedback.impactOccurred('medium');
-        await socialService.nudgeFriend(memberId);
+        try {
+            await socialService.respondToRequest(requestId, true);
+            setFriendRequests(prev => prev.filter(r => r.id !== requestId));
+            loadData(); // Reload friends list
+            if (window.Telegram?.WebApp) {
+                window.Telegram.WebApp.showAlert('Друг добавлен!');
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    };
 
-        if (window.Telegram?.WebApp) {
-            window.Telegram.WebApp.showAlert(`Вы пнули ${memberName}! ⚡`);
-        } else {
-            alert(`Вы пнули ${memberName}! ⚡`);
+    const handleRejectRequest = async (requestId: number) => {
+        hapticFeedback.impactOccurred('light');
+        try {
+            await socialService.respondToRequest(requestId, false);
+            setFriendRequests(prev => prev.filter(r => r.id !== requestId));
+        } catch (e) {
+            console.error(e);
+        }
+    };
+
+    const handleNudge = async (memberId: number, memberName: string) => {
+        hapticFeedback.impactOccurred('medium');
+        const success = await socialService.nudgeFriend(memberId);
+
+        if (success) {
+            if (window.Telegram?.WebApp) {
+                window.Telegram.WebApp.showAlert(`Вы пнули ${memberName}!`);
+            }
         }
     };
 
@@ -112,16 +143,43 @@ const SquadView: React.FC<SquadViewProps> = ({ telegramUser }) => {
         }
     };
 
-    // Sort members by Total Volume (as a proxy for progress score for now)
+    // Sort members by Total Volume
     const sortedMembers = [...friends].sort((a, b) => b.totalVolume - a.totalVolume);
 
     // Friend Profile Modal State
     const [selectedFriend, setSelectedFriend] = useState<FriendProfile | null>(null);
 
     const handleFriendClick = (friend: FriendProfile) => {
-        if (friend.id === 'me') return; // Don't open for self (or maybe open own profile later)
+        if (friend.id === -1) return; // Don't open for self
         hapticFeedback.selectionChanged();
         setSelectedFriend(friend);
+    };
+
+    const getStatusButton = (user: FriendProfile) => {
+        if (user.friendshipStatus === 'accepted') {
+            return <span className="text-green-400 text-xs">Друзья</span>;
+        }
+        if (user.friendshipStatus === 'pending') {
+            if (user.requestDirection === 'outgoing') {
+                return <span className="text-yellow-400 text-xs">Запрос отправлен</span>;
+            }
+            return (
+                <button
+                    onClick={() => handleAcceptRequest(user.id)}
+                    className="bg-green-600 text-white px-3 py-1 rounded-lg text-xs hover:bg-green-500"
+                >
+                    Принять
+                </button>
+            );
+        }
+        return (
+            <button
+                onClick={() => handleSendRequest(user)}
+                className="bg-indigo-600 text-white p-2 rounded-lg hover:bg-indigo-500 transition"
+            >
+                <UserPlus size={16} />
+            </button>
+        );
     };
 
     return (
@@ -139,9 +197,14 @@ const SquadView: React.FC<SquadViewProps> = ({ telegramUser }) => {
                 <div className="flex gap-2">
                     <button
                         onClick={() => setShowAddFriend(true)}
-                        className="w-10 h-10 bg-neutral-800 rounded-full flex items-center justify-center text-indigo-400 border border-indigo-500/30 hover:bg-neutral-700 transition active:scale-95"
+                        className="w-10 h-10 bg-neutral-800 rounded-full flex items-center justify-center text-indigo-400 border border-indigo-500/30 hover:bg-neutral-700 transition active:scale-95 relative"
                     >
                         <UserPlus size={18} />
+                        {friendRequests.length > 0 && (
+                            <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full text-white text-xs flex items-center justify-center font-bold">
+                                {friendRequests.length}
+                            </span>
+                        )}
                     </button>
                     <button
                         onClick={handleInvite}
@@ -151,6 +214,49 @@ const SquadView: React.FC<SquadViewProps> = ({ telegramUser }) => {
                     </button>
                 </div>
             </div>
+
+            {/* Friend Requests Section */}
+            {friendRequests.length > 0 && (
+                <div className="bg-orange-500/10 border border-orange-500/30 rounded-2xl p-4 mb-6 animate-fade-in">
+                    <h3 className="text-orange-400 font-bold mb-3 flex items-center gap-2">
+                        <UserPlus size={16} />
+                        Запросы в друзья ({friendRequests.length})
+                    </h3>
+                    <div className="space-y-2">
+                        {friendRequests.map(req => (
+                            <div key={req.id} className="flex items-center justify-between bg-neutral-900/50 rounded-xl p-3">
+                                <div className="flex items-center gap-3">
+                                    {req.requester.photoUrl ? (
+                                        <img src={req.requester.photoUrl} alt={req.requester.name} className="w-10 h-10 rounded-full" />
+                                    ) : (
+                                        <div className="w-10 h-10 rounded-full bg-neutral-800 flex items-center justify-center text-gray-400 font-bold">
+                                            {req.requester.name[0]}
+                                        </div>
+                                    )}
+                                    <div>
+                                        <p className="font-bold text-white text-sm">{req.requester.name}</p>
+                                        <p className="text-xs text-gray-400">@{req.requester.username || 'user'} • Lvl {req.requester.level}</p>
+                                    </div>
+                                </div>
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={() => handleAcceptRequest(req.id)}
+                                        className="bg-green-600 text-white p-2 rounded-lg hover:bg-green-500 transition active:scale-95"
+                                    >
+                                        <Check size={16} />
+                                    </button>
+                                    <button
+                                        onClick={() => handleRejectRequest(req.id)}
+                                        className="bg-neutral-700 text-gray-400 p-2 rounded-lg hover:bg-neutral-600 transition active:scale-95"
+                                    >
+                                        <X size={16} />
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             {/* Leaderboard Card */}
             <div className="bg-neutral-900 border border-white/5 rounded-3xl overflow-hidden shadow-2xl mb-6">
@@ -168,12 +274,16 @@ const SquadView: React.FC<SquadViewProps> = ({ telegramUser }) => {
                             <SkeletonLoader className="h-12 w-full rounded-xl" />
                             <SkeletonLoader className="h-12 w-full rounded-xl" />
                         </div>
+                    ) : sortedMembers.length === 0 ? (
+                        <div className="p-8 text-center text-gray-500">
+                            Пока нет друзей. Добавьте кого-нибудь!
+                        </div>
                     ) : (
                         sortedMembers.map((member, index) => (
                             <div
                                 key={member.id}
                                 onClick={() => handleFriendClick(member)}
-                                className={`p-4 flex items-center gap-4 hover:bg-white/5 transition ${member.id !== 'me' ? 'cursor-pointer active:bg-white/10' : ''}`}
+                                className={`p-4 flex items-center gap-4 hover:bg-white/5 transition ${member.id !== -1 ? 'cursor-pointer active:bg-white/10' : ''}`}
                             >
                                 {/* Rank */}
                                 <div className={`w-6 text-center font-black text-lg ${index === 0 ? 'text-yellow-500' : index === 1 ? 'text-gray-300' : index === 2 ? 'text-amber-700' : 'text-gray-600'}`}>
@@ -197,8 +307,8 @@ const SquadView: React.FC<SquadViewProps> = ({ telegramUser }) => {
                                 {/* Info */}
                                 <div className="flex-1">
                                     <div className="flex items-center gap-2">
-                                        <h3 className={`font-bold ${member.id === 'me' ? 'text-indigo-400' : 'text-white'}`}>
-                                            {member.name} {member.id === 'me' && '(Вы)'}
+                                        <h3 className={`font-bold ${member.id === -1 ? 'text-indigo-400' : 'text-white'}`}>
+                                            {member.name} {member.id === -1 && '(Вы)'}
                                         </h3>
                                         {index === 0 && <Crown size={14} className="text-yellow-500 fill-yellow-500" />}
                                     </div>
@@ -212,10 +322,10 @@ const SquadView: React.FC<SquadViewProps> = ({ telegramUser }) => {
                                 </div>
 
                                 {/* Action (Nudge) */}
-                                {member.id !== 'me' && (
+                                {member.id !== -1 && (
                                     <button
                                         onClick={(e) => {
-                                            e.stopPropagation(); // Prevent opening modal
+                                            e.stopPropagation();
                                             handleNudge(member.id, member.name);
                                         }}
                                         className="p-2 rounded-full bg-neutral-800 text-gray-400 hover:text-yellow-400 hover:bg-yellow-400/10 transition active:scale-95"
@@ -243,11 +353,7 @@ const SquadView: React.FC<SquadViewProps> = ({ telegramUser }) => {
                         feed.map(item => (
                             <div
                                 key={item.id}
-                                onClick={() => {
-                                    const friend = friends.find(f => f.id === item.userId);
-                                    if (friend) handleFriendClick(friend);
-                                }}
-                                className="bg-neutral-900/50 border border-white/5 rounded-2xl p-4 flex gap-3 cursor-pointer hover:bg-neutral-800 transition active:scale-[0.98]"
+                                className="bg-neutral-900/50 border border-white/5 rounded-2xl p-4 flex gap-3"
                             >
                                 <div className="shrink-0">
                                     <div className="w-10 h-10 rounded-full bg-neutral-800 border border-white/10 flex items-center justify-center text-lg">
@@ -285,20 +391,24 @@ const SquadView: React.FC<SquadViewProps> = ({ telegramUser }) => {
             {/* Add Friend Modal */}
             {showAddFriend && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
-                    <div className="bg-neutral-900 border border-white/10 rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl transform transition-all scale-100">
-                        <div className="p-5 border-b border-white/5 flex justify-between items-center">
+                    <div className="bg-neutral-900 border border-white/10 rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl transform transition-all scale-100 max-h-[80vh] flex flex-col">
+                        <div className="p-5 border-b border-white/5 flex justify-between items-center shrink-0">
                             <h3 className="font-bold text-white text-lg">Добавить друга</h3>
                             <button
-                                onClick={() => setShowAddFriend(false)}
+                                onClick={() => {
+                                    setShowAddFriend(false);
+                                    setSearchQuery('');
+                                    setSearchResults([]);
+                                }}
                                 className="p-1 rounded-full bg-neutral-800 text-gray-400 hover:text-white"
                             >
                                 <X size={20} />
                             </button>
                         </div>
 
-                        <div className="p-5">
+                        <div className="p-5 flex-1 overflow-y-auto">
                             <p className="text-sm text-gray-400 mb-4">
-                                Введите ID пользователя (например: <span className="text-indigo-400 font-mono">alex_fit</span>, <span className="text-indigo-400 font-mono">kate_strong</span>)
+                                Введите Telegram username для поиска
                             </p>
 
                             <div className="flex gap-2 mb-4">
@@ -307,7 +417,8 @@ const SquadView: React.FC<SquadViewProps> = ({ telegramUser }) => {
                                         type="text"
                                         value={searchQuery}
                                         onChange={(e) => setSearchQuery(e.target.value)}
-                                        placeholder="Telegram ID / Username"
+                                        onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                                        placeholder="@username"
                                         className="w-full bg-neutral-800 border border-white/10 rounded-xl py-3 pl-10 pr-4 text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500 transition"
                                     />
                                     <Search size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500" />
@@ -321,30 +432,70 @@ const SquadView: React.FC<SquadViewProps> = ({ telegramUser }) => {
                                 </button>
                             </div>
 
-                            {/* Search Result */}
-                            {searchResult ? (
-                                <div
-                                    onClick={handleAddFriend}
-                                    className="bg-neutral-800/50 rounded-xl p-3 border border-white/10 flex items-center justify-between animate-fade-in cursor-pointer hover:bg-neutral-800 transition active:scale-95"
-                                >
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-full bg-indigo-500/20 flex items-center justify-center text-indigo-400 font-bold">
-                                            {searchResult.name[0]}
+                            {/* Search Results */}
+                            {searchResults.length > 0 ? (
+                                <div className="space-y-2">
+                                    {searchResults.map(user => (
+                                        <div
+                                            key={user.id}
+                                            className="bg-neutral-800/50 rounded-xl p-3 border border-white/10 flex items-center justify-between animate-fade-in"
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                {user.photoUrl ? (
+                                                    <img src={user.photoUrl} alt={user.name} className="w-10 h-10 rounded-full" />
+                                                ) : (
+                                                    <div className="w-10 h-10 rounded-full bg-indigo-500/20 flex items-center justify-center text-indigo-400 font-bold">
+                                                        {user.name?.[0] || '?'}
+                                                    </div>
+                                                )}
+                                                <div>
+                                                    <p className="font-bold text-white text-sm">{user.name}</p>
+                                                    <p className="text-xs text-gray-400">@{user.username || 'user'} • Lvl {user.level}</p>
+                                                </div>
+                                            </div>
+                                            {getStatusButton(user)}
                                         </div>
-                                        <div>
-                                            <p className="font-bold text-white text-sm">{searchResult.name}</p>
-                                            <p className="text-xs text-gray-400">Lvl {searchResult.level}</p>
-                                        </div>
-                                    </div>
-                                    <button
-                                        className="bg-green-600 text-white p-2 rounded-lg hover:bg-green-500 transition"
-                                    >
-                                        <UserPlus size={18} />
-                                    </button>
+                                    ))}
                                 </div>
                             ) : searchQuery && !isSearching && (
-                                <div className="text-center text-gray-500 text-sm py-2">
-                                    Пользователь не найден
+                                <div className="text-center text-gray-500 text-sm py-4">
+                                    Пользователи не найдены
+                                </div>
+                            )}
+
+                            {/* Show pending requests in modal too */}
+                            {friendRequests.length > 0 && (
+                                <div className="mt-6">
+                                    <h4 className="text-orange-400 font-bold text-sm mb-3">Входящие запросы</h4>
+                                    <div className="space-y-2">
+                                        {friendRequests.map(req => (
+                                            <div key={req.id} className="flex items-center justify-between bg-neutral-800/50 rounded-xl p-3 border border-orange-500/20">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-10 h-10 rounded-full bg-orange-500/20 flex items-center justify-center text-orange-400 font-bold">
+                                                        {req.requester.name[0]}
+                                                    </div>
+                                                    <div>
+                                                        <p className="font-bold text-white text-sm">{req.requester.name}</p>
+                                                        <p className="text-xs text-gray-400">Lvl {req.requester.level}</p>
+                                                    </div>
+                                                </div>
+                                                <div className="flex gap-2">
+                                                    <button
+                                                        onClick={() => handleAcceptRequest(req.id)}
+                                                        className="bg-green-600 text-white p-2 rounded-lg text-xs"
+                                                    >
+                                                        <Check size={14} />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleRejectRequest(req.id)}
+                                                        className="bg-neutral-700 text-gray-400 p-2 rounded-lg text-xs"
+                                                    >
+                                                        <X size={14} />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
                                 </div>
                             )}
                         </div>
@@ -361,7 +512,7 @@ const SquadView: React.FC<SquadViewProps> = ({ telegramUser }) => {
                     onNudge={handleNudge}
                     onRemove={(id) => {
                         setFriends(prev => prev.filter(f => f.id !== id));
-                        loadData(); // Reload to ensure sync
+                        loadData();
                     }}
                 />
             )}

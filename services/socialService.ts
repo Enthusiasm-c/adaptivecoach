@@ -1,156 +1,116 @@
-import { FriendProfile, ActivityFeedItem } from '../types';
+import { FriendProfile, ActivityFeedItem, FriendRequest } from '../types';
 
-const STORAGE_KEY_FRIENDS = 'sensei_training_friends';
-const STORAGE_KEY_FEED = 'sensei_training_feed';
+const API_BASE = 'https://api.sensei.training';
 
-// Mock Database of Users
-const MOCK_USERS: FriendProfile[] = [
-    {
-        id: 'alex_fit',
-        name: 'Alex Fitness',
-        level: 12,
-        streak: 45,
-        totalVolume: 125000,
-        lastActive: new Date().toISOString(),
-        isOnline: true
-    },
-    {
-        id: 'kate_strong',
-        name: 'Kate Power',
-        level: 8,
-        streak: 12,
-        totalVolume: 85000,
-        lastActive: new Date(Date.now() - 3600000).toISOString(), // 1 hour ago
-        isOnline: false
-    },
-    {
-        id: 'mike_gym',
-        name: 'Mike Gym',
-        level: 20,
-        streak: 100,
-        totalVolume: 500000,
-        lastActive: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
-        isOnline: false
+function getInitData(): string {
+    return window.Telegram?.WebApp?.initData || '';
+}
+
+async function apiRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+    const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        ...(options.headers as Record<string, string> || {}),
+    };
+
+    const initData = getInitData();
+    if (initData) {
+        headers['X-Telegram-Init-Data'] = initData;
     }
-];
 
-// Mock Feed Generator
-const generateMockFeed = (friends: FriendProfile[]): ActivityFeedItem[] => {
-    const feed: ActivityFeedItem[] = [];
-    const now = Date.now();
-
-    friends.forEach(friend => {
-        // Randomly generate an activity
-        if (Math.random() > 0.3) {
-            feed.push({
-                id: `feed_${friend.id}_1`,
-                userId: friend.id,
-                userName: friend.name,
-                type: 'workout_finish',
-                title: 'Закончил тренировку "Push Day"',
-                description: `Поднял ${Math.floor(Math.random() * 10000 + 5000)} кг! 🔥`,
-                timestamp: now - Math.floor(Math.random() * 86400000), // Within last 24h
-                likes: Math.floor(Math.random() * 20),
-                likedByMe: false
-            });
-        }
-        if (Math.random() > 0.7) {
-            feed.push({
-                id: `feed_${friend.id}_2`,
-                userId: friend.id,
-                userName: friend.name,
-                type: 'level_up',
-                title: `Достиг уровня ${friend.level}!`,
-                description: 'Новый ранг: Машина 🤖',
-                timestamp: now - Math.floor(Math.random() * 172800000), // Within last 48h
-                likes: Math.floor(Math.random() * 50),
-                likedByMe: false
-            });
-        }
-    });
-
-    return feed.sort((a, b) => b.timestamp - a.timestamp);
-};
+    const response = await fetch(`${API_BASE}${endpoint}`, { ...options, headers });
+    if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+    }
+    return response.json();
+}
 
 export const socialService = {
-    // Get current friends list
+    // Search users by username
+    searchUser: async (query: string): Promise<FriendProfile[]> => {
+        if (!query || query.length < 2) return [];
+        try {
+            const { users } = await apiRequest<{ users: FriendProfile[] }>(
+                `/api/social/search?q=${encodeURIComponent(query)}`
+            );
+            return users;
+        } catch (e) {
+            console.error('Search error:', e);
+            return [];
+        }
+    },
+
+    // Send friend request
+    sendFriendRequest: async (addresseeId: number): Promise<void> => {
+        await apiRequest('/api/social/friends/request', {
+            method: 'POST',
+            body: JSON.stringify({ addresseeId })
+        });
+    },
+
+    // Get incoming friend requests
+    getFriendRequests: async (): Promise<FriendRequest[]> => {
+        try {
+            const { requests } = await apiRequest<{ requests: FriendRequest[] }>(
+                '/api/social/friends/requests'
+            );
+            return requests;
+        } catch (e) {
+            console.error('Get requests error:', e);
+            return [];
+        }
+    },
+
+    // Respond to friend request
+    respondToRequest: async (friendshipId: number, accept: boolean): Promise<void> => {
+        await apiRequest('/api/social/friends/respond', {
+            method: 'POST',
+            body: JSON.stringify({ friendshipId, accept })
+        });
+    },
+
+    // Get friends list
     getSquad: async (): Promise<FriendProfile[]> => {
-        // Simulate network delay
-        await new Promise(resolve => setTimeout(resolve, 500));
-
-        const stored = localStorage.getItem(STORAGE_KEY_FRIENDS);
-        if (stored) {
-            return JSON.parse(stored);
+        try {
+            const { friends } = await apiRequest<{ friends: FriendProfile[] }>(
+                '/api/social/friends'
+            );
+            return friends;
+        } catch (e) {
+            console.error('Get squad error:', e);
+            return [];
         }
-        return [];
     },
 
-    // Search for a user by ID (Mock)
-    searchUser: async (query: string): Promise<FriendProfile | null> => {
-        await new Promise(resolve => setTimeout(resolve, 800));
-
-        // 1. Check hardcoded mock users
-        const user = MOCK_USERS.find(u => u.id.toLowerCase() === query.toLowerCase() || u.name.toLowerCase().includes(query.toLowerCase()));
-        if (user) return user;
-
-        // 2. If not found, GENERATE a mock user (Simulating finding a real user in DB)
-        // Only if query looks like a username (length > 3)
-        if (query.length > 3) {
-            return {
-                id: query.toLowerCase().replace(/\s/g, '_'),
-                name: query, // Use query as name for simplicity
-                level: Math.floor(Math.random() * 10) + 1,
-                streak: Math.floor(Math.random() * 20),
-                totalVolume: Math.floor(Math.random() * 100000),
-                lastActive: new Date().toISOString(),
-                isOnline: Math.random() > 0.5
-            };
-        }
-
-        return null;
-    },
-
-    // Add a friend
-    addFriend: async (friend: FriendProfile): Promise<void> => {
-        await new Promise(resolve => setTimeout(resolve, 500));
-
-        const stored = localStorage.getItem(STORAGE_KEY_FRIENDS);
-        let friends: FriendProfile[] = stored ? JSON.parse(stored) : [];
-
-        // Check if already exists
-        if (!friends.some(f => f.id === friend.id)) {
-            friends.push(friend);
-            localStorage.setItem(STORAGE_KEY_FRIENDS, JSON.stringify(friends));
-        }
+    // Remove friend
+    removeFriend: async (friendId: number): Promise<void> => {
+        await apiRequest(`/api/social/friends/${friendId}`, { method: 'DELETE' });
     },
 
     // Get activity feed
     getFeed: async (): Promise<ActivityFeedItem[]> => {
-        await new Promise(resolve => setTimeout(resolve, 600));
-
-        const storedFriends = localStorage.getItem(STORAGE_KEY_FRIENDS);
-        const friends: FriendProfile[] = storedFriends ? JSON.parse(storedFriends) : [];
-
-        // In a real app, we'd fetch from backend. Here we generate mock data based on friends.
-        // We merge it with any "local" feed items if we had them (e.g. user's own activities)
-        return generateMockFeed(friends);
+        try {
+            const { feed } = await apiRequest<{ feed: ActivityFeedItem[] }>(
+                '/api/social/feed'
+            );
+            return feed;
+        } catch (e) {
+            console.error('Get feed error:', e);
+            return [];
+        }
     },
 
-    // Nudge a friend
-    nudgeFriend: async (friendId: string): Promise<boolean> => {
-        await new Promise(resolve => setTimeout(resolve, 300));
-        return true; // Always success in mock
-    },
-
-    // Remove a friend
-    removeFriend: async (friendId: string): Promise<void> => {
-        await new Promise(resolve => setTimeout(resolve, 500));
-
-        const stored = localStorage.getItem(STORAGE_KEY_FRIENDS);
-        if (stored) {
-            let friends: FriendProfile[] = JSON.parse(stored);
-            friends = friends.filter(f => f.id !== friendId);
-            localStorage.setItem(STORAGE_KEY_FRIENDS, JSON.stringify(friends));
+    // Nudge friend
+    nudgeFriend: async (friendId: number): Promise<boolean> => {
+        try {
+            await apiRequest('/api/social/nudge', {
+                method: 'POST',
+                body: JSON.stringify({ friendId })
+            });
+            return true;
+        } catch (e) {
+            console.error('Nudge error:', e);
+            return false;
         }
     }
 };

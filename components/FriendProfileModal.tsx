@@ -8,12 +8,12 @@ interface FriendProfileModalProps {
     friend: FriendProfile;
     feed: ActivityFeedItem[];
     onClose: () => void;
-    onNudge: (id: string, name: string) => void;
-    onRemove?: (id: string) => void;
+    onNudge: (id: number, name: string) => void;
+    onRemove?: (id: number) => void;
 }
 
 const FriendProfileModal: React.FC<FriendProfileModalProps> = ({ friend, feed, onClose, onNudge, onRemove }) => {
-    const friendActivities = feed.filter(item => item.userId === friend.id);
+    const friendActivities = feed.filter(item => String(item.userId) === String(friend.id));
 
     const handleRemove = async () => {
         if (confirm(`Удалить ${friend.name} из друзей?`)) {
