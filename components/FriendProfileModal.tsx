@@ -81,8 +81,8 @@ const FriendProfileModal: React.FC<FriendProfileModalProps> = ({
                 </div>
 
                 {/* Profile Info */}
-                <div className="px-6 -mt-10 mb-4 flex justify-between items-end">
-                    <div className="relative">
+                <div className="px-6 -mt-10 mb-4">
+                    <div className="relative inline-block">
                         <div className="w-20 h-20 rounded-full bg-neutral-800 border-4 border-[#111] flex items-center justify-center text-2xl font-bold text-gray-400 overflow-hidden">
                             {friend.photoUrl ? (
                                 <img src={friend.photoUrl} alt={friend.name} className="w-full h-full object-cover" />
@@ -94,7 +94,11 @@ const FriendProfileModal: React.FC<FriendProfileModalProps> = ({
                             <div className="absolute bottom-1 right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-[#111]"></div>
                         )}
                     </div>
-                    <div className="flex gap-2 mb-1">
+                </div>
+
+                <div className="px-6 mb-4">
+                    <div className="flex items-center justify-between mb-1">
+                        <h2 className="text-2xl font-black text-white">{friend.name}</h2>
                         <button
                             onClick={() => onNudge(friend.id, friend.name)}
                             className="px-3 py-2 bg-yellow-500 text-black font-bold rounded-xl text-sm flex items-center gap-1.5 hover:bg-yellow-400 transition active:scale-95"
@@ -102,10 +106,6 @@ const FriendProfileModal: React.FC<FriendProfileModalProps> = ({
                             <Zap size={14} fill="currentColor" /> Пнуть
                         </button>
                     </div>
-                </div>
-
-                <div className="px-6 mb-4">
-                    <h2 className="text-2xl font-black text-white">{friend.name}</h2>
                     <div className="flex items-center gap-3 text-sm text-gray-400">
                         <span>Level {profile?.user?.level || friend.level}</span>
                         <span>•</span>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Check, Crown, Zap, MessageCircle, BarChart2, Users } from 'lucide-react';
+import { X, Check, Crown, Zap, MessageCircle, BarChart2, Users, Clock, Lock } from 'lucide-react';
 import { hapticFeedback } from '../utils/hapticUtils';
 
 import { paymentService } from '../services/paymentService';
@@ -7,9 +7,24 @@ import { paymentService } from '../services/paymentService';
 interface PremiumModalProps {
     onClose: () => void;
     onSuccess?: () => void;
+    isPro?: boolean;
+    trialEndsAt?: string | null;
 }
 
-const PremiumModal: React.FC<PremiumModalProps> = ({ onClose, onSuccess }) => {
+const PremiumModal: React.FC<PremiumModalProps> = ({ onClose, onSuccess, isPro = false, trialEndsAt }) => {
+    // Calculate trial days remaining
+    const getTrialDaysRemaining = () => {
+        if (!trialEndsAt) return null;
+        const endDate = new Date(trialEndsAt);
+        const now = new Date();
+        const diffTime = endDate.getTime() - now.getTime();
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        return diffDays > 0 ? diffDays : 0;
+    };
+
+    const trialDays = getTrialDaysRemaining();
+    const isInTrial = trialDays !== null && trialDays > 0;
+
     const handleSubscribe = async () => {
         hapticFeedback.impactOccurred('medium');
 
@@ -48,27 +63,15 @@ const PremiumModal: React.FC<PremiumModalProps> = ({ onClose, onSuccess }) => {
         }
     };
 
-    const benefits = [
-        {
-            icon: <Zap size={20} className="text-yellow-400" />,
-            title: "Умная Адаптация",
-            desc: "ИИ меняет план, если болит спина или нет сил."
-        },
-        {
-            icon: <MessageCircle size={20} className="text-indigo-400" />,
-            title: "Чат с Тренером",
-            desc: "Безлимитные вопросы по технике и питанию."
-        },
-        {
-            icon: <BarChart2 size={20} className="text-emerald-400" />,
-            title: "Pro Аналитика",
-            desc: "Прогноз рекордов, баланс мышц, тренды."
-        },
-        {
-            icon: <Users size={20} className="text-pink-400" />,
-            title: "Команда Pro",
-            desc: "Полная история друзей и секретные бейджи."
-        }
+    const features = [
+        { name: "Персональный план", free: true, pro: true },
+        { name: "История тренировок", free: true, pro: true },
+        { name: "Базовая статистика", free: true, pro: true },
+        { name: "Чат с AI-тренером", free: "3 сообщ/день", pro: "Безлимит" },
+        { name: "Умная адаптация плана", free: false, pro: true },
+        { name: "Анализ дисбалансов", free: false, pro: true },
+        { name: "Прогноз рекордов", free: false, pro: true },
+        { name: "Pro бейджи", free: false, pro: true },
     ];
 
     return (
@@ -91,26 +94,58 @@ const PremiumModal: React.FC<PremiumModalProps> = ({ onClose, onSuccess }) => {
                     <div className="relative z-10 flex flex-col items-center">
                         <Crown size={48} className="text-yellow-400 drop-shadow-[0_0_15px_rgba(250,204,21,0.5)] mb-2" fill="currentColor" />
                         <h2 className="text-2xl font-black text-white tracking-tight uppercase italic">Sensei Pro</h2>
+                        {isInTrial && (
+                            <div className="mt-2 px-3 py-1 bg-green-500/20 border border-green-500/30 rounded-full flex items-center gap-1.5">
+                                <Clock size={12} className="text-green-400" />
+                                <span className="text-xs font-bold text-green-400">Триал: {trialDays} дней</span>
+                            </div>
+                        )}
+                        {isPro && !isInTrial && (
+                            <div className="mt-2 px-3 py-1 bg-yellow-500/20 border border-yellow-500/30 rounded-full flex items-center gap-1.5">
+                                <Check size={12} className="text-yellow-400" />
+                                <span className="text-xs font-bold text-yellow-400">Pro активен</span>
+                            </div>
+                        )}
                     </div>
                 </div>
 
                 <div className="p-6">
-                    <p className="text-gray-400 text-center text-sm mb-6">
-                        Разблокируй полный потенциал ИИ-тренера и достигай целей в 2 раза быстрее.
+                    <p className="text-gray-400 text-center text-sm mb-4">
+                        Сравни возможности бесплатной и Pro версии
                     </p>
 
-                    <div className="space-y-4 mb-8">
-                        {benefits.map((benefit, idx) => (
-                            <div key={idx} className="flex items-start gap-3">
-                                <div className="shrink-0 mt-0.5 bg-white/5 p-1.5 rounded-lg border border-white/5">
-                                    {benefit.icon}
+                    {/* Feature Comparison Table */}
+                    <div className="bg-neutral-900/50 rounded-2xl border border-white/5 overflow-hidden mb-6">
+                        {/* Table Header */}
+                        <div className="grid grid-cols-3 gap-2 p-3 border-b border-white/5 bg-neutral-900">
+                            <div className="text-xs font-bold text-gray-400">Функция</div>
+                            <div className="text-xs font-bold text-gray-500 text-center">Free</div>
+                            <div className="text-xs font-bold text-yellow-400 text-center">Pro</div>
+                        </div>
+                        {/* Table Body */}
+                        <div className="divide-y divide-white/5">
+                            {features.map((feature, idx) => (
+                                <div key={idx} className="grid grid-cols-3 gap-2 p-3 items-center">
+                                    <div className="text-xs text-white">{feature.name}</div>
+                                    <div className="text-center">
+                                        {feature.free === true ? (
+                                            <Check size={14} className="text-green-500 mx-auto" />
+                                        ) : feature.free === false ? (
+                                            <Lock size={14} className="text-gray-600 mx-auto" />
+                                        ) : (
+                                            <span className="text-[10px] text-gray-500">{feature.free}</span>
+                                        )}
+                                    </div>
+                                    <div className="text-center">
+                                        {feature.pro === true ? (
+                                            <Check size={14} className="text-yellow-400 mx-auto" />
+                                        ) : (
+                                            <span className="text-[10px] text-yellow-400">{feature.pro}</span>
+                                        )}
+                                    </div>
                                 </div>
-                                <div>
-                                    <h3 className="font-bold text-white text-sm">{benefit.title}</h3>
-                                    <p className="text-xs text-gray-500">{benefit.desc}</p>
-                                </div>
-                            </div>
-                        ))}
+                            ))}
+                        </div>
                     </div>
 
                     {/* Price & CTA */}

@@ -331,8 +331,11 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
                         </div>
                     </div>
 
-                    {/* Weekly Goal Widget */}
-                    <div className="flex items-center gap-3 bg-neutral-900 border border-white/10 rounded-full pl-4 pr-1.5 py-1.5">
+                    {/* Weekly Goal Widget - Clickable to Progress */}
+                    <button
+                        onClick={() => handleViewChange('progress')}
+                        className="flex items-center gap-3 bg-neutral-900 border border-white/10 rounded-full pl-4 pr-1.5 py-1.5 hover:bg-neutral-800 transition active:scale-95"
+                    >
                         <div className="text-right mr-1">
                             <p className="text-[10px] text-gray-400 font-bold uppercase">План на неделю</p>
                             <p className="text-sm font-black text-white leading-none">{weeklyProgress} <span className="text-gray-500">/ {profile.daysPerWeek}</span></p>
@@ -357,21 +360,19 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
                                 </div>
                             )}
                         </div>
-                    </div>
+                    </button>
                 </div>
 
 
                 {/* AI Insight & Body Status Combined Widget */}
                 <div
-                    onClick={onOpenChat}
-                    className="col-span-2 bg-neutral-900/80 border border-white/10 rounded-3xl p-4 flex items-start gap-4 cursor-pointer hover:bg-neutral-800 transition active:scale-[0.99] relative overflow-hidden group"
+                    className="col-span-2 bg-neutral-900/80 border border-white/10 rounded-3xl p-4 flex items-start gap-4 relative overflow-hidden"
                 >
                     <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500"></div>
 
                     <div className="shrink-0 pt-1">
                         <div className="w-10 h-10 bg-indigo-500/10 rounded-xl flex items-center justify-center text-indigo-400 relative">
-                            <MessageCircle size={20} />
-                            {!insight && <div className="absolute top-0 right-0 w-2.5 h-2.5 bg-indigo-500 rounded-full border-2 border-neutral-900 animate-pulse"></div>}
+                            <Activity size={20} />
                         </div>
                     </div>
 
@@ -391,10 +392,10 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
                             <div className={`flex-1 rounded-full ${isTodayWorkoutDay ? 'bg-neutral-700' : 'bg-green-500'}`}></div>
                         </div>
 
-                        <p className="text-xs text-gray-400 line-clamp-2 leading-relaxed">
-                            {insight || (isTodayWorkoutDay
-                                ? "Твое тело восстановилось. Сегодня отличный день, чтобы увеличить нагрузку."
-                                : "Сегодня день восстановления. Легкая прогулка или растяжка помогут мышцам расти.")}
+                        <p className="text-xs text-gray-400 leading-relaxed">
+                            {isTodayWorkoutDay
+                                ? "Твое тело восстановилось. Отличный день для тренировки!"
+                                : "День восстановления. Прогулка или растяжка помогут."}
                         </p>
                     </div>
                 </div>
@@ -735,6 +736,8 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
                         onUpdateProfile({ ...profile, isPro: true });
                         setShowPremiumModal(false);
                     }}
+                    isPro={profile.isPro}
+                    trialEndsAt={profile.trialEndsAt}
                 />
             )}
         </div>

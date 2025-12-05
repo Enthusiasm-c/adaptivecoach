@@ -105,6 +105,7 @@ export interface OnboardingProfile {
   lastWorkout?: LastWorkout;
   knownWeights?: KnownWeight[];
   isPro?: boolean; // New field for subscription status
+  trialEndsAt?: string | null; // Trial expiration date
 }
 
 export interface TelegramUser {

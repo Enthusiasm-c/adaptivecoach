@@ -18,6 +18,9 @@ const SquadView: React.FC<SquadViewProps> = ({ telegramUser }) => {
     const [isLoading, setIsLoading] = useState(true);
     const [friendRequests, setFriendRequests] = useState<FriendRequest[]>([]);
 
+    // My stats for comparison
+    const [myStats, setMyStats] = useState<{ totalVolume: number; streak: number }>({ totalVolume: 0, streak: 0 });
+
     // Add Friend Modal State
     const [showAddFriend, setShowAddFriend] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
@@ -37,13 +40,31 @@ const SquadView: React.FC<SquadViewProps> = ({ telegramUser }) => {
                 socialService.getFriendRequests()
             ]);
 
+            // Load my profile stats from API
+            let myLevel = 1;
+            let myStreak = 0;
+            let myVolume = 0;
+
+            try {
+                const userId = telegramUser?.id;
+                if (userId) {
+                    const myProfile = await apiService.social.getUserProfile(userId);
+                    myLevel = myProfile?.user?.level || 1;
+                    myStreak = myProfile?.user?.streak_days || 0;
+                    myVolume = myProfile?.user?.total_volume || 0;
+                    setMyStats({ totalVolume: myVolume, streak: myStreak });
+                }
+            } catch (e) {
+                console.error('Failed to load my profile:', e);
+            }
+
             // Add current user to the list for leaderboard
             const currentUser: FriendProfile = {
                 id: -1, // Special ID for current user
                 name: telegramUser?.first_name || "Вы",
-                level: 7,
-                streak: 5,
-                totalVolume: 125000,
+                level: myLevel,
+                streak: myStreak,
+                totalVolume: myVolume,
                 lastActive: new Date().toISOString(),
                 isOnline: true,
                 photoUrl: telegramUser?.photo_url
@@ -571,6 +592,8 @@ const SquadView: React.FC<SquadViewProps> = ({ telegramUser }) => {
                         setFriends(prev => prev.filter(f => f.id !== id));
                         loadData();
                     }}
+                    myTotalVolume={myStats.totalVolume}
+                    myStreak={myStats.streak}
                 />
             )}
 
