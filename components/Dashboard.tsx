@@ -608,7 +608,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
                 />
                 <NavButton
                     icon={<Users size={24} />}
-                    label="Squad"
+                    label="Команда"
                     isActive={activeView === 'squad'}
                     onClick={() => handleViewChange('squad')}
                 />

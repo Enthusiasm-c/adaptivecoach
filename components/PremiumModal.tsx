@@ -66,7 +66,7 @@ const PremiumModal: React.FC<PremiumModalProps> = ({ onClose, onSuccess }) => {
         },
         {
             icon: <Users size={20} className="text-pink-400" />,
-            title: "Squads Pro",
+            title: "Команда Pro",
             desc: "Полная история друзей и секретные бейджи."
         }
     ];

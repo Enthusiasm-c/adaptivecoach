@@ -11,7 +11,7 @@ interface SquadViewProps {
 }
 
 const SquadView: React.FC<SquadViewProps> = ({ telegramUser }) => {
-    const [squadName] = useState("Titan Gym Bros");
+    const [squadName] = useState("Моя Команда");
     const [friends, setFriends] = useState<FriendProfile[]>([]);
     const [feed, setFeed] = useState<ActivityFeedItem[]>([]);
     const [isLoading, setIsLoading] = useState(true);
