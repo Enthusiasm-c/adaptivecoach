@@ -165,6 +165,26 @@ const App: React.FC = () => {
         console.warn("Could not save workout logs to localStorage", e);
     }
 
+    // Sync workout to server (for social features)
+    try {
+      const syncResult = await apiService.workouts.sync({
+        sessionId: log.sessionId,
+        date: log.date,
+        startTime: log.startTime ? new Date(log.startTime).toISOString() : undefined,
+        duration: log.duration,
+        completedExercises: log.completedExercises,
+        feedback: log.feedback,
+      });
+
+      // Show toast for new badges
+      if (syncResult.newBadges && syncResult.newBadges.length > 0) {
+        const badgeNames = syncResult.newBadges.map(b => `${b.icon} ${b.name_ru}`).join(', ');
+        setToastMessage(`Новые достижения: ${badgeNames}`);
+      }
+    } catch (e) {
+      console.warn("Could not sync workout to server", e);
+    }
+
     if (updatedLogs.length > 0 && updatedLogs.length % 3 === 0 && trainingProgram) {
       setIsLoading(true); // Short loading for adaptation
       setError(null);
