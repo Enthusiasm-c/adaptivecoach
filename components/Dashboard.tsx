@@ -360,34 +360,6 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
                     </div>
                 </div>
 
-                {/* Quick Action Grid */}
-                <div className="col-span-2 overflow-x-auto no-scrollbar -mx-4 px-4 pb-2">
-                    <div className="flex gap-3 w-max">
-                        {isTodayWorkoutDay && (
-                            <button
-                                onClick={() => setWorkoutToPreview(nextWorkout)}
-                                className="flex items-center gap-2 bg-neutral-900 border border-white/10 rounded-xl px-4 py-3 whitespace-nowrap active:scale-95 transition"
-                            >
-                                <Dumbbell size={16} className="text-emerald-400" />
-                                <span className="text-xs font-bold text-gray-300">Обзор тренировки</span>
-                            </button>
-                        )}
-                        <button
-                            onClick={() => setActiveView('progress')}
-                            className="flex items-center gap-2 bg-neutral-900 border border-white/10 rounded-xl px-4 py-3 whitespace-nowrap active:scale-95 transition"
-                        >
-                            <BarChart2 size={16} className="text-violet-400" />
-                            <span className="text-xs font-bold text-gray-300">Статистика</span>
-                        </button>
-                        <button
-                            onClick={() => setActiveView('squad')}
-                            className="flex items-center gap-2 bg-neutral-900 border border-white/10 rounded-xl px-4 py-3 whitespace-nowrap active:scale-95 transition"
-                        >
-                            <Users size={16} className="text-pink-400" />
-                            <span className="text-xs font-bold text-gray-300">Команда</span>
-                        </button>
-                    </div>
-                </div>
 
                 {/* AI Insight & Body Status Combined Widget */}
                 <div
