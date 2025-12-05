@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { OnboardingProfile, TelegramUser, Goal } from '../types';
-import { Trash2, Save, User, LogOut, Target, Calendar, Clock, Star, Check, Award, Loader2 } from 'lucide-react';
+import { Trash2, Save, User, LogOut, Target, Calendar, Clock, Star, Check, Award, Loader2, MessageCircle } from 'lucide-react';
 import { apiService, Badge } from '../services/apiService';
 
 interface SettingsViewProps {
@@ -335,6 +335,23 @@ const SettingsView: React.FC<SettingsViewProps> = ({ profile, telegramUser, onUp
                     </p>
                 </div>
             )}
+
+            {/* Cooperation / Contact Section */}
+            <div className="mt-8 pt-6 border-t border-white/5">
+                <button
+                    onClick={() => {
+                        if (window.Telegram?.WebApp?.openTelegramLink) {
+                            window.Telegram.WebApp.openTelegramLink('https://t.me/domashenkod');
+                        } else {
+                            window.open('https://t.me/domashenkod', '_blank');
+                        }
+                    }}
+                    className="w-full flex items-center justify-center gap-2 py-3 text-gray-400 hover:text-white transition text-sm"
+                >
+                    <MessageCircle size={16} />
+                    Сотрудничество: @domashenkod
+                </button>
+            </div>
         </div>
     );
 };
