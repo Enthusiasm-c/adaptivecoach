@@ -4,6 +4,7 @@ import { OnboardingProfile, TrainingProgram, WorkoutLog, ChatMessage, TelegramUs
 import Onboarding from './components/Onboarding';
 import Dashboard from './components/Dashboard';
 import { generateInitialPlan, adaptPlan, getChatbotResponse, currentApiKey } from './services/geminiService';
+import { apiService } from './services/apiService';
 import Chatbot from './components/Chatbot';
 import { AlertTriangle, RefreshCw, Copy, Settings, Globe, Brain, Dumbbell, Activity, CalendarCheck } from 'lucide-react';
 
@@ -60,7 +61,7 @@ const App: React.FC = () => {
         window.Telegram.WebApp.expand();
         // Ensure proper viewport height for Telegram
         document.documentElement.style.setProperty('--tg-viewport-height', window.Telegram.WebApp.viewportHeight + 'px');
-        
+
         // Set header color
         window.Telegram.WebApp.setHeaderColor('#0a0a0a');
         window.Telegram.WebApp.setBackgroundColor('#0a0a0a');
@@ -69,13 +70,20 @@ const App: React.FC = () => {
         if (window.Telegram.WebApp.initDataUnsafe?.user) {
             setTelegramUser(window.Telegram.WebApp.initDataUnsafe.user);
         }
+
+        // Register user in backend database (for friend search)
+        if (window.Telegram.WebApp.initData) {
+            apiService.auth.validate().catch(err => {
+                console.warn('Auth validation failed:', err);
+            });
+        }
     }
 
     try {
       const storedProfile = localStorage.getItem('onboardingProfile');
       const storedProgram = localStorage.getItem('trainingProgram');
       const storedLogs = localStorage.getItem('workoutLogs');
-      
+
       if (storedProfile) setOnboardingProfile(JSON.parse(storedProfile));
       if (storedProgram) setTrainingProgram(JSON.parse(storedProgram));
       if (storedLogs) setWorkoutLogs(JSON.parse(storedLogs));
