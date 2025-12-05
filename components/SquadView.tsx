@@ -359,6 +359,10 @@ const SquadView: React.FC<SquadViewProps> = ({ telegramUser }) => {
                     feed={feed}
                     onClose={() => setSelectedFriend(null)}
                     onNudge={handleNudge}
+                    onRemove={(id) => {
+                        setFriends(prev => prev.filter(f => f.id !== id));
+                        loadData(); // Reload to ensure sync
+                    }}
                 />
             )}
 

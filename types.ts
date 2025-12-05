@@ -93,6 +93,7 @@ export interface OnboardingProfile {
   intensity: Intensity;
   lastWorkout?: LastWorkout;
   knownWeights?: KnownWeight[];
+  isPro?: boolean; // New field for subscription status
 }
 
 export interface TelegramUser {

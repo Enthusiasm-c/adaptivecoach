@@ -89,9 +89,25 @@ export const socialService = {
     searchUser: async (query: string): Promise<FriendProfile | null> => {
         await new Promise(resolve => setTimeout(resolve, 800));
 
-        // Simple mock search
+        // 1. Check hardcoded mock users
         const user = MOCK_USERS.find(u => u.id.toLowerCase() === query.toLowerCase() || u.name.toLowerCase().includes(query.toLowerCase()));
-        return user || null;
+        if (user) return user;
+
+        // 2. If not found, GENERATE a mock user (Simulating finding a real user in DB)
+        // Only if query looks like a username (length > 3)
+        if (query.length > 3) {
+            return {
+                id: query.toLowerCase().replace(/\s/g, '_'),
+                name: query, // Use query as name for simplicity
+                level: Math.floor(Math.random() * 10) + 1,
+                streak: Math.floor(Math.random() * 20),
+                totalVolume: Math.floor(Math.random() * 100000),
+                lastActive: new Date().toISOString(),
+                isOnline: Math.random() > 0.5
+            };
+        }
+
+        return null;
     },
 
     // Add a friend
@@ -124,5 +140,17 @@ export const socialService = {
     nudgeFriend: async (friendId: string): Promise<boolean> => {
         await new Promise(resolve => setTimeout(resolve, 300));
         return true; // Always success in mock
+    },
+
+    // Remove a friend
+    removeFriend: async (friendId: string): Promise<void> => {
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        const stored = localStorage.getItem(STORAGE_KEY_FRIENDS);
+        if (stored) {
+            let friends: FriendProfile[] = JSON.parse(stored);
+            friends = friends.filter(f => f.id !== friendId);
+            localStorage.setItem(STORAGE_KEY_FRIENDS, JSON.stringify(friends));
+        }
     }
 };

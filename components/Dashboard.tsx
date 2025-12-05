@@ -1,45 +1,41 @@
 import React, { useState, useEffect } from 'react';
-import { OnboardingProfile, TrainingProgram, WorkoutLog, WorkoutSession, ReadinessData, TelegramUser, ActiveWorkoutState } from '../types';
+import { OnboardingProfile, TrainingProgram, WorkoutLog, WorkoutSession, ReadinessData, ActiveWorkoutState, TelegramUser } from '../types';
 import WorkoutView from './WorkoutView';
 import ProgressView from './ProgressView';
 import SettingsView from './SettingsView';
-import SquadView from './SquadView'; // New import
-import { Play, Calendar, Check, ChevronLeft, ChevronRight, BarChart2, Settings, LayoutGrid, Dumbbell, Bot, Crown, Users, MessageCircle, Flame, Activity, Zap, Clock, TrendingUp, Sparkles, MessageSquarePlus, HelpCircle, Coffee, Sun, Moon } from 'lucide-react'; // Updated imports
+import SquadView from './SquadView';
+import { Dumbbell, Calendar as CalendarIcon, BarChart2, Settings, Play, ChevronRight, Info, Battery, Zap, Trophy, Users, Crown, Bot, MessageCircle, Flame, Activity, Clock, TrendingUp, Sparkles, MessageSquarePlus, HelpCircle, Coffee, Sun, Moon, Check, LayoutGrid } from 'lucide-react';
 import WorkoutPreviewModal from './WorkoutPreviewModal';
 import ReadinessModal from './ReadinessModal';
+import PremiumModal from './PremiumModal';
 import { calculateStreaks, calculateWorkoutVolume, calculateWeeklyProgress, getMuscleFocus, calculateLevel } from '../utils/progressUtils';
 import { getDashboardInsight } from '../services/geminiService';
 import { hapticFeedback } from '../utils/hapticUtils';
 import SkeletonLoader from './SkeletonLoader';
 
-
 interface DashboardProps {
     profile: OnboardingProfile;
-    program: TrainingProgram;
     logs: WorkoutLog[];
+    program: TrainingProgram | null;
     telegramUser: TelegramUser | null;
+    onUpdateProgram: (program: TrainingProgram) => void;
+    onUpdateProfile: (profile: OnboardingProfile) => void;
     onWorkoutComplete: (log: WorkoutLog) => void;
-    onUpdateProfile: (newProfile: OnboardingProfile) => void;
     onResetAccount: () => void;
     onOpenChat: () => void;
 }
 
-type View = 'today' | 'squad' | 'progress' | 'settings'; // Changed 'plan' to 'squad'
-
-const Dashboard: React.FC<DashboardProps> = ({ profile, program, logs, telegramUser, onWorkoutComplete, onUpdateProfile, onResetAccount, onOpenChat }) => {
-    const [activeView, setActiveView] = useState<View>('today');
+const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramUser, onUpdateProgram, onUpdateProfile, onWorkoutComplete, onResetAccount, onOpenChat }) => {
+    const [activeView, setActiveView] = useState<'today' | 'squad' | 'progress' | 'settings'>('today');
     const [activeWorkout, setActiveWorkout] = useState<string | null>(null);
     const [workoutToPreview, setWorkoutToPreview] = useState<WorkoutSession | null>(null);
-    const [restoredState, setRestoredState] = useState<ActiveWorkoutState | null>(null);
-
-    // Readiness State
+    const [insight, setInsight] = useState<string | null>(null); // Unified insight state
+    const [isInsightLoading, setIsInsightLoading] = useState(false);
+    const [showPremiumModal, setShowPremiumModal] = useState(false);
     const [showReadinessModal, setShowReadinessModal] = useState(false);
     const [pendingSessionName, setPendingSessionName] = useState<string | null>(null);
     const [currentReadiness, setCurrentReadiness] = useState<ReadinessData | null>(null);
-
-    // AI Insight State
-    const [coachInsight, setCoachInsight] = useState<string | null>(null);
-    const [isInsightLoading, setIsInsightLoading] = useState(false);
+    const [restoredState, setRestoredState] = useState<ActiveWorkoutState | null>(null);
 
     // Calendar State (Removed calendarDate, isEditingSchedule, selectedDateToMove, scheduleOverrides)
 
@@ -54,7 +50,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, program, logs, telegramU
         // Restore active workout state
         try {
             const savedState = localStorage.getItem('activeWorkoutState');
-            if (savedState) {
+            if (savedState && program) {
                 const parsedState: ActiveWorkoutState = JSON.parse(savedState);
                 // Verify if session still exists in program
                 const sessionExists = program.sessions.some(s => s.name === parsedState.session.name);
@@ -69,10 +65,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, program, logs, telegramU
         } catch (e) {
             console.error("Failed to restore state", e);
         }
-    }, []);
-
-    // Removed saveOverrides function
-
+    }, [program]);
 
     useEffect(() => {
         // Check local storage for cached insight
@@ -88,7 +81,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, program, logs, telegramU
             const isStale = (now - parsed.timestamp) > 6 * 60 * 60 * 1000;
 
             if (parsed.logCount === lastLogCount && !isStale) {
-                setCoachInsight(parsed.text);
+                setInsight(parsed.text);
                 shouldFetch = false;
             }
         }
@@ -98,7 +91,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, program, logs, telegramU
                 setIsInsightLoading(true);
                 try {
                     const text = await getDashboardInsight(profile, logs);
-                    setCoachInsight(text);
+                    setInsight(text);
                     localStorage.setItem('lastCoachInsight', JSON.stringify({
                         timestamp: new Date().getTime(),
                         logCount: lastLogCount,
@@ -112,7 +105,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, program, logs, telegramU
             }
             fetchInsight();
         }
-    }, [logs.length]); // Re-run only if workout count changes
+    }, [logs.length, profile]);
 
 
     if (!program || !Array.isArray(program.sessions) || program.sessions.length === 0) {
@@ -345,7 +338,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, program, logs, telegramU
                             onClick={() => setActiveView('plan')}
                             className="flex items-center gap-2 bg-neutral-900 border border-white/10 rounded-xl px-4 py-3 whitespace-nowrap active:scale-95 transition"
                         >
-                            <Calendar size={16} className="text-violet-400" />
+                            <CalendarIcon size={16} className="text-violet-400" />
                             <span className="text-xs font-bold text-gray-300">Изменить график</span>
                         </button>
                         {isTodayWorkoutDay && (
@@ -370,7 +363,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, program, logs, telegramU
                     <div className="shrink-0 pt-1">
                         <div className="w-10 h-10 bg-indigo-500/10 rounded-xl flex items-center justify-center text-indigo-400 relative">
                             <MessageCircle size={20} />
-                            {!coachInsight && <div className="absolute top-0 right-0 w-2.5 h-2.5 bg-indigo-500 rounded-full border-2 border-neutral-900 animate-pulse"></div>}
+                            {!insight && <div className="absolute top-0 right-0 w-2.5 h-2.5 bg-indigo-500 rounded-full border-2 border-neutral-900 animate-pulse"></div>}
                         </div>
                     </div>
 
@@ -391,7 +384,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, program, logs, telegramU
                         </div>
 
                         <p className="text-xs text-gray-400 line-clamp-2 leading-relaxed">
-                            {coachInsight || (isTodayWorkoutDay
+                            {insight || (isTodayWorkoutDay
                                 ? "Твое тело восстановилось. Сегодня отличный день, чтобы увеличить нагрузку."
                                 : "Сегодня день восстановления. Легкая прогулка или растяжка помогут мышцам расти.")}
                         </p>
@@ -417,7 +410,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, program, logs, telegramU
                                     <div>
                                         <div className="flex items-center gap-2 mb-2">
                                             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/10 text-white text-[10px] font-bold uppercase tracking-wider">
-                                                <Calendar size={10} /> Сегодня
+                                                <CalendarIcon size={10} /> Сегодня
                                             </span>
                                             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/5 text-gray-400 text-[10px] font-bold uppercase tracking-wider">
                                                 <Clock size={10} /> ~{profile.timePerWorkout} мин
@@ -511,7 +504,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, program, logs, telegramU
                                                 </div>
                                             ) : (
                                                 <p className="text-gray-300 text-sm leading-relaxed">
-                                                    {coachInsight || "Анализирую твой прогресс..."}
+                                                    {insight || "Анализирую твой прогресс..."}
                                                 </p>
                                             )}
 
@@ -571,40 +564,69 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, program, logs, telegramU
         );
     };
 
+    const handleViewChange = (view: 'today' | 'squad' | 'progress' | 'settings') => {
+        setActiveView(view);
+        hapticFeedback.selectionChanged();
+    };
+
     return (
-        <div className="w-full max-w-md mx-auto min-h-[100dvh] p-4 font-sans text-gray-100 relative">
-            <main className="py-2">
+        <div className="min-h-screen pb-24 relative overflow-hidden">
+            {/* Header */}
+            <header className="px-6 pt-6 pb-4 flex items-center justify-between sticky top-0 bg-[#0a0a0a]/80 backdrop-blur-md z-40 border-b border-white/5">
+                <div>
+                    <h1 className="text-2xl font-black text-white tracking-tight italic">
+                        ADAPTIVE<span className="text-indigo-500">COACH</span>
+                    </h1>
+                    <p className="text-xs text-gray-400 font-medium">
+                        {profile.experience} • {profile.goals.primary}
+                    </p>
+                </div>
+                <button
+                    onClick={() => {
+                        hapticFeedback.impactOccurred('light');
+                        setShowPremiumModal(true);
+                    }}
+                    className="p-2 bg-gradient-to-r from-amber-500/20 to-yellow-500/20 border border-amber-500/30 rounded-xl text-amber-400 hover:text-amber-300 transition-colors relative group"
+                >
+                    <Crown size={24} fill="currentColor" className="drop-shadow-[0_0_8px_rgba(251,191,36,0.5)]" />
+                    <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-[#0a0a0a]"></div>
+                </button>
+            </header>
+
+            {/* Main Content */}
+            <main className="px-6 py-6 space-y-6">
                 {renderContent()}
             </main>
 
-            {/* Bottom Navigation Bar */}
-            <nav className="fixed bottom-0 left-0 w-full bg-neutral-950/90 backdrop-blur-md border-t border-white/5 pb-[calc(0.5rem+env(safe-area-inset-bottom))] pt-3 flex justify-around items-center z-40 shadow-[0_-10px_30px_rgba(0,0,0,0.5)]">
+            {/* Navigation Bar */}
+            <nav className="fixed bottom-6 left-6 right-6 bg-[#111]/90 backdrop-blur-xl border border-white/10 rounded-2xl p-2 flex justify-between items-center shadow-2xl z-40">
                 <NavButton
-                    icon={<LayoutGrid size={24} strokeWidth={activeView === 'today' ? 2.5 : 2} />}
-                    label="Главная"
+                    icon={<Dumbbell size={24} />}
+                    label="Today"
                     isActive={activeView === 'today'}
-                    onClick={() => { setActiveView('today'); hapticFeedback.selectionChanged(); }}
+                    onClick={() => handleViewChange('today')}
                 />
                 <NavButton
-                    icon={<Users size={24} strokeWidth={activeView === 'squad' ? 2.5 : 2} />}
+                    icon={<Users size={24} />}
                     label="Squad"
                     isActive={activeView === 'squad'}
-                    onClick={() => { setActiveView('squad'); hapticFeedback.selectionChanged(); }}
+                    onClick={() => handleViewChange('squad')}
                 />
                 <NavButton
-                    icon={<BarChart2 size={24} strokeWidth={activeView === 'progress' ? 2.5 : 2} />}
-                    label="Прогресс"
+                    icon={<BarChart2 size={24} />}
+                    label="Progress"
                     isActive={activeView === 'progress'}
-                    onClick={() => { setActiveView('progress'); hapticFeedback.selectionChanged(); }}
+                    onClick={() => handleViewChange('progress')}
                 />
                 <NavButton
-                    icon={<Settings size={24} strokeWidth={activeView === 'settings' ? 2.5 : 2} />}
-                    label="Настройки"
+                    icon={<Settings size={24} />}
+                    label="Settings"
                     isActive={activeView === 'settings'}
-                    onClick={() => { setActiveView('settings'); hapticFeedback.selectionChanged(); }}
+                    onClick={() => handleViewChange('settings')}
                 />
             </nav>
 
+            {/* Modals */}
             {workoutToPreview && (
                 <WorkoutPreviewModal
                     session={workoutToPreview}
@@ -617,6 +639,16 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, program, logs, telegramU
                 <ReadinessModal
                     onConfirm={handleReadinessConfirm}
                     onCancel={() => setShowReadinessModal(false)}
+                />
+            )}
+
+            {showPremiumModal && (
+                <PremiumModal
+                    onClose={() => setShowPremiumModal(false)}
+                    onSuccess={() => {
+                        onUpdateProfile({ ...profile, isPro: true });
+                        setShowPremiumModal(false);
+                    }}
                 />
             )}
         </div>
