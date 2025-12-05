@@ -98,25 +98,25 @@ const generateMockLogs = (): WorkoutLog[] => {
     return logs;
 };
 
-const ProgressView: React.FC<ProgressViewProps> = ({ logs, program }) => {
+const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProgram }) => {
     const isDemoMode = logs.length === 0;
 
     const displayLogs = useMemo(() => {
         return isDemoMode ? generateMockLogs() : logs;
     }, [logs, isDemoMode]);
 
-    const { currentStreak, bestStreak } = calculateStreaks(displayLogs);
-    const totalVolume = calculateTotalVolume(displayLogs);
-    const weeklyVolumeData = calculateWeeklyVolume(displayLogs);
-    const personalRecords = calculatePersonalRecords(displayLogs);
-    const readinessData = calculateReadinessHistory(displayLogs);
-    const movementData = calculateMovementPatterns(displayLogs);
-    const heatmapData = getHeatmapData(displayLogs);
+    const { currentStreak, bestStreak } = useMemo(() => calculateStreaks(displayLogs), [displayLogs]);
+    const totalVolume = useMemo(() => calculateTotalVolume(displayLogs), [displayLogs]);
+    const weeklyVolumeData = useMemo(() => calculateWeeklyVolume(displayLogs), [displayLogs]);
+    const personalRecords = useMemo(() => calculatePersonalRecords(displayLogs), [displayLogs]);
+    const readinessData = useMemo(() => calculateReadinessHistory(displayLogs), [displayLogs]);
+    const movementData = useMemo(() => calculateMovementPatterns(displayLogs), [displayLogs]);
+    const heatmapData = useMemo(() => getHeatmapData(displayLogs), [displayLogs]);
 
     // New Analytics
-    const userLevel = calculateLevel(displayLogs);
-    const strengthData = getStrengthProgression(displayLogs);
-    const volumeDistData = getVolumeDistribution(displayLogs);
+    const userLevel = useMemo(() => calculateLevel(displayLogs), [displayLogs]);
+    const strengthData = useMemo(() => getStrengthProgression(displayLogs), [displayLogs]);
+    const volumeDistData = useMemo(() => getVolumeDistribution(displayLogs), [displayLogs]);
 
     // --- Calendar Logic ---
     const [currentDate, setCurrentDate] = React.useState(new Date());
@@ -154,14 +154,14 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program }) => {
                 // Select session to move
                 if (status?.type === 'planned') {
                     setSelectedDateToMove(date);
-                    hapticFeedback.impactLight();
+                    hapticFeedback.impactOccurred('light');
                 }
             } else {
                 // Move to new date
                 moveSession(selectedDateToMove, date);
                 setSelectedDateToMove(null);
                 setIsEditingSchedule(false);
-                hapticFeedback.notificationSuccess();
+                hapticFeedback.notificationOccurred('success');
             }
         } else {
             // Toggle day status (Rest <-> Planned)
@@ -210,7 +210,7 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program }) => {
         onUpdateProgram({ ...program, schedule: newSchedule });
     };
 
-    const onUpdateProgram = props.onUpdateProgram; // Access from props
+    // Removed redundant props access
 
     const renderCalendar = () => {
         const days = getDaysInMonth(currentDate);
@@ -539,8 +539,8 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program }) => {
                         <div key={idx} className="flex flex-col items-center gap-1 flex-1">
                             <div
                                 className={`w-full aspect-[4/5] rounded-md transition-all duration-500 ${day.hasWorkout
-                                        ? (day.intensity > 1 ? 'bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.4)]' : 'bg-green-500/60')
-                                        : 'bg-neutral-800'
+                                    ? (day.intensity > 1 ? 'bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.4)]' : 'bg-green-500/60')
+                                    : 'bg-neutral-800'
                                     }`}
                                 title={day.date.toDateString()}
                             ></div>
