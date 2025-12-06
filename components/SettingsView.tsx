@@ -1,8 +1,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { OnboardingProfile, TelegramUser, Goal } from '../types';
-import { Trash2, Save, User, LogOut, Target, Calendar, Clock, Star, Check, Award, Loader2, MessageCircle } from 'lucide-react';
-import { apiService, Badge } from '../services/apiService';
+import { Trash2, Save, User, LogOut, Target, Calendar, Clock, Star, Check, Award, Loader2, MessageCircle, Bell, BellOff } from 'lucide-react';
+import { apiService, Badge, NotificationSettings } from '../services/apiService';
 
 interface SettingsViewProps {
     profile: OnboardingProfile;
@@ -41,6 +41,11 @@ const SettingsView: React.FC<SettingsViewProps> = ({ profile, telegramUser, onUp
     const [myBadges, setMyBadges] = useState<Badge[]>([]);
     const [loadingBadges, setLoadingBadges] = useState(true);
 
+    // Notification settings state
+    const [notifEnabled, setNotifEnabled] = useState(true);
+    const [notifDays, setNotifDays] = useState<number[]>([1, 3, 5]);
+    const [notifSaving, setNotifSaving] = useState(false);
+
     useEffect(() => {
         const loadBadges = async () => {
             try {
@@ -59,6 +64,62 @@ const SettingsView: React.FC<SettingsViewProps> = ({ profile, telegramUser, onUp
         };
         loadBadges();
     }, [telegramUser]);
+
+    // Load notification settings
+    useEffect(() => {
+        const loadNotifSettings = async () => {
+            try {
+                const settings = await apiService.notifications.getSettings();
+                setNotifEnabled(settings.reminder_enabled);
+                setNotifDays(settings.preferred_days || [1, 3, 5]);
+            } catch (e) {
+                console.error('Failed to load notification settings:', e);
+            }
+        };
+        loadNotifSettings();
+    }, []);
+
+    // Sync preferredDays from profile on mount
+    useEffect(() => {
+        if (profile.preferredDays && profile.preferredDays.length > 0) {
+            setNotifDays(profile.preferredDays);
+        }
+    }, [profile.preferredDays]);
+
+    const handleNotifToggle = async () => {
+        const newEnabled = !notifEnabled;
+        setNotifEnabled(newEnabled);
+        setNotifSaving(true);
+        try {
+            await apiService.notifications.saveSettings({
+                preferredDays: notifDays,
+                enabled: newEnabled,
+            });
+        } catch (e) {
+            console.error('Failed to save notification settings:', e);
+            setNotifEnabled(!newEnabled); // revert on error
+        } finally {
+            setNotifSaving(false);
+        }
+    };
+
+    const handleNotifDaysChange = async (day: number) => {
+        const newDays = notifDays.includes(day)
+            ? notifDays.filter(d => d !== day)
+            : [...notifDays, day].sort();
+        setNotifDays(newDays);
+        setNotifSaving(true);
+        try {
+            await apiService.notifications.saveSettings({
+                preferredDays: newDays,
+                enabled: notifEnabled,
+            });
+        } catch (e) {
+            console.error('Failed to save notification days:', e);
+        } finally {
+            setNotifSaving(false);
+        }
+    };
 
     const handleSave = () => {
         onUpdateProfile({
@@ -278,6 +339,76 @@ const SettingsView: React.FC<SettingsViewProps> = ({ profile, telegramUser, onUp
                                 )}
                             </>
                         )}
+                    </section>
+
+                    {/* Notifications Section */}
+                    <section className="space-y-4">
+                        <h2 className="text-lg font-bold text-gray-300 px-2 flex items-center gap-2">
+                            <Bell size={18} className="text-indigo-400" /> Уведомления
+                        </h2>
+
+                        <div className="bg-neutral-900 rounded-2xl border border-white/5 overflow-hidden">
+                            {/* Toggle */}
+                            <div className="p-4 flex items-center justify-between border-b border-white/5">
+                                <div className="flex items-center gap-3">
+                                    {notifEnabled ? (
+                                        <Bell size={20} className="text-indigo-400" />
+                                    ) : (
+                                        <BellOff size={20} className="text-gray-500" />
+                                    )}
+                                    <div>
+                                        <p className="text-sm font-bold text-white">Напоминания о тренировках</p>
+                                        <p className="text-xs text-gray-500">Утром в дни тренировок</p>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={handleNotifToggle}
+                                    disabled={notifSaving}
+                                    className={`w-12 h-7 rounded-full relative transition-colors ${
+                                        notifEnabled ? 'bg-indigo-600' : 'bg-neutral-700'
+                                    }`}
+                                >
+                                    <div className={`absolute top-1 w-5 h-5 bg-white rounded-full transition-transform ${
+                                        notifEnabled ? 'left-6' : 'left-1'
+                                    }`} />
+                                </button>
+                            </div>
+
+                            {/* Days selector */}
+                            {notifEnabled && (
+                                <div className="p-4">
+                                    <p className="text-xs text-gray-500 mb-3">Дни тренировок:</p>
+                                    <div className="flex gap-2">
+                                        {[
+                                            { day: 1, label: 'Пн' },
+                                            { day: 2, label: 'Вт' },
+                                            { day: 3, label: 'Ср' },
+                                            { day: 4, label: 'Чт' },
+                                            { day: 5, label: 'Пт' },
+                                            { day: 6, label: 'Сб' },
+                                            { day: 0, label: 'Вс' },
+                                        ].map(({ day, label }) => (
+                                            <button
+                                                key={day}
+                                                onClick={() => handleNotifDaysChange(day)}
+                                                disabled={notifSaving}
+                                                className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${
+                                                    notifDays.includes(day)
+                                                        ? 'bg-indigo-600 text-white'
+                                                        : 'bg-neutral-800 text-gray-500'
+                                                }`}
+                                            >
+                                                {label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        <p className="text-[10px] text-gray-600 px-2">
+                            Напоминания приходят в чат с ботом утром (08:00 МСК) в выбранные дни. Макс 2-3 сообщения в неделю.
+                        </p>
                     </section>
 
                     {/* Danger Zone */}

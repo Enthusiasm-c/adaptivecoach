@@ -142,6 +142,16 @@ export interface CreateChallengeRequest {
   invitedUserIds: number[];
 }
 
+// Notification settings types
+export interface NotificationSettings {
+  reminder_enabled: boolean;
+  preferred_days: number[];
+  reminder_time: string;
+  timezone: string;
+  last_notification_at?: string;
+  notification_response_rate?: number;
+}
+
 // Enhanced profile types
 export interface EnhancedUserProfile {
   user: {
@@ -246,6 +256,32 @@ export const apiService = {
   social: {
     getUserProfile: async (userId: number): Promise<EnhancedUserProfile> => {
       return apiRequest<EnhancedUserProfile>(`/api/social/users/${userId}/profile`);
+    },
+  },
+
+  // Notification endpoints
+  notifications: {
+    getSettings: async (): Promise<NotificationSettings> => {
+      return apiRequest<NotificationSettings>('/api/notifications/settings');
+    },
+
+    saveSettings: async (settings: {
+      preferredDays: number[];
+      reminderTime?: string;
+      enabled: boolean;
+      timezone?: string;
+    }): Promise<{ success: boolean }> => {
+      return apiRequest<{ success: boolean }>('/api/notifications/settings', {
+        method: 'POST',
+        body: JSON.stringify(settings),
+      });
+    },
+
+    trackOpen: async (ref?: string): Promise<{ success: boolean }> => {
+      return apiRequest<{ success: boolean }>('/api/notifications/track-open', {
+        method: 'POST',
+        body: JSON.stringify({ ref }),
+      });
     },
   },
 };

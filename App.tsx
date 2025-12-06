@@ -128,6 +128,33 @@ const App: React.FC = () => {
       }
   }, [toastMessage]);
 
+  // Track notification opens
+  useEffect(() => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const ref = urlParams.get('ref');
+
+      if (ref && ref.startsWith('notif_')) {
+          // Track this open in the backend
+          apiService.notifications.trackOpen(ref).catch(err => {
+              console.warn('Failed to track notification open:', err);
+          });
+
+          // Handle specific notification types
+          if (ref.includes('_summary')) {
+              // User clicked from weekly summary - could navigate to progress tab
+              const tab = urlParams.get('tab');
+              if (tab === 'progress') {
+                  // Progress tab will be shown via Dashboard's default behavior
+                  console.log('[Notif] User opened from weekly summary');
+              }
+          }
+
+          // Clean up URL without reloading
+          const cleanUrl = window.location.pathname;
+          window.history.replaceState({}, document.title, cleanUrl);
+      }
+  }, []);
+
   const handleOnboardingComplete = useCallback(async (profile: OnboardingProfile) => {
     setIsLoading(true);
     setLoadingStep(0); // Reset animation to start
