@@ -59,12 +59,15 @@ const SquadView: React.FC<SquadViewProps> = ({ telegramUser }) => {
             }
 
             // Enrich each friend with full profile data (streak, totalVolume, level)
+            // Note: getUserProfile expects telegram_id, not DB id
             const enrichedFriends = await Promise.all(
                 squadData.map(async (friend) => {
                     try {
-                        const profile = await apiService.social.getUserProfile(friend.id);
+                        const profileId = friend.telegramId || friend.id;
+                        const profile = await apiService.social.getUserProfile(profileId);
                         return {
                             ...friend,
+                            telegramId: friend.telegramId || profile?.user?.id,
                             level: profile?.user?.level || friend.level || 1,
                             streak: profile?.user?.streak_days || friend.streak || 0,
                             totalVolume: profile?.user?.total_volume || friend.totalVolume || 0,

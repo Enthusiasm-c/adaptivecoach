@@ -38,7 +38,9 @@ const FriendProfileModal: React.FC<FriendProfileModalProps> = ({
     useEffect(() => {
         const loadProfile = async () => {
             try {
-                const data = await apiService.social.getUserProfile(friend.id);
+                // Use telegramId if available, fallback to id
+                const profileId = friend.telegramId || friend.id;
+                const data = await apiService.social.getUserProfile(profileId);
                 setProfile(data);
             } catch (e) {
                 console.error('Failed to load enhanced profile:', e);
@@ -47,7 +49,7 @@ const FriendProfileModal: React.FC<FriendProfileModalProps> = ({
             }
         };
         loadProfile();
-    }, [friend.id]);
+    }, [friend.id, friend.telegramId]);
 
     const friendActivities = feed.filter(item => String(item.userId) === String(friend.id));
 
