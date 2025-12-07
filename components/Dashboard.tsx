@@ -284,7 +284,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
 
     const renderContent = () => {
         if (activeView === 'squad') { // New 'squad' view
-            return <SquadView telegramUser={telegramUser} />;
+            return <SquadView telegramUser={telegramUser} logs={logs} />;
         }
 
         if (activeView === 'progress') {

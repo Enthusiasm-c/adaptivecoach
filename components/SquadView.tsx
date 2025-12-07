@@ -1,17 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { Users, Zap, Trophy, Crown, Share2, Activity, UserPlus, X, Search, Heart, Clock, Check, UserX } from 'lucide-react';
 import { hapticFeedback } from '../utils/hapticUtils';
-import { TelegramUser, FriendProfile, ActivityFeedItem, FriendRequest } from '../types';
+import { TelegramUser, FriendProfile, ActivityFeedItem, FriendRequest, WorkoutLog } from '../types';
 import { socialService } from '../services/socialService';
 import { apiService } from '../services/apiService';
+import { calculateStreaks, calculateTotalVolume, calculateLevel } from '../utils/progressUtils';
 import SkeletonLoader from './SkeletonLoader';
 import FriendProfileModal from './FriendProfileModal';
 
 interface SquadViewProps {
     telegramUser: TelegramUser | null;
+    logs?: WorkoutLog[]; // Local workout logs for calculating own stats
 }
 
-const SquadView: React.FC<SquadViewProps> = ({ telegramUser }) => {
+const SquadView: React.FC<SquadViewProps> = ({ telegramUser, logs = [] }) => {
     const [squadName] = useState("Моя Команда");
     const [friends, setFriends] = useState<FriendProfile[]>([]);
     const [feed, setFeed] = useState<ActivityFeedItem[]>([]);
@@ -29,7 +31,7 @@ const SquadView: React.FC<SquadViewProps> = ({ telegramUser }) => {
 
     useEffect(() => {
         loadData();
-    }, []);
+    }, [logs.length]); // Reload when logs change
 
     const loadData = async () => {
         setIsLoading(true);
@@ -40,23 +42,13 @@ const SquadView: React.FC<SquadViewProps> = ({ telegramUser }) => {
                 socialService.getFriendRequests()
             ]);
 
-            // Load my profile stats from API
-            let myLevel = 1;
-            let myStreak = 0;
-            let myVolume = 0;
+            // Calculate my stats from LOCAL logs (more reliable than API)
+            const { currentStreak } = calculateStreaks(logs);
+            const myVolume = calculateTotalVolume(logs);
+            const { level: myLevel } = calculateLevel(logs);
 
-            try {
-                const userId = telegramUser?.id;
-                if (userId) {
-                    const myProfile = await apiService.social.getUserProfile(userId);
-                    myLevel = myProfile?.user?.level || 1;
-                    myStreak = myProfile?.user?.streak_days || 0;
-                    myVolume = myProfile?.user?.total_volume || 0;
-                    setMyStats({ totalVolume: myVolume, streak: myStreak });
-                }
-            } catch (e) {
-                console.error('Failed to load my profile:', e);
-            }
+            // Update myStats for use in FriendProfileModal comparison
+            setMyStats({ totalVolume: myVolume, streak: currentStreak });
 
             // Enrich each friend with full profile data (streak, totalVolume, level)
             // Note: getUserProfile expects telegram_id, not DB id
@@ -84,7 +76,7 @@ const SquadView: React.FC<SquadViewProps> = ({ telegramUser }) => {
                 id: -1, // Special ID for current user
                 name: telegramUser?.first_name || "Вы",
                 level: myLevel,
-                streak: myStreak,
+                streak: currentStreak,
                 totalVolume: myVolume,
                 lastActive: new Date().toISOString(),
                 isOnline: true,
