@@ -1,25 +1,32 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Users, Zap, Trophy, Crown, Share2, Activity, UserPlus, X, Search, Heart, Clock, Check, UserX } from 'lucide-react';
 import { hapticFeedback } from '../utils/hapticUtils';
-import { TelegramUser, FriendProfile, ActivityFeedItem, FriendRequest } from '../types';
+import { TelegramUser, FriendProfile, ActivityFeedItem, FriendRequest, WorkoutLog } from '../types';
 import { socialService } from '../services/socialService';
 import { apiService } from '../services/apiService';
+import { calculateStreaks, calculateTotalVolume, calculateLevel } from '../utils/progressUtils';
 import SkeletonLoader from './SkeletonLoader';
 import FriendProfileModal from './FriendProfileModal';
 
 interface SquadViewProps {
     telegramUser: TelegramUser | null;
+    logs?: WorkoutLog[]; // Local workout logs for calculating own stats
 }
 
-const SquadView: React.FC<SquadViewProps> = ({ telegramUser }) => {
+const SquadView: React.FC<SquadViewProps> = ({ telegramUser, logs = [] }) => {
     const [squadName] = useState("Моя Команда");
     const [friends, setFriends] = useState<FriendProfile[]>([]);
     const [feed, setFeed] = useState<ActivityFeedItem[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [friendRequests, setFriendRequests] = useState<FriendRequest[]>([]);
 
-    // My stats for comparison
-    const [myStats, setMyStats] = useState<{ totalVolume: number; streak: number }>({ totalVolume: 0, streak: 0 });
+    // Calculate my stats from LOCAL logs using useMemo (avoids closure issues)
+    const myStats = useMemo(() => {
+        const { currentStreak } = calculateStreaks(logs);
+        const totalVolume = calculateTotalVolume(logs);
+        const { level } = calculateLevel(logs);
+        return { totalVolume, streak: currentStreak, level };
+    }, [logs]);
 
     // Add Friend Modal State
     const [showAddFriend, setShowAddFriend] = useState(false);
@@ -29,7 +36,7 @@ const SquadView: React.FC<SquadViewProps> = ({ telegramUser }) => {
 
     useEffect(() => {
         loadData();
-    }, []);
+    }, [logs, telegramUser]); // Reload when logs or user change
 
     const loadData = async () => {
         setIsLoading(true);
@@ -40,31 +47,16 @@ const SquadView: React.FC<SquadViewProps> = ({ telegramUser }) => {
                 socialService.getFriendRequests()
             ]);
 
-            // Load my profile stats from API
-            let myLevel = 1;
-            let myStreak = 0;
-            let myVolume = 0;
-
-            try {
-                const userId = telegramUser?.id;
-                if (userId) {
-                    const myProfile = await apiService.social.getUserProfile(userId);
-                    myLevel = myProfile?.user?.level || 1;
-                    myStreak = myProfile?.user?.streak_days || 0;
-                    myVolume = myProfile?.user?.total_volume || 0;
-                    setMyStats({ totalVolume: myVolume, streak: myStreak });
-                }
-            } catch (e) {
-                console.error('Failed to load my profile:', e);
-            }
-
             // Enrich each friend with full profile data (streak, totalVolume, level)
+            // Note: getUserProfile expects telegram_id, not DB id
             const enrichedFriends = await Promise.all(
                 squadData.map(async (friend) => {
                     try {
-                        const profile = await apiService.social.getUserProfile(friend.id);
+                        const profileId = friend.telegramId || friend.id;
+                        const profile = await apiService.social.getUserProfile(profileId);
                         return {
                             ...friend,
+                            telegramId: friend.telegramId || profile?.user?.id,
                             level: profile?.user?.level || friend.level || 1,
                             streak: profile?.user?.streak_days || friend.streak || 0,
                             totalVolume: profile?.user?.total_volume || friend.totalVolume || 0,
@@ -77,11 +69,16 @@ const SquadView: React.FC<SquadViewProps> = ({ telegramUser }) => {
             );
 
             // Add current user to the list for leaderboard
+            // Use fresh calculation from logs prop
+            const { currentStreak } = calculateStreaks(logs);
+            const myVolume = calculateTotalVolume(logs);
+            const { level: myLevel } = calculateLevel(logs);
+
             const currentUser: FriendProfile = {
                 id: -1, // Special ID for current user
                 name: telegramUser?.first_name || "Вы",
                 level: myLevel,
-                streak: myStreak,
+                streak: currentStreak,
                 totalVolume: myVolume,
                 lastActive: new Date().toISOString(),
                 isOnline: true,
@@ -288,6 +285,21 @@ const SquadView: React.FC<SquadViewProps> = ({ telegramUser }) => {
                         <Share2 size={18} />
                     </button>
                 </div>
+            </div>
+
+            {/* DEBUG PANEL - REMOVE AFTER TESTING */}
+            <div className="bg-red-900/30 border border-red-500/50 rounded-xl p-3 mb-4 text-xs font-mono">
+                <div className="text-red-400 font-bold mb-2">🔧 DEBUG INFO:</div>
+                <div className="text-white">logs.length: {logs.length}</div>
+                <div className="text-white">myStats.totalVolume: {myStats.totalVolume}</div>
+                <div className="text-white">myStats.streak: {myStats.streak}</div>
+                <div className="text-white">myStats.level: {myStats.level}</div>
+                <div className="text-white">friends.length: {friends.length}</div>
+                {friends[0] && (
+                    <div className="text-yellow-400 mt-1">
+                        friends[0]: vol={friends[0].totalVolume}, streak={friends[0].streak}, lvl={friends[0].level}
+                    </div>
+                )}
             </div>
 
             {/* Friend Requests Section */}
