@@ -1,0 +1,5 @@
+node_modules/
+.env
+logs/*.log
+nginx/ssl/*.pem
+.DS_Store
