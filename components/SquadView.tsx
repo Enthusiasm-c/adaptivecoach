@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Users, Zap, Trophy, Crown, Share2, Activity, UserPlus, X, Search, Heart, Clock, Check, UserX } from 'lucide-react';
 import { hapticFeedback } from '../utils/hapticUtils';
 import { TelegramUser, FriendProfile, ActivityFeedItem, FriendRequest, WorkoutLog } from '../types';
@@ -20,8 +20,13 @@ const SquadView: React.FC<SquadViewProps> = ({ telegramUser, logs = [] }) => {
     const [isLoading, setIsLoading] = useState(true);
     const [friendRequests, setFriendRequests] = useState<FriendRequest[]>([]);
 
-    // My stats for comparison
-    const [myStats, setMyStats] = useState<{ totalVolume: number; streak: number }>({ totalVolume: 0, streak: 0 });
+    // Calculate my stats from LOCAL logs using useMemo (avoids closure issues)
+    const myStats = useMemo(() => {
+        const { currentStreak } = calculateStreaks(logs);
+        const totalVolume = calculateTotalVolume(logs);
+        const { level } = calculateLevel(logs);
+        return { totalVolume, streak: currentStreak, level };
+    }, [logs]);
 
     // Add Friend Modal State
     const [showAddFriend, setShowAddFriend] = useState(false);
@@ -31,7 +36,7 @@ const SquadView: React.FC<SquadViewProps> = ({ telegramUser, logs = [] }) => {
 
     useEffect(() => {
         loadData();
-    }, [logs.length]); // Reload when logs change
+    }, [logs, telegramUser]); // Reload when logs or user change
 
     const loadData = async () => {
         setIsLoading(true);
@@ -41,14 +46,6 @@ const SquadView: React.FC<SquadViewProps> = ({ telegramUser, logs = [] }) => {
                 socialService.getFeed(),
                 socialService.getFriendRequests()
             ]);
-
-            // Calculate my stats from LOCAL logs (more reliable than API)
-            const { currentStreak } = calculateStreaks(logs);
-            const myVolume = calculateTotalVolume(logs);
-            const { level: myLevel } = calculateLevel(logs);
-
-            // Update myStats for use in FriendProfileModal comparison
-            setMyStats({ totalVolume: myVolume, streak: currentStreak });
 
             // Enrich each friend with full profile data (streak, totalVolume, level)
             // Note: getUserProfile expects telegram_id, not DB id
@@ -72,6 +69,11 @@ const SquadView: React.FC<SquadViewProps> = ({ telegramUser, logs = [] }) => {
             );
 
             // Add current user to the list for leaderboard
+            // Use fresh calculation from logs prop
+            const { currentStreak } = calculateStreaks(logs);
+            const myVolume = calculateTotalVolume(logs);
+            const { level: myLevel } = calculateLevel(logs);
+
             const currentUser: FriendProfile = {
                 id: -1, // Special ID for current user
                 name: telegramUser?.first_name || "Вы",
