@@ -364,56 +364,30 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
                 </div>
 
 
-                {/* Stats Bar - Level, Streak, Volume */}
-                <div className="col-span-2 grid grid-cols-3 gap-2">
-                    {/* Streak Card */}
-                    <div className="relative bg-gradient-to-br from-orange-500/10 to-red-500/5 border border-orange-500/20 rounded-2xl p-3 overflow-hidden group">
-                        <div className="absolute -top-4 -right-4 w-16 h-16 bg-orange-500/10 rounded-full blur-xl"></div>
-                        <div className="relative">
-                            <div className="flex items-center gap-1.5 mb-1">
-                                <Flame size={14} className="text-orange-500" fill="currentColor" />
-                                <span className="text-[10px] text-orange-400/80 font-bold uppercase tracking-wider">Серия</span>
-                            </div>
-                            <div className="flex items-baseline gap-1">
-                                <span className="text-2xl font-black text-white tabular-nums">{currentStreak}</span>
-                                <span className="text-xs text-gray-500 font-medium">дн.</span>
-                            </div>
-                        </div>
+                {/* Stats Grid */}
+                <div className="col-span-2 grid grid-cols-3 gap-3">
+                    {/* Streak */}
+                    <div className="bg-neutral-900/50 border border-white/5 rounded-2xl p-3 flex flex-col items-center justify-center text-center gap-1">
+                        <Flame size={20} className="text-orange-500 mb-1" fill="currentColor" fillOpacity={0.2} />
+                        <span className="text-xl font-black text-white leading-none">{currentStreak}</span>
+                        <span className="text-[10px] text-gray-500 font-bold uppercase">Дней подряд</span>
                     </div>
 
-                    {/* Level Card */}
-                    <div className="relative bg-gradient-to-br from-yellow-500/10 to-amber-500/5 border border-yellow-500/20 rounded-2xl p-3 overflow-hidden">
-                        <div className="absolute -top-4 -right-4 w-16 h-16 bg-yellow-500/10 rounded-full blur-xl"></div>
-                        <div className="absolute inset-x-0 bottom-0 h-1 bg-neutral-800/50">
-                            <div
-                                className="h-full bg-gradient-to-r from-yellow-500 to-amber-400 transition-all duration-500"
-                                style={{ width: `${userLevel.levelProgress}%` }}
-                            ></div>
+                    {/* Level */}
+                    <div className="bg-neutral-900/50 border border-white/5 rounded-2xl p-3 flex flex-col items-center justify-center text-center gap-1 relative overflow-hidden">
+                        <div className="absolute inset-x-0 bottom-0 h-1 bg-neutral-800">
+                            <div className="h-full bg-yellow-500" style={{ width: `${userLevel.levelProgress}%` }}></div>
                         </div>
-                        <div className="relative">
-                            <div className="flex items-center gap-1.5 mb-1">
-                                <Crown size={14} className="text-yellow-500" fill="currentColor" />
-                                <span className="text-[10px] text-yellow-400/80 font-bold uppercase tracking-wider">Уровень</span>
-                            </div>
-                            <div className="flex items-baseline gap-1">
-                                <span className="text-2xl font-black text-white tabular-nums">{userLevel.level}</span>
-                            </div>
-                        </div>
+                        <Crown size={20} className="text-yellow-500 mb-1" fill="currentColor" fillOpacity={0.2} />
+                        <span className="text-xl font-black text-white leading-none">{userLevel.level}</span>
+                        <span className="text-[10px] text-gray-500 font-bold uppercase">Уровень</span>
                     </div>
 
-                    {/* Volume Card */}
-                    <div className="relative bg-gradient-to-br from-emerald-500/10 to-green-500/5 border border-emerald-500/20 rounded-2xl p-3 overflow-hidden">
-                        <div className="absolute -top-4 -right-4 w-16 h-16 bg-emerald-500/10 rounded-full blur-xl"></div>
-                        <div className="relative">
-                            <div className="flex items-center gap-1.5 mb-1">
-                                <TrendingUp size={14} className="text-emerald-500" />
-                                <span className="text-[10px] text-emerald-400/80 font-bold uppercase tracking-wider">Объём</span>
-                            </div>
-                            <div className="flex items-baseline gap-1">
-                                <span className="text-2xl font-black text-white tabular-nums">{(lastWorkoutVolume / 1000).toFixed(1)}</span>
-                                <span className="text-xs text-gray-500 font-medium">т</span>
-                            </div>
-                        </div>
+                    {/* Last Volume */}
+                    <div className="bg-neutral-900/50 border border-white/5 rounded-2xl p-3 flex flex-col items-center justify-center text-center gap-1">
+                        <Dumbbell size={20} className="text-emerald-500 mb-1" />
+                        <span className="text-xl font-black text-white leading-none">{(lastWorkoutVolume / 1000).toFixed(1)}т</span>
+                        <span className="text-[10px] text-gray-500 font-bold uppercase">Поднято</span>
                     </div>
                 </div>
 
