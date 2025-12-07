@@ -447,22 +447,22 @@ const SettingsView: React.FC<SettingsViewProps> = ({ profile, telegramUser, onUp
             {/* Subscription Content */}
             {activeTab === 'subscription' && (
                 <div className="space-y-6 animate-slide-up">
-                    <SubscriptionCard 
-                        title="Базовый" 
-                        price="Бесплатно" 
-                        features={["Стандартный план", "Базовая статистика", "История тренировок"]} 
-                        isCurrent={true} 
+                    <SubscriptionCard
+                        title="Базовый"
+                        price="Бесплатно"
+                        features={["Персональный план тренировок", "Трекинг прогресса"]}
+                        isCurrent={!profile.isPro}
                     />
-                    <SubscriptionCard 
-                        title="MAX" 
-                        price="299₽ / мес" 
-                        features={["AI Тренер в чате 24/7", "Умная адаптация плана", "Расширенная аналитика", "Коррекция техники"]} 
-                        isCurrent={false}
+                    <SubscriptionCard
+                        title="PRO"
+                        price="500 ⭐ / мес"
+                        features={["AI-тренер в чате 24/7", "Детальный анализ силы", "Команды и лидерборды", "Социальные функции"]}
+                        isCurrent={profile.isPro}
                         isPremium={true}
                     />
-                    
+
                     <p className="text-center text-xs text-gray-500 mt-8">
-                        Подписка управляется через Telegram. Средства списываются автоматически.
+                        Оплата через Telegram Stars. Отмена в любое время.
                     </p>
                 </div>
             )}
