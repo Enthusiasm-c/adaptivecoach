@@ -287,6 +287,21 @@ const SquadView: React.FC<SquadViewProps> = ({ telegramUser, logs = [] }) => {
                 </div>
             </div>
 
+            {/* DEBUG PANEL - REMOVE AFTER TESTING */}
+            <div className="bg-red-900/30 border border-red-500/50 rounded-xl p-3 mb-4 text-xs font-mono">
+                <div className="text-red-400 font-bold mb-2">🔧 DEBUG INFO:</div>
+                <div className="text-white">logs.length: {logs.length}</div>
+                <div className="text-white">myStats.totalVolume: {myStats.totalVolume}</div>
+                <div className="text-white">myStats.streak: {myStats.streak}</div>
+                <div className="text-white">myStats.level: {myStats.level}</div>
+                <div className="text-white">friends.length: {friends.length}</div>
+                {friends[0] && (
+                    <div className="text-yellow-400 mt-1">
+                        friends[0]: vol={friends[0].totalVolume}, streak={friends[0].streak}, lvl={friends[0].level}
+                    </div>
+                )}
+            </div>
+
             {/* Friend Requests Section */}
             {friendRequests.length > 0 && (
                 <div className="bg-orange-500/10 border border-orange-500/30 rounded-2xl p-4 mb-6 animate-fade-in">
