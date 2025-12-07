@@ -364,39 +364,56 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
                 </div>
 
 
-                {/* AI Insight & Body Status Combined Widget */}
-                <div
-                    className="col-span-2 bg-neutral-900/80 border border-white/10 rounded-3xl p-4 flex items-start gap-4 relative overflow-hidden"
-                >
-                    <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500"></div>
-
-                    <div className="shrink-0 pt-1">
-                        <div className="w-10 h-10 bg-indigo-500/10 rounded-xl flex items-center justify-center text-indigo-400 relative">
-                            <Activity size={20} />
+                {/* Stats Bar - Level, Streak, Volume */}
+                <div className="col-span-2 grid grid-cols-3 gap-2">
+                    {/* Streak Card */}
+                    <div className="relative bg-gradient-to-br from-orange-500/10 to-red-500/5 border border-orange-500/20 rounded-2xl p-3 overflow-hidden group">
+                        <div className="absolute -top-4 -right-4 w-16 h-16 bg-orange-500/10 rounded-full blur-xl"></div>
+                        <div className="relative">
+                            <div className="flex items-center gap-1.5 mb-1">
+                                <Flame size={14} className="text-orange-500" fill="currentColor" />
+                                <span className="text-[10px] text-orange-400/80 font-bold uppercase tracking-wider">Серия</span>
+                            </div>
+                            <div className="flex items-baseline gap-1">
+                                <span className="text-2xl font-black text-white tabular-nums">{currentStreak}</span>
+                                <span className="text-xs text-gray-500 font-medium">дн.</span>
+                            </div>
                         </div>
                     </div>
 
-                    <div className="flex-1 min-w-0">
-                        <div className="flex justify-between items-start mb-1">
-                            <h3 className="font-bold text-white text-sm">Статус восстановления</h3>
-                            <div className="px-2 py-0.5 bg-green-500/10 rounded text-[10px] font-bold text-green-400 uppercase tracking-wide">
-                                {isTodayWorkoutDay ? "Готов к бою" : "Активный отдых"}
+                    {/* Level Card */}
+                    <div className="relative bg-gradient-to-br from-yellow-500/10 to-amber-500/5 border border-yellow-500/20 rounded-2xl p-3 overflow-hidden">
+                        <div className="absolute -top-4 -right-4 w-16 h-16 bg-yellow-500/10 rounded-full blur-xl"></div>
+                        <div className="absolute inset-x-0 bottom-0 h-1 bg-neutral-800/50">
+                            <div
+                                className="h-full bg-gradient-to-r from-yellow-500 to-amber-400 transition-all duration-500"
+                                style={{ width: `${userLevel.levelProgress}%` }}
+                            ></div>
+                        </div>
+                        <div className="relative">
+                            <div className="flex items-center gap-1.5 mb-1">
+                                <Crown size={14} className="text-yellow-500" fill="currentColor" />
+                                <span className="text-[10px] text-yellow-400/80 font-bold uppercase tracking-wider">Уровень</span>
+                            </div>
+                            <div className="flex items-baseline gap-1">
+                                <span className="text-2xl font-black text-white tabular-nums">{userLevel.level}</span>
                             </div>
                         </div>
+                    </div>
 
-                        {/* Visual Battery Bar */}
-                        <div className="flex gap-1 mb-2 h-1.5 w-full max-w-[120px]">
-                            <div className="flex-1 bg-green-500 rounded-full"></div>
-                            <div className="flex-1 bg-green-500 rounded-full"></div>
-                            <div className="flex-1 bg-green-500 rounded-full"></div>
-                            <div className={`flex-1 rounded-full ${isTodayWorkoutDay ? 'bg-neutral-700' : 'bg-green-500'}`}></div>
+                    {/* Volume Card */}
+                    <div className="relative bg-gradient-to-br from-emerald-500/10 to-green-500/5 border border-emerald-500/20 rounded-2xl p-3 overflow-hidden">
+                        <div className="absolute -top-4 -right-4 w-16 h-16 bg-emerald-500/10 rounded-full blur-xl"></div>
+                        <div className="relative">
+                            <div className="flex items-center gap-1.5 mb-1">
+                                <TrendingUp size={14} className="text-emerald-500" />
+                                <span className="text-[10px] text-emerald-400/80 font-bold uppercase tracking-wider">Объём</span>
+                            </div>
+                            <div className="flex items-baseline gap-1">
+                                <span className="text-2xl font-black text-white tabular-nums">{(lastWorkoutVolume / 1000).toFixed(1)}</span>
+                                <span className="text-xs text-gray-500 font-medium">т</span>
+                            </div>
                         </div>
-
-                        <p className="text-xs text-gray-400 leading-relaxed">
-                            {isTodayWorkoutDay
-                                ? "Твое тело восстановилось. Отличный день для тренировки!"
-                                : "День восстановления. Прогулка или растяжка помогут."}
-                        </p>
                     </div>
                 </div>
 
@@ -620,33 +637,6 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
                     </div>
                 )}
 
-                {/* Stats Grid - Gamification */}
-                <div className="col-span-2 grid grid-cols-3 gap-3 mt-2">
-
-                    {/* Streak */}
-                    <div className="bg-neutral-900/50 border border-white/5 rounded-2xl p-3 flex flex-col items-center justify-center text-center gap-1">
-                        <Flame size={20} className="text-orange-500 mb-1" fill="currentColor" fillOpacity={0.2} />
-                        <span className="text-xl font-black text-white leading-none">{currentStreak}</span>
-                        <span className="text-[10px] text-gray-500 font-bold uppercase">Дней подряд</span>
-                    </div>
-
-                    {/* Level */}
-                    <div className="bg-neutral-900/50 border border-white/5 rounded-2xl p-3 flex flex-col items-center justify-center text-center gap-1 relative overflow-hidden">
-                        <div className="absolute inset-x-0 bottom-0 h-1 bg-neutral-800">
-                            <div className="h-full bg-yellow-500" style={{ width: `${userLevel.levelProgress}%` }}></div>
-                        </div>
-                        <Crown size={20} className="text-yellow-500 mb-1" fill="currentColor" fillOpacity={0.2} />
-                        <span className="text-xl font-black text-white leading-none">{userLevel.level}</span>
-                        <span className="text-[10px] text-gray-500 font-bold uppercase">Уровень</span>
-                    </div>
-
-                    {/* Last Volume */}
-                    <div className="bg-neutral-900/50 border border-white/5 rounded-2xl p-3 flex flex-col items-center justify-center text-center gap-1">
-                        <Dumbbell size={20} className="text-emerald-500 mb-1" />
-                        <span className="text-xl font-black text-white leading-none">{(lastWorkoutVolume / 1000).toFixed(1)}т</span>
-                        <span className="text-[10px] text-gray-500 font-bold uppercase">Поднято</span>
-                    </div>
-                </div>
             </div>
         );
     };
