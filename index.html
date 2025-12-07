@@ -84,6 +84,25 @@
       overscroll-behavior-y: none;
       /* background-image removed */
     }
+
+    /* Remove focus outline on chart elements */
+    .recharts-wrapper,
+    .recharts-surface,
+    .recharts-layer,
+    .recharts-bar,
+    .recharts-bar-rectangle,
+    .recharts-line,
+    .recharts-area,
+    .recharts-pie,
+    .recharts-sector {
+      outline: none !important;
+    }
+
+    /* Remove tap highlight on mobile */
+    .recharts-wrapper * {
+      -webkit-tap-highlight-color: transparent;
+      outline: none !important;
+    }
   </style>
   <script type="importmap">
 {
