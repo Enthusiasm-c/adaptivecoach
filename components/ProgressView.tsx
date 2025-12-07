@@ -133,11 +133,20 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
         if (!program || program.sessions.length === 0) return null;
 
         const dayOfWeek = date.getDay();
-        if (!preferredDays.includes(dayOfWeek)) return null;
+
+        // If no preferredDays, just use first session
+        if (!preferredDays || preferredDays.length === 0) {
+            return program.sessions[0];
+        }
 
         // Sort preferred days to get consistent order
         const sortedDays = [...preferredDays].sort((a, b) => a - b);
         const dayIndex = sortedDays.indexOf(dayOfWeek);
+
+        // If this day is not in preferredDays, still return based on day of week
+        if (dayIndex === -1) {
+            return program.sessions[dayOfWeek % program.sessions.length];
+        }
 
         // Calculate which workout in rotation
         const workoutIndex = dayIndex % program.sessions.length;
@@ -190,11 +199,27 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
     const handleDateClick = (date: Date, status: any) => {
         hapticFeedback.selectionChanged();
 
-        // If it's a planned day, show workout preview
+        // Show workout preview for planned days
         if (status?.type === 'planned') {
             const workout = getWorkoutForDate(date);
             if (workout) {
                 setWorkoutToPreview(workout);
+            }
+        }
+
+        // For completed days, also show what was planned (or get from logs)
+        if (status?.type === 'completed' && status.data) {
+            // Try to find the workout that matches the session from logs
+            const log = status.data;
+            const matchingSession = program?.sessions.find(s => s.name === log.sessionId);
+            if (matchingSession) {
+                setWorkoutToPreview(matchingSession);
+            } else {
+                // Fallback: get workout for that day of week
+                const workout = getWorkoutForDate(date);
+                if (workout) {
+                    setWorkoutToPreview(workout);
+                }
             }
         }
     };
