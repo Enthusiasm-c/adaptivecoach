@@ -43,6 +43,12 @@ export interface AuthUser {
   firstName: string;
   isPro: boolean;
   proExpiresAt: string | null;
+  // Trial fields
+  isInTrial: boolean;
+  trialDaysLeft: number;
+  trialStartedAt: string | null;
+  trialEndsAt: string | null;
+  freeWorkoutsUsed: number;
 }
 
 export interface AuthResponse {
@@ -281,6 +287,64 @@ export const apiService = {
       return apiRequest<{ success: boolean }>('/api/notifications/track-open', {
         method: 'POST',
         body: JSON.stringify({ ref }),
+      });
+    },
+  },
+
+  // Monetization endpoints
+  monetization: {
+    getWorkoutLimit: async (): Promise<{
+      freeWorkoutsUsed: number;
+      freeWorkoutsLimit: number;
+      canWorkout: boolean;
+      isPro: boolean;
+      isInTrial: boolean;
+      trialDaysLeft: number;
+      shieldUsedAt: string | null;
+      shieldAutoUsed: boolean;
+    }> => {
+      return apiRequest('/api/workouts/limit');
+    },
+
+    startTrial: async (): Promise<{
+      success: boolean;
+      message?: string;
+      trialStartedAt?: string;
+      trialEndsAt?: string;
+      trialDays?: number;
+    }> => {
+      return apiRequest('/api/trial/start', { method: 'POST' });
+    },
+
+    getStreakShield: async (): Promise<{
+      shieldAvailable: boolean;
+      usedAt: string | null;
+      isPro: boolean;
+    }> => {
+      return apiRequest('/api/user/streak-shield');
+    },
+
+    useStreakShield: async (): Promise<{ success: boolean; usedAt: string }> => {
+      return apiRequest('/api/user/streak-shield/use', { method: 'POST' });
+    },
+  },
+
+  analytics: {
+    track: async (
+      eventType:
+        | 'paywall_impression'
+        | 'paywall_cta_click'
+        | 'paywall_dismissed'
+        | 'trial_started'
+        | 'trial_converted'
+        | 'shield_used'
+        | 'workout_limit_reached'
+        | 'premium_feature_blocked',
+      eventData?: Record<string, unknown>
+    ): Promise<{ success: boolean }> => {
+      return apiRequest('/api/analytics/track', {
+        method: 'POST',
+        body: JSON.stringify({ eventType, eventData }),
       });
     },
   },

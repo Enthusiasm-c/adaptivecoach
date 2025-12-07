@@ -275,3 +275,30 @@ export interface StrengthInsightsData {
   aiInsights?: string;
   lastUpdated: string;
 }
+
+// --- Monetization ---
+
+export interface WorkoutLimitStatus {
+  freeWorkoutsUsed: number;
+  freeWorkoutsLimit: number;
+  canWorkout: boolean;
+  isPro: boolean;
+  isInTrial: boolean;
+  trialDaysLeft: number;
+  shieldUsedAt: string | null;
+  shieldAutoUsed: boolean;
+}
+
+export interface TrialStartResponse {
+  success: boolean;
+  message?: string;
+  trialStartedAt?: string;
+  trialEndsAt?: string;
+  trialDays?: number;
+}
+
+export interface StreakShieldStatus {
+  shieldAvailable: boolean;
+  usedAt: string | null;
+  isPro: boolean;
+}

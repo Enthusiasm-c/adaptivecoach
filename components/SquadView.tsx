@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Users, Zap, Trophy, Crown, Share2, Activity, UserPlus, X, Search, Heart, Clock, Check, UserX } from 'lucide-react';
+import { Users, Zap, Trophy, Crown, Share2, Activity, UserPlus, X, Search, Heart, Clock, Check, UserX, Lock } from 'lucide-react';
 import { hapticFeedback } from '../utils/hapticUtils';
 import { TelegramUser, FriendProfile, ActivityFeedItem, FriendRequest, WorkoutLog } from '../types';
 import { socialService } from '../services/socialService';
@@ -11,9 +11,11 @@ import FriendProfileModal from './FriendProfileModal';
 interface SquadViewProps {
     telegramUser: TelegramUser | null;
     logs?: WorkoutLog[]; // Local workout logs for calculating own stats
+    isPro?: boolean;
+    onOpenPremium?: () => void;
 }
 
-const SquadView: React.FC<SquadViewProps> = ({ telegramUser, logs = [] }) => {
+const SquadView: React.FC<SquadViewProps> = ({ telegramUser, logs = [], isPro = false, onOpenPremium }) => {
     const [squadName] = useState("Моя Команда");
     const [friends, setFriends] = useState<FriendProfile[]>([]);
     const [feed, setFeed] = useState<ActivityFeedItem[]>([]);
@@ -351,7 +353,8 @@ const SquadView: React.FC<SquadViewProps> = ({ telegramUser, logs = [] }) => {
                             Пока нет друзей. Добавьте кого-нибудь!
                         </div>
                     ) : (
-                        sortedMembers.map((member, index) => (
+                        // Show top 3 for free users, all for Pro
+                        (isPro ? sortedMembers : sortedMembers.slice(0, 3)).map((member, index) => (
                             <div
                                 key={member.id}
                                 onClick={() => handleFriendClick(member)}
@@ -414,6 +417,38 @@ const SquadView: React.FC<SquadViewProps> = ({ telegramUser, logs = [] }) => {
                                 )}
                             </div>
                         ))
+                    )}
+
+                    {/* Blurred remaining entries for free users */}
+                    {!isPro && !isLoading && sortedMembers.length > 3 && (
+                        <div className="relative">
+                            <div className="blur-sm opacity-50 pointer-events-none">
+                                {sortedMembers.slice(3, 5).map((member, index) => (
+                                    <div key={member.id} className="p-4 flex items-center gap-4 border-t border-white/5">
+                                        <div className="w-6 text-center font-black text-lg text-gray-600">{index + 4}</div>
+                                        <div className="w-10 h-10 rounded-full bg-neutral-800 flex items-center justify-center text-gray-400 font-bold border border-white/10">
+                                            {member.name[0]}
+                                        </div>
+                                        <div className="flex-1">
+                                            <h3 className="font-bold text-white">{member.name}</h3>
+                                            <span className="text-xs text-gray-500">{(member.totalVolume / 1000).toFixed(1)}т</span>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+                                <button
+                                    onClick={() => {
+                                        hapticFeedback.impactOccurred('medium');
+                                        onOpenPremium?.();
+                                    }}
+                                    className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-600 to-violet-600 rounded-xl font-bold text-white text-sm shadow-lg"
+                                >
+                                    <Lock size={14} />
+                                    +{sortedMembers.length - 3} участников с Pro
+                                </button>
+                            </div>
+                        </div>
                     )}
                 </div>
             </div>

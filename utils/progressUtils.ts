@@ -10,8 +10,21 @@ const getWeekNumber = (d: Date): [number, number] => {
     return [d.getUTCFullYear(), weekNo];
 };
 
-export const calculateStreaks = (logs: WorkoutLog[]): { currentStreak: number; bestStreak: number } => {
-    if (logs.length === 0) return { currentStreak: 0, bestStreak: 0 };
+export interface StreakShieldOptions {
+    shieldUsedAt?: string | null;  // Date when shield was used this week
+}
+
+export interface StreakResult {
+    currentStreak: number;
+    bestStreak: number;
+    streakProtected: boolean;  // True if shield is currently protecting the streak
+}
+
+export const calculateStreaks = (
+    logs: WorkoutLog[],
+    shieldOptions?: StreakShieldOptions
+): StreakResult => {
+    if (logs.length === 0) return { currentStreak: 0, bestStreak: 0, streakProtected: false };
 
     // Получаем уникальные даты тренировок (без времени)
     const workoutDates = [...new Set(logs.map(l => {
@@ -33,6 +46,21 @@ export const calculateStreaks = (logs: WorkoutLog[]): { currentStreak: number; b
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
 
+    // Check if shield was used recently (within last 24 hours)
+    let streakProtected = false;
+    let shieldProtectedDate: Date | null = null;
+    if (shieldOptions?.shieldUsedAt) {
+        shieldProtectedDate = new Date(shieldOptions.shieldUsedAt);
+        shieldProtectedDate.setHours(0, 0, 0, 0);
+        const daysSinceShield = Math.floor(
+            (today.getTime() - shieldProtectedDate.getTime()) / (24 * 60 * 60 * 1000)
+        );
+        // Shield protects for 1 day
+        if (daysSinceShield <= 1) {
+            streakProtected = true;
+        }
+    }
+
     // Проверяем текущий streak
     let currentStreak = 0;
     let checkDate = new Date(today);
@@ -45,11 +73,20 @@ export const calculateStreaks = (logs: WorkoutLog[]): { currentStreak: number; b
         checkDate = new Date(yesterday);
     }
 
-    // Считаем последовательные дни назад
+    // Считаем последовательные дни назад, учитывая защиту щита
     for (let i = 0; i < 365; i++) {
         const checkStr = `${checkDate.getFullYear()}-${checkDate.getMonth()}-${checkDate.getDate()}`;
+
         if (workoutDates.includes(checkStr)) {
             currentStreak++;
+            checkDate.setDate(checkDate.getDate() - 1);
+        } else if (
+            streakProtected &&
+            shieldProtectedDate &&
+            checkDate.getTime() === shieldProtectedDate.getTime()
+        ) {
+            // Shield protected this day - don't break streak, continue counting
+            currentStreak++; // Count the protected day
             checkDate.setDate(checkDate.getDate() - 1);
         } else {
             break;
@@ -69,7 +106,7 @@ export const calculateStreaks = (logs: WorkoutLog[]): { currentStreak: number; b
         const curr = sortedDates[i];
         const next = sortedDates[i + 1];
 
-        const diffDays = Math.round((curr.getTime() - next.getTime()) / (1000 * 60 * 60 * 24));
+        const diffDays = Math.round((curr.getTime() - next.getTime()) / (1000 * 60 * 60 * 1000));
 
         if (diffDays === 1) {
             tempStreak++;
@@ -80,7 +117,7 @@ export const calculateStreaks = (logs: WorkoutLog[]): { currentStreak: number; b
     }
     bestStreak = Math.max(bestStreak, tempStreak);
 
-    return { currentStreak, bestStreak };
+    return { currentStreak, bestStreak, streakProtected };
 };
 
 export const calculateWorkoutVolume = (log: WorkoutLog): number => {

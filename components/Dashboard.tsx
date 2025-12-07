@@ -1,17 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import { OnboardingProfile, TrainingProgram, WorkoutLog, WorkoutSession, ReadinessData, ActiveWorkoutState, TelegramUser } from '../types';
+import { OnboardingProfile, TrainingProgram, WorkoutLog, WorkoutSession, ReadinessData, ActiveWorkoutState, TelegramUser, WorkoutLimitStatus } from '../types';
 import WorkoutView from './WorkoutView';
 import ProgressView from './ProgressView';
 import SettingsView from './SettingsView';
 import SquadView from './SquadView';
-import { Dumbbell, Calendar as CalendarIcon, BarChart2, Settings, Play, ChevronRight, Info, Battery, Zap, Trophy, Users, Crown, Bot, MessageCircle, Flame, Activity, Clock, TrendingUp, Sparkles, MessageSquarePlus, HelpCircle, Coffee, Sun, Moon, Check, LayoutGrid } from 'lucide-react';
+import { Dumbbell, Calendar as CalendarIcon, BarChart2, Settings, Play, ChevronRight, Info, Battery, Zap, Trophy, Users, Crown, Bot, MessageCircle, Flame, Activity, Clock, TrendingUp, Sparkles, MessageSquarePlus, HelpCircle, Coffee, Sun, Moon, Check, LayoutGrid, Shield, AlertTriangle } from 'lucide-react';
 import WorkoutPreviewModal from './WorkoutPreviewModal';
 import ReadinessModal from './ReadinessModal';
 import PremiumModal from './PremiumModal';
+import HardPaywall from './HardPaywall';
+import TrialBanner from './TrialBanner';
+import FirstWorkoutPaywall from './FirstWorkoutPaywall';
+import StreakMilestonePaywall from './StreakMilestonePaywall';
 import { calculateStreaks, calculateWorkoutVolume, calculateWeeklyProgress, getMuscleFocus, calculateLevel } from '../utils/progressUtils';
 import { getDashboardInsight } from '../services/geminiService';
 import { hapticFeedback } from '../utils/hapticUtils';
 import SkeletonLoader from './SkeletonLoader';
+import apiService from '../services/apiService';
 
 interface DashboardProps {
     profile: OnboardingProfile;
@@ -37,11 +42,47 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
     const [currentReadiness, setCurrentReadiness] = useState<ReadinessData | null>(null);
     const [restoredState, setRestoredState] = useState<ActiveWorkoutState | null>(null);
 
+    // Monetization state
+    const [showHardPaywall, setShowHardPaywall] = useState(false);
+    const [workoutLimitStatus, setWorkoutLimitStatus] = useState<WorkoutLimitStatus | null>(null);
+    const [streakShieldAvailable, setStreakShieldAvailable] = useState(false);
+    const [shieldNotification, setShieldNotification] = useState<string | null>(null);
+    const [showFirstWorkoutPaywall, setShowFirstWorkoutPaywall] = useState(false);
+    const [streakMilestone, setStreakMilestone] = useState<number | null>(null);
+
     // Calendar State (Removed calendarDate, isEditingSchedule, selectedDateToMove, scheduleOverrides)
 
     useEffect(() => {
         // Check for first login
         // Removed Welcome Guide as per user request
+    }, []);
+
+    // Fetch workout limit status on mount
+    useEffect(() => {
+        const fetchMonetizationStatus = async () => {
+            try {
+                const limitStatus = await apiService.monetization.getWorkoutLimit();
+                setWorkoutLimitStatus(limitStatus);
+
+                // Show notification if shield was auto-used
+                if (limitStatus.shieldAutoUsed) {
+                    setShieldNotification('Защита стрика активирована! Твой стрик сохранён.');
+                    hapticFeedback.notificationOccurred('success');
+                    // Auto-dismiss after 5 seconds
+                    setTimeout(() => setShieldNotification(null), 5000);
+                }
+
+                // Also fetch streak shield status if user is Pro
+                if (limitStatus.isPro) {
+                    const shieldStatus = await apiService.monetization.getStreakShield();
+                    setStreakShieldAvailable(shieldStatus.shieldAvailable);
+                }
+            } catch (error) {
+                console.error('Failed to fetch monetization status:', error);
+            }
+        };
+
+        fetchMonetizationStatus();
     }, []);
 
     useEffect(() => {
@@ -171,6 +212,25 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
     const weeklyProgress = calculateWeeklyProgress(logs);
     const userLevel = calculateLevel(logs);
 
+    // Check for streak milestones
+    useEffect(() => {
+        if (workoutLimitStatus?.isPro || workoutLimitStatus?.isInTrial) return;
+
+        const milestones = [7, 30, 100];
+        const shownMilestones = JSON.parse(
+            localStorage.getItem('shownStreakMilestones') || '[]'
+        );
+
+        if (milestones.includes(currentStreak) &&
+            !shownMilestones.includes(currentStreak)) {
+            setStreakMilestone(currentStreak);
+            localStorage.setItem(
+                'shownStreakMilestones',
+                JSON.stringify([...shownMilestones, currentStreak])
+            );
+        }
+    }, [currentStreak, workoutLimitStatus?.isPro, workoutLimitStatus?.isInTrial]);
+
     // Calculate muscle focus based on the *next* workout, even if not today
     const muscleFocus = getMuscleFocus(nextWorkout);
 
@@ -239,6 +299,13 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
                         setCurrentReadiness(null);
                         setRestoredState(null);
                         localStorage.removeItem('activeWorkoutState');
+
+                        // Show first workout paywall if this is the first workout and user is not Pro
+                        const isFirstWorkout = logs.length === 0;
+                        const notProOrTrial = !workoutLimitStatus?.isPro && !workoutLimitStatus?.isInTrial;
+                        if (isFirstWorkout && notProOrTrial) {
+                            setTimeout(() => setShowFirstWorkoutPaywall(true), 500);
+                        }
                     }}
                     onBack={() => {
                         // If backing out, we might want to KEEP the state so they can resume?
@@ -254,8 +321,33 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
         }
     }
 
-    const initiateWorkoutStart = (sessionName: string) => {
-        // Check readiness first
+    const initiateWorkoutStart = async (sessionName: string) => {
+        // Check workout limit first
+        try {
+            const limitStatus = await apiService.monetization.getWorkoutLimit();
+            setWorkoutLimitStatus(limitStatus);
+
+            if (!limitStatus.canWorkout) {
+                // Show hard paywall - user has used all free workouts
+                hapticFeedback.notificationOccurred('warning');
+                setShowHardPaywall(true);
+                return;
+            }
+
+            // Show warning if this is the last free workout
+            if (!limitStatus.isPro && !limitStatus.isInTrial) {
+                const remaining = limitStatus.freeWorkoutsLimit - limitStatus.freeWorkoutsUsed;
+                if (remaining === 1) {
+                    // This is the last free workout - show soft warning
+                    // (Optional: could show a toast notification here)
+                }
+            }
+        } catch (error) {
+            console.error('Failed to check workout limit:', error);
+            // Continue anyway if check fails
+        }
+
+        // Check readiness
         setPendingSessionName(sessionName);
         setShowReadinessModal(true);
         hapticFeedback.impactOccurred('heavy');
@@ -284,7 +376,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
 
     const renderContent = () => {
         if (activeView === 'squad') { // New 'squad' view
-            return <SquadView telegramUser={telegramUser} logs={logs} />;
+            return <SquadView telegramUser={telegramUser} logs={logs} isPro={workoutLimitStatus?.isPro || false} onOpenPremium={() => setShowPremiumModal(true)} />;
         }
 
         if (activeView === 'progress') {
@@ -367,10 +459,18 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
                 {/* Stats Grid */}
                 <div className="col-span-2 grid grid-cols-3 gap-3">
                     {/* Streak */}
-                    <div className="bg-neutral-900/50 border border-white/5 rounded-2xl p-3 flex flex-col items-center justify-center text-center gap-1">
-                        <Flame size={20} className="text-orange-500 mb-1" fill="currentColor" fillOpacity={0.2} />
+                    <div className="bg-neutral-900/50 border border-white/5 rounded-2xl p-3 flex flex-col items-center justify-center text-center gap-1 relative">
+                        <div className="flex items-center gap-1">
+                            <Flame size={20} className="text-orange-500" fill="currentColor" fillOpacity={0.2} />
+                            {/* Streak Shield Indicator */}
+                            {streakShieldAvailable && workoutLimitStatus?.isPro && (
+                                <Shield size={12} className="text-indigo-400" fill="currentColor" fillOpacity={0.3} />
+                            )}
+                        </div>
                         <span className="text-xl font-black text-white leading-none">{currentStreak}</span>
-                        <span className="text-[10px] text-gray-500 font-bold uppercase">Дней подряд</span>
+                        <span className="text-[10px] text-gray-500 font-bold uppercase">
+                            {streakShieldAvailable && workoutLimitStatus?.isPro ? 'Защищён' : 'Дней подряд'}
+                        </span>
                     </div>
 
                     {/* Level */}
@@ -390,6 +490,14 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
                         <span className="text-[10px] text-gray-500 font-bold uppercase">Поднято</span>
                     </div>
                 </div>
+
+                {/* Trial Banner for users in trial */}
+                {workoutLimitStatus?.isInTrial && workoutLimitStatus.trialDaysLeft > 0 && (
+                    <TrialBanner
+                        daysLeft={workoutLimitStatus.trialDaysLeft}
+                        onUpgrade={() => setShowPremiumModal(true)}
+                    />
+                )}
 
                 {/* CONDITIONAL MAIN CARD: Workout OR Rest */}
                 {isTodayWorkoutDay ? (
@@ -421,7 +529,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
                                 </div>
 
                                 {/* Muscle Focus Tags */}
-                                <div className="flex flex-wrap gap-2 mb-6">
+                                <div className="flex flex-wrap gap-2 mb-4">
                                     {muscleFocus.map(muscle => (
                                         <span key={muscle} className="px-3 py-1 rounded-full border border-indigo-500/30 text-indigo-300 text-xs font-bold bg-indigo-500/10">
                                             {muscle}
@@ -431,6 +539,19 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
                                         +{Math.max(0, nextWorkout.exercises.length - muscleFocus.length)} упр.
                                     </span>
                                 </div>
+
+                                {/* Free workouts remaining warning */}
+                                {workoutLimitStatus && !workoutLimitStatus.isPro && !workoutLimitStatus.isInTrial && (
+                                    <div className="flex items-center gap-2 mb-4 p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl">
+                                        <AlertTriangle size={16} className="text-amber-400 flex-shrink-0" />
+                                        <span className="text-amber-300 text-sm">
+                                            Осталось {workoutLimitStatus.freeWorkoutsLimit - workoutLimitStatus.freeWorkoutsUsed} бесплатных {
+                                                (workoutLimitStatus.freeWorkoutsLimit - workoutLimitStatus.freeWorkoutsUsed) === 1 ? 'тренировка' :
+                                                (workoutLimitStatus.freeWorkoutsLimit - workoutLimitStatus.freeWorkoutsUsed) <= 4 ? 'тренировки' : 'тренировок'
+                                            }
+                                        </span>
+                                    </div>
+                                )}
 
                                 <div className="flex gap-3">
                                     <button
@@ -622,6 +743,22 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
 
     return (
         <div className="min-h-screen pb-24 relative overflow-hidden">
+            {/* Shield Notification */}
+            {shieldNotification && (
+                <div className="fixed top-4 left-4 right-4 z-50 animate-slide-down">
+                    <div className="bg-gradient-to-r from-indigo-600 to-violet-600 text-white p-4 rounded-2xl flex items-center gap-3 shadow-xl shadow-indigo-500/30">
+                        <Shield size={24} className="text-white flex-shrink-0" fill="currentColor" />
+                        <p className="font-bold text-sm flex-1">{shieldNotification}</p>
+                        <button
+                            onClick={() => setShieldNotification(null)}
+                            className="text-white/70 hover:text-white"
+                        >
+                            ✕
+                        </button>
+                    </div>
+                </div>
+            )}
+
             {/* Header */}
             <header className="px-6 pt-6 pb-4 flex items-center justify-between sticky top-0 bg-[#0a0a0a]/80 backdrop-blur-md z-40 border-b border-white/5">
                 <div>
@@ -699,9 +836,59 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
                     onSuccess={() => {
                         onUpdateProfile({ ...profile, isPro: true });
                         setShowPremiumModal(false);
+                        // Refresh workout limit status
+                        apiService.monetization.getWorkoutLimit().then(setWorkoutLimitStatus).catch(console.error);
                     }}
                     isPro={profile.isPro}
                     trialEndsAt={profile.trialEndsAt}
+                    isInTrial={workoutLimitStatus?.isInTrial}
+                    trialDaysLeft={workoutLimitStatus?.trialDaysLeft}
+                />
+            )}
+
+            {showHardPaywall && workoutLimitStatus && (
+                <HardPaywall
+                    onClose={() => setShowHardPaywall(false)}
+                    onOpenPremium={() => {
+                        setShowHardPaywall(false);
+                        setShowPremiumModal(true);
+                    }}
+                    onTrialStarted={() => {
+                        // Refresh status after trial started
+                        apiService.monetization.getWorkoutLimit().then(status => {
+                            setWorkoutLimitStatus(status);
+                            onUpdateProfile({ ...profile, isPro: status.isPro, trialEndsAt: status.isInTrial ? new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString() : null });
+                        }).catch(console.error);
+                    }}
+                    freeWorkoutsUsed={workoutLimitStatus.freeWorkoutsUsed}
+                    freeWorkoutsLimit={workoutLimitStatus.freeWorkoutsLimit}
+                />
+            )}
+
+            {/* First Workout Paywall */}
+            {showFirstWorkoutPaywall && (
+                <FirstWorkoutPaywall
+                    onClose={() => setShowFirstWorkoutPaywall(false)}
+                    onStartTrial={() => {
+                        setShowFirstWorkoutPaywall(false);
+                        // Refresh status after trial started
+                        apiService.monetization.getWorkoutLimit().then(status => {
+                            setWorkoutLimitStatus(status);
+                            onUpdateProfile({ ...profile, isPro: status.isPro });
+                        }).catch(console.error);
+                    }}
+                />
+            )}
+
+            {/* Streak Milestone Paywall */}
+            {streakMilestone && (
+                <StreakMilestonePaywall
+                    streakDays={streakMilestone}
+                    onClose={() => setStreakMilestone(null)}
+                    onUpgrade={() => {
+                        setStreakMilestone(null);
+                        setShowPremiumModal(true);
+                    }}
                 />
             )}
         </div>

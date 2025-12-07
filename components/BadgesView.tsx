@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Lock, Loader2 } from 'lucide-react';
+import { X, Lock, Loader2, Crown, Sparkles } from 'lucide-react';
 import { apiService, Badge } from '../services/apiService';
 import { hapticFeedback } from '../utils/hapticUtils';
 
@@ -7,11 +7,24 @@ interface BadgesViewProps {
   onClose: () => void;
 }
 
+// Premium badge codes
+const PREMIUM_BADGES = ['pro_member', 'supporter'];
+
+const isPremiumBadge = (code: string) => PREMIUM_BADGES.includes(code);
+
 const tierColors: Record<string, { bg: string; border: string; text: string }> = {
   bronze: { bg: 'bg-amber-900/20', border: 'border-amber-700/50', text: 'text-amber-400' },
   silver: { bg: 'bg-gray-500/20', border: 'border-gray-400/50', text: 'text-gray-300' },
   gold: { bg: 'bg-yellow-500/20', border: 'border-yellow-400/50', text: 'text-yellow-400' },
   diamond: { bg: 'bg-cyan-500/20', border: 'border-cyan-400/50', text: 'text-cyan-400' },
+};
+
+// Special premium badge styling
+const premiumBadgeStyle = {
+  bg: 'bg-gradient-to-br from-amber-500/20 to-yellow-500/10',
+  border: 'border-amber-500/50',
+  text: 'text-amber-300',
+  glow: 'shadow-[0_0_15px_rgba(251,191,36,0.3)]'
 };
 
 const categoryLabels: Record<string, string> = {
@@ -92,14 +105,18 @@ const BadgesView: React.FC<BadgesViewProps> = ({ onClose }) => {
               <Loader2 className="animate-spin text-indigo-500" size={32} />
             </div>
           ) : (
-            Object.entries(badgesByCategory).map(([category, categoryBadges]) => (
+            Object.entries(badgesByCategory).map(([category, categoryBadges]: [string, Badge[]]) => (
               <div key={category}>
                 <h3 className="text-sm font-bold text-gray-400 mb-3 uppercase tracking-wider">
                   {categoryLabels[category] || category}
                 </h3>
                 <div className="grid grid-cols-3 gap-3">
                   {categoryBadges.map((badge) => {
-                    const tier = tierColors[badge.tier] || tierColors.bronze;
+                    const isPremium = isPremiumBadge(badge.code);
+                    const tier = isPremium && badge.earned
+                      ? { bg: premiumBadgeStyle.bg, border: premiumBadgeStyle.border, text: premiumBadgeStyle.text }
+                      : (tierColors[badge.tier] || tierColors.bronze);
+
                     return (
                       <button
                         key={badge.id}
@@ -107,11 +124,18 @@ const BadgesView: React.FC<BadgesViewProps> = ({ onClose }) => {
                         className={`relative aspect-square rounded-2xl border ${tier.border} ${tier.bg}
                           flex flex-col items-center justify-center p-2 transition-all
                           ${badge.earned
-                            ? 'opacity-100 hover:scale-105'
+                            ? `opacity-100 hover:scale-105 ${isPremium ? premiumBadgeStyle.glow : ''}`
                             : 'opacity-40 grayscale'
                           }`}
                       >
-                        <span className="text-3xl mb-1">{badge.icon}</span>
+                        {/* Premium badge crown indicator */}
+                        {isPremium && badge.earned && (
+                          <div className="absolute -top-1 -left-1">
+                            <Crown size={14} className="text-amber-400 fill-amber-400" />
+                          </div>
+                        )}
+
+                        <span className={`text-3xl mb-1 ${isPremium && badge.earned ? 'animate-pulse' : ''}`}>{badge.icon}</span>
                         <span className={`text-[10px] font-bold text-center leading-tight ${tier.text}`}>
                           {badge.name_ru}
                         </span>
@@ -120,9 +144,14 @@ const BadgesView: React.FC<BadgesViewProps> = ({ onClose }) => {
                             <Lock size={12} className="text-gray-500" />
                           </div>
                         )}
-                        {badge.earned && (
+                        {badge.earned && !isPremium && (
                           <div className="absolute -top-1 -right-1 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
                             <span className="text-white text-[10px]">✓</span>
+                          </div>
+                        )}
+                        {badge.earned && isPremium && (
+                          <div className="absolute -top-1 -right-1 w-5 h-5 bg-gradient-to-br from-amber-500 to-yellow-500 rounded-full flex items-center justify-center">
+                            <Sparkles size={10} className="text-white" />
                           </div>
                         )}
                       </button>

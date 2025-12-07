@@ -14,6 +14,7 @@ import {
 import { Dumbbell, Flame, TrendingUp, Trophy, Battery, PieChart as PieIcon, Calendar, Eye, Crown, Star, Activity, HeartPulse, ChevronLeft, ChevronRight, Check, Target, BarChart2, X, Repeat, Timer } from 'lucide-react';
 import { hapticFeedback } from '../utils/hapticUtils';
 import StrengthAnalysisView from './StrengthAnalysisView';
+import BlurredContent from './BlurredContent';
 
 interface ProgressViewProps {
     logs: WorkoutLog[];
@@ -467,60 +468,74 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
                 />
             </div>
 
-            {/* Strength Progression Chart */}
+            {/* Strength Progression Chart - Premium */}
             {strengthData.data.length > 0 && strengthData.exercises.length > 0 && (
-                <div className="bg-neutral-900 border border-white/5 rounded-3xl p-5 shadow-lg">
-                    <div className="flex items-center gap-2 mb-4 text-gray-300 font-bold text-sm">
-                        <TrendingUp size={16} className="text-indigo-400" />
-                        Динамика Силы (e1RM)
+                <BlurredContent
+                    title="Динамика Силы"
+                    description="Отслеживай прогресс в ключевых упражнениях"
+                    onUnlock={onOpenPremium || (() => {})}
+                    isPro={profile?.isPro || false}
+                >
+                    <div className="bg-neutral-900 border border-white/5 rounded-3xl p-5 shadow-lg">
+                        <div className="flex items-center gap-2 mb-4 text-gray-300 font-bold text-sm">
+                            <TrendingUp size={16} className="text-indigo-400" />
+                            Динамика Силы (e1RM)
+                        </div>
+                        <div className="h-56 -ml-2">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <LineChart data={strengthData.data} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+                                    <CartesianGrid stroke={chartTheme.grid} vertical={false} strokeDasharray="3 3" />
+                                    <XAxis dataKey="date" stroke={chartTheme.text} fontSize={10} tickLine={false} axisLine={false} dy={10} />
+                                    <YAxis stroke={chartTheme.text} fontSize={10} tickLine={false} axisLine={false} domain={['auto', 'auto']} />
+                                    <Tooltip
+                                        contentStyle={{ backgroundColor: '#171717', border: '1px solid #333', borderRadius: '8px', color: '#fff' }}
+                                    />
+                                    <Legend wrapperStyle={{ fontSize: '10px', paddingTop: '10px' }} iconType="circle" />
+                                    {strengthData.exercises[0] && (
+                                        <Line type="monotone" dataKey="ex0" name={strengthData.exercises[0]} stroke="#6366f1" strokeWidth={3} dot={false} connectNulls />
+                                    )}
+                                    {strengthData.exercises[1] && (
+                                        <Line type="monotone" dataKey="ex1" name={strengthData.exercises[1]} stroke="#10b981" strokeWidth={3} dot={false} connectNulls />
+                                    )}
+                                    {strengthData.exercises[2] && (
+                                        <Line type="monotone" dataKey="ex2" name={strengthData.exercises[2]} stroke="#f59e0b" strokeWidth={3} dot={false} connectNulls />
+                                    )}
+                                </LineChart>
+                            </ResponsiveContainer>
+                        </div>
                     </div>
-                    <div className="h-56 -ml-2">
+                </BlurredContent>
+            )}
+
+            {/* Detailed Readiness Trends (Health & Recovery) - Premium */}
+            <BlurredContent
+                title="Здоровье и Восстановление"
+                description="Анализ сна, питания и стресса"
+                onUnlock={onOpenPremium || (() => {})}
+                isPro={profile?.isPro || false}
+            >
+                <div className="bg-neutral-900 border border-white/5 rounded-3xl p-5 shadow-lg overflow-hidden relative">
+                    <div className="flex items-center gap-2 mb-4 text-gray-300 font-bold text-sm z-10 relative">
+                        <HeartPulse size={16} className="text-pink-400" />
+                        Здоровье и Восстановление
+                    </div>
+                    <div className="h-48 -ml-2">
                         <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={strengthData.data} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+                            <LineChart data={readinessData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                                 <CartesianGrid stroke={chartTheme.grid} vertical={false} strokeDasharray="3 3" />
                                 <XAxis dataKey="date" stroke={chartTheme.text} fontSize={10} tickLine={false} axisLine={false} dy={10} />
-                                <YAxis stroke={chartTheme.text} fontSize={10} tickLine={false} axisLine={false} domain={['auto', 'auto']} />
-                                <Tooltip
-                                    contentStyle={{ backgroundColor: '#171717', border: '1px solid #333', borderRadius: '8px', color: '#fff' }}
-                                />
+                                <YAxis stroke={chartTheme.text} fontSize={10} tickLine={false} axisLine={false} domain={[0, 6]} hide />
+                                <Tooltip contentStyle={{ backgroundColor: '#171717', border: '1px solid #333', borderRadius: '8px', color: '#fff' }} />
                                 <Legend wrapperStyle={{ fontSize: '10px', paddingTop: '10px' }} iconType="circle" />
-                                {strengthData.exercises[0] && (
-                                    <Line type="monotone" dataKey="ex0" name={strengthData.exercises[0]} stroke="#6366f1" strokeWidth={3} dot={false} connectNulls />
-                                )}
-                                {strengthData.exercises[1] && (
-                                    <Line type="monotone" dataKey="ex1" name={strengthData.exercises[1]} stroke="#10b981" strokeWidth={3} dot={false} connectNulls />
-                                )}
-                                {strengthData.exercises[2] && (
-                                    <Line type="monotone" dataKey="ex2" name={strengthData.exercises[2]} stroke="#f59e0b" strokeWidth={3} dot={false} connectNulls />
-                                )}
+
+                                <Line type="monotone" dataKey="sleep" name="Сон" stroke="#818cf8" strokeWidth={2} dot={false} />
+                                <Line type="monotone" dataKey="food" name="Еда" stroke="#34d399" strokeWidth={2} dot={false} />
+                                <Line type="monotone" dataKey="stress" name="Стресс" stroke="#f472b6" strokeWidth={2} dot={false} />
                             </LineChart>
                         </ResponsiveContainer>
                     </div>
                 </div>
-            )}
-
-            {/* Detailed Readiness Trends (Health & Recovery) */}
-            <div className="bg-neutral-900 border border-white/5 rounded-3xl p-5 shadow-lg overflow-hidden relative">
-                <div className="flex items-center gap-2 mb-4 text-gray-300 font-bold text-sm z-10 relative">
-                    <HeartPulse size={16} className="text-pink-400" />
-                    Здоровье и Восстановление
-                </div>
-                <div className="h-48 -ml-2">
-                    <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={readinessData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                            <CartesianGrid stroke={chartTheme.grid} vertical={false} strokeDasharray="3 3" />
-                            <XAxis dataKey="date" stroke={chartTheme.text} fontSize={10} tickLine={false} axisLine={false} dy={10} />
-                            <YAxis stroke={chartTheme.text} fontSize={10} tickLine={false} axisLine={false} domain={[0, 6]} hide />
-                            <Tooltip contentStyle={{ backgroundColor: '#171717', border: '1px solid #333', borderRadius: '8px', color: '#fff' }} />
-                            <Legend wrapperStyle={{ fontSize: '10px', paddingTop: '10px' }} iconType="circle" />
-
-                            <Line type="monotone" dataKey="sleep" name="Сон" stroke="#818cf8" strokeWidth={2} dot={false} />
-                            <Line type="monotone" dataKey="food" name="Еда" stroke="#34d399" strokeWidth={2} dot={false} />
-                            <Line type="monotone" dataKey="stress" name="Стресс" stroke="#f472b6" strokeWidth={2} dot={false} />
-                        </LineChart>
-                    </ResponsiveContainer>
-                </div>
-            </div>
+            </BlurredContent>
 
             {/* Total Readiness Score Area Chart */}
             <div className="bg-neutral-900 border border-white/5 rounded-3xl p-5 shadow-lg overflow-hidden relative">

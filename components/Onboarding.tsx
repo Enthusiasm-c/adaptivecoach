@@ -4,6 +4,7 @@ import { OnboardingProfile, Gender, ExperienceLevel, Goal, Location, Intensity, 
 import { calculateProjectedOutcome } from '../utils/progressUtils';
 import { hapticFeedback } from '../utils/hapticUtils';
 import SkeletonLoader from './SkeletonLoader';
+import PostOnboardingPaywall from './PostOnboardingPaywall';
 import { ChevronLeft, ArrowRight, Check, Dumbbell, User, Heart, MapPin, Target, CalendarDays, Zap, ShieldAlert, Thermometer, Activity, Ruler, Weight, Laptop, Footprints, Flame, Trophy } from 'lucide-react';
 
 interface OnboardingProps {
@@ -35,6 +36,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete, isLoading, error })
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [analysisText, setAnalysisText] = useState("Анализ метаболизма...");
     const [showPrediction, setShowPrediction] = useState(false);
+    const [showPaywall, setShowPaywall] = useState(false);
 
     const updateProfile = <K extends keyof OnboardingProfile>(key: K, value: OnboardingProfile[K]) => {
         setProfile(prev => ({ ...prev, [key]: value }));
@@ -81,10 +83,17 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete, isLoading, error })
     };
 
     const handleSubmit = () => {
+        // Show paywall before completing
+        setShowPaywall(true);
+    };
+
+    const completeOnboarding = (withTrial: boolean = false) => {
         // Ensure preferredDays has at least one day or default to Mon/Wed/Fri
         const finalProfile = {
             ...profile,
-            preferredDays: (profile.preferredDays && profile.preferredDays.length > 0) ? profile.preferredDays : [1, 3, 5]
+            preferredDays: (profile.preferredDays && profile.preferredDays.length > 0) ? profile.preferredDays : [1, 3, 5],
+            // If trial was started, mark it
+            ...(withTrial && { trialAccepted: true })
         };
         onComplete(finalProfile as OnboardingProfile);
     };
@@ -179,6 +188,15 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete, isLoading, error })
                     </div>
                 )}
             </div>
+
+            {/* Post-Onboarding Paywall */}
+            {showPaywall && (
+                <PostOnboardingPaywall
+                    onStartTrial={() => completeOnboarding(true)}
+                    onContinueFree={() => completeOnboarding(false)}
+                    userName={window.Telegram?.WebApp?.initDataUnsafe?.user?.first_name}
+                />
+            )}
         </div>
     );
 };
