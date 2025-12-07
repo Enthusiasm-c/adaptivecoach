@@ -1,6 +1,6 @@
 
 import React, { useMemo, useState } from 'react';
-import { WorkoutLog, TrainingProgram, ReadinessData, WorkoutCompletion, OnboardingProfile } from '../types';
+import { WorkoutLog, TrainingProgram, ReadinessData, WorkoutCompletion, OnboardingProfile, WorkoutSession } from '../types';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
     AreaChart, Area, Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
@@ -11,7 +11,7 @@ import {
     calculatePersonalRecords, calculateReadinessHistory, calculateMovementPatterns, getHeatmapData,
     calculateLevel, getStrengthProgression, getVolumeDistribution
 } from '../utils/progressUtils';
-import { Dumbbell, Flame, TrendingUp, Trophy, Battery, PieChart as PieIcon, Calendar, Eye, Crown, Star, Activity, HeartPulse, ChevronLeft, ChevronRight, Check, Target, BarChart2 } from 'lucide-react';
+import { Dumbbell, Flame, TrendingUp, Trophy, Battery, PieChart as PieIcon, Calendar, Eye, Crown, Star, Activity, HeartPulse, ChevronLeft, ChevronRight, Check, Target, BarChart2, X, Repeat, Timer } from 'lucide-react';
 import { hapticFeedback } from '../utils/hapticUtils';
 import StrengthAnalysisView from './StrengthAnalysisView';
 
@@ -126,6 +126,23 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
     // --- Calendar Logic ---
     const [currentDate, setCurrentDate] = React.useState(new Date());
     const [selectedDateToMove, setSelectedDateToMove] = React.useState<Date | null>(null);
+    const [workoutToPreview, setWorkoutToPreview] = React.useState<WorkoutSession | null>(null);
+
+    // Get workout for specific date based on preferredDays rotation
+    const getWorkoutForDate = (date: Date): WorkoutSession | null => {
+        if (!program || program.sessions.length === 0) return null;
+
+        const dayOfWeek = date.getDay();
+        if (!preferredDays.includes(dayOfWeek)) return null;
+
+        // Sort preferred days to get consistent order
+        const sortedDays = [...preferredDays].sort((a, b) => a - b);
+        const dayIndex = sortedDays.indexOf(dayOfWeek);
+
+        // Calculate which workout in rotation
+        const workoutIndex = dayIndex % program.sessions.length;
+        return program.sessions[workoutIndex];
+    };
 
     // Generate planned workouts based on preferredDays
     const plannedDates = useMemo(() => {
@@ -172,7 +189,14 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
 
     const handleDateClick = (date: Date, status: any) => {
         hapticFeedback.selectionChanged();
-        // Calendar is now view-only, just show info
+
+        // If it's a planned day, show workout preview
+        if (status?.type === 'planned') {
+            const workout = getWorkoutForDate(date);
+            if (workout) {
+                setWorkoutToPreview(workout);
+            }
+        }
     };
 
     const moveSession = (from: Date, to: Date) => {
@@ -271,9 +295,10 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
                         return (
                             <div
                                 key={idx}
+                                onClick={() => status && handleDateClick(day, status)}
                                 className={`aspect-square rounded-xl flex flex-col items-center justify-center relative transition-all duration-300
                               ${isToday ? 'bg-white/10 border border-white/20' : ''}
-                              ${status ? '' : 'opacity-40'}
+                              ${status ? 'cursor-pointer hover:bg-white/5' : 'opacity-40'}
                           `}
                             >
                                 <span className={`text-xs font-medium ${isToday ? 'text-white font-bold' : 'text-gray-400'}`}>{day.getDate()}</span>
@@ -605,6 +630,39 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
                 </div>
             )}
                 </>
+            )}
+
+            {/* Workout Preview Modal */}
+            {workoutToPreview && (
+                <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+                    <div className="bg-gray-800 rounded-2xl shadow-lg p-6 w-full max-w-md space-y-4 text-white animate-fade-in-up flex flex-col max-h-[90vh]">
+                        <div className="flex justify-between items-center">
+                            <h2 className="text-xl font-bold text-indigo-300">{workoutToPreview.name}</h2>
+                            <button onClick={() => setWorkoutToPreview(null)} className="p-1 rounded-full hover:bg-gray-700">
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        <div className="flex-grow overflow-y-auto pr-2 space-y-3">
+                            {workoutToPreview.exercises.map((ex, index) => (
+                                <div key={index} className="bg-gray-700 p-4 rounded-lg">
+                                    <h3 className="font-semibold text-white">{ex.name}</h3>
+                                    <div className="flex items-center gap-4 text-gray-400 text-sm mt-2">
+                                        <span className="flex items-center gap-1.5"><Repeat size={14}/> {ex.sets} подх. x {ex.reps} повт.</span>
+                                        <span className="flex items-center gap-1.5"><Timer size={14}/> {ex.rest}с отдых</span>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
+                        <button
+                            onClick={() => setWorkoutToPreview(null)}
+                            className="w-full bg-neutral-700 text-white font-bold py-3 px-4 rounded-lg hover:bg-neutral-600 transition-all duration-300"
+                        >
+                            Закрыть
+                        </button>
+                    </div>
+                </div>
             )}
         </div>
     );
