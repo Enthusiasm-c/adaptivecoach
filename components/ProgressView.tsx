@@ -686,63 +686,101 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
             )}
 
             {/* Workout Report Modal (for completed days) */}
-            {workoutLogToView && (
-                <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
-                    <div className="bg-gray-800 rounded-2xl shadow-lg p-6 w-full max-w-md space-y-4 text-white animate-fade-in-up flex flex-col max-h-[90vh]">
-                        <div className="flex justify-between items-center">
-                            <div>
-                                <p className="text-xs text-green-400 uppercase tracking-wide flex items-center gap-1">
-                                    <Check size={12} /> Выполнено
-                                </p>
-                                <h2 className="text-xl font-bold text-white">{workoutLogToView.sessionId}</h2>
-                                <p className="text-xs text-gray-400 mt-1">
-                                    {new Date(workoutLogToView.date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })}
-                                    {workoutLogToView.duration && ` • ${Math.round(workoutLogToView.duration / 60)} мин`}
-                                </p>
+            {workoutLogToView && (() => {
+                // Helper to detect timed exercises (plank, cardio, etc.)
+                const isTimedExercise = (name: string) => {
+                    const n = name.toLowerCase();
+                    return n.includes('планк') || n.includes('plank') ||
+                           n.includes('кардио') || n.includes('cardio') ||
+                           n.includes('бег') || n.includes('run') ||
+                           n.includes('велосипед') || n.includes('bike') ||
+                           n.includes('эллипс') || n.includes('ellip') ||
+                           n.includes('дорожк') || n.includes('treadmill') ||
+                           n.includes('скакалк') || n.includes('rope') ||
+                           n.includes('берпи') || n.includes('burpee');
+                };
+
+                // Calculate total volume (only for weighted exercises)
+                const totalVolume = workoutLogToView.completedExercises.reduce((total, ex) => {
+                    if (isTimedExercise(ex.name)) return total;
+                    return total + ex.completedSets.reduce((sum, set) => {
+                        const weight = set.weight || 0;
+                        const reps = set.reps || 0;
+                        return sum + (weight * reps);
+                    }, 0);
+                }, 0);
+
+                return (
+                    <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+                        <div className="bg-gray-800 rounded-2xl shadow-lg p-6 w-full max-w-md space-y-4 text-white animate-fade-in-up flex flex-col max-h-[90vh]">
+                            <div className="flex justify-between items-center">
+                                <div>
+                                    <p className="text-xs text-green-400 uppercase tracking-wide flex items-center gap-1">
+                                        <Check size={12} /> Выполнено
+                                    </p>
+                                    <h2 className="text-xl font-bold text-white">{workoutLogToView.sessionId}</h2>
+                                    <p className="text-xs text-gray-400 mt-1">
+                                        {new Date(workoutLogToView.date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })}
+                                        {workoutLogToView.duration && ` • ${Math.round(workoutLogToView.duration / 60)} мин`}
+                                    </p>
+                                </div>
+                                <button onClick={() => setWorkoutLogToView(null)} className="p-1 rounded-full hover:bg-gray-700">
+                                    <X size={20} />
+                                </button>
                             </div>
-                            <button onClick={() => setWorkoutLogToView(null)} className="p-1 rounded-full hover:bg-gray-700">
-                                <X size={20} />
+
+                            {/* Total volume (only if > 0) */}
+                            {totalVolume > 0 && (
+                                <div className="bg-green-500/10 border border-green-500/20 rounded-xl p-3 flex items-center justify-between">
+                                    <span className="text-green-400 text-sm font-medium">Общий объём</span>
+                                    <span className="text-white font-bold">{totalVolume.toLocaleString()} кг</span>
+                                </div>
+                            )}
+
+                            <div className="flex-grow overflow-y-auto pr-2 space-y-3">
+                                {workoutLogToView.completedExercises.map((ex, index) => {
+                                    const isTimed = isTimedExercise(ex.name);
+
+                                    return (
+                                        <div key={index} className="bg-gray-700 p-4 rounded-lg">
+                                            <h3 className="font-semibold text-white mb-2">{ex.name}</h3>
+                                            <div className="space-y-1">
+                                                {ex.completedSets.map((set, setIdx) => (
+                                                    <div key={setIdx} className="flex items-center justify-between text-sm">
+                                                        <span className="text-gray-500">Подход {setIdx + 1}</span>
+                                                        <span className="text-white font-medium">
+                                                            {isTimed ? (
+                                                                // Timed exercise: show seconds
+                                                                `${set.reps || 0} сек`
+                                                            ) : set.weight && set.weight > 0 ? (
+                                                                // Weighted exercise
+                                                                <>
+                                                                    {set.weight} кг × {set.reps || 0}
+                                                                    {set.rir !== undefined && <span className="text-gray-400 ml-2">RIR {set.rir}</span>}
+                                                                </>
+                                                            ) : (
+                                                                // Bodyweight exercise (no weight)
+                                                                `${set.reps || 0} повт.`
+                                                            )}
+                                                        </span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+
+                            <button
+                                onClick={() => setWorkoutLogToView(null)}
+                                className="w-full bg-neutral-700 text-white font-bold py-3 px-4 rounded-lg hover:bg-neutral-600 transition-all duration-300"
+                            >
+                                Закрыть
                             </button>
                         </div>
-
-                        {/* Total volume */}
-                        <div className="bg-green-500/10 border border-green-500/20 rounded-xl p-3 flex items-center justify-between">
-                            <span className="text-green-400 text-sm font-medium">Общий объём</span>
-                            <span className="text-white font-bold">
-                                {workoutLogToView.completedExercises.reduce((total, ex) =>
-                                    total + ex.completedSets.reduce((sum, set) => sum + (set.weight * set.reps), 0), 0
-                                ).toLocaleString()} кг
-                            </span>
-                        </div>
-
-                        <div className="flex-grow overflow-y-auto pr-2 space-y-3">
-                            {workoutLogToView.completedExercises.map((ex, index) => (
-                                <div key={index} className="bg-gray-700 p-4 rounded-lg">
-                                    <h3 className="font-semibold text-white mb-2">{ex.name}</h3>
-                                    <div className="space-y-1">
-                                        {ex.completedSets.map((set, setIdx) => (
-                                            <div key={setIdx} className="flex items-center justify-between text-sm">
-                                                <span className="text-gray-500">Подход {setIdx + 1}</span>
-                                                <span className="text-white font-medium">
-                                                    {set.weight} кг × {set.reps}
-                                                    {set.rir !== undefined && <span className="text-gray-400 ml-2">RIR {set.rir}</span>}
-                                                </span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-
-                        <button
-                            onClick={() => setWorkoutLogToView(null)}
-                            className="w-full bg-neutral-700 text-white font-bold py-3 px-4 rounded-lg hover:bg-neutral-600 transition-all duration-300"
-                        >
-                            Закрыть
-                        </button>
                     </div>
-                </div>
-            )}
+                );
+            })()}
         </div>
     );
 };
