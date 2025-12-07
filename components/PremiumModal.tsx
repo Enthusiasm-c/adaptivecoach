@@ -65,13 +65,11 @@ const PremiumModal: React.FC<PremiumModalProps> = ({ onClose, onSuccess, isPro =
 
     const features = [
         { name: "Персональный план", free: true, pro: true },
-        { name: "История тренировок", free: true, pro: true },
-        { name: "Базовая статистика", free: true, pro: true },
-        { name: "Чат с AI-тренером", free: "3 сообщ/день", pro: "Безлимит" },
-        { name: "Умная адаптация плана", free: false, pro: true },
-        { name: "Анализ дисбалансов", free: false, pro: true },
-        { name: "Прогноз рекордов", free: false, pro: true },
-        { name: "Pro бейджи", free: false, pro: true },
+        { name: "Трекинг тренировок", free: true, pro: true },
+        { name: "AI-тренер в чате", free: false, pro: true },
+        { name: "Детальный анализ силы", free: false, pro: true },
+        { name: "Команды и лидерборды", free: false, pro: true },
+        { name: "Социальные функции", free: false, pro: true },
     ];
 
     return (
