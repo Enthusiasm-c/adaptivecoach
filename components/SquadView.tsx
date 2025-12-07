@@ -58,6 +58,24 @@ const SquadView: React.FC<SquadViewProps> = ({ telegramUser }) => {
                 console.error('Failed to load my profile:', e);
             }
 
+            // Enrich each friend with full profile data (streak, totalVolume, level)
+            const enrichedFriends = await Promise.all(
+                squadData.map(async (friend) => {
+                    try {
+                        const profile = await apiService.social.getUserProfile(friend.id);
+                        return {
+                            ...friend,
+                            level: profile?.user?.level || friend.level || 1,
+                            streak: profile?.user?.streak_days || friend.streak || 0,
+                            totalVolume: profile?.user?.total_volume || friend.totalVolume || 0,
+                        };
+                    } catch (e) {
+                        console.error(`Failed to load profile for friend ${friend.id}:`, e);
+                        return friend; // Return original data if failed
+                    }
+                })
+            );
+
             // Add current user to the list for leaderboard
             const currentUser: FriendProfile = {
                 id: -1, // Special ID for current user
@@ -70,7 +88,7 @@ const SquadView: React.FC<SquadViewProps> = ({ telegramUser }) => {
                 photoUrl: telegramUser?.photo_url
             };
 
-            setFriends([currentUser, ...squadData]);
+            setFriends([currentUser, ...enrichedFriends]);
             setFeed(feedData);
             setFriendRequests(requestsData);
         } catch (e) {
@@ -375,6 +393,12 @@ const SquadView: React.FC<SquadViewProps> = ({ telegramUser }) => {
                                         </span>
                                         <span>•</span>
                                         <span>Lvl {member.level}</span>
+                                        {member.streak > 0 && (
+                                            <>
+                                                <span>•</span>
+                                                <span className="text-orange-400">🔥 {member.streak}д</span>
+                                            </>
+                                        )}
                                     </div>
                                 </div>
 
