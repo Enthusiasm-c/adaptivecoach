@@ -179,50 +179,51 @@ runMigrations();
 // ============ NOTIFICATION SYSTEM ============
 
 const MESSAGE_TEMPLATES = {
+  // Professional trainer reminder
   workout_reminder: [
-    "🌅 Доброе утро, {name}!\n\nСегодня по плану {workout_type}. Помнишь упражнения?\nЖду тебя! 💪",
-    "Привет, {name}! 💪 Сегодня {workout_type} - твой любимый день! Жду тебя в зале!",
-    "{name}, готов к {workout_type}? Твои мышцы соскучились! 🔥",
-    "Чемпион {name}! День {workout_type} ждёт. Покажем что можем? 💪",
-    "Эй {name}, я тут сижу один... А сегодня же {workout_type}! 🥺",
-    "{name}, твой план тренировок скучает! Сегодня {workout_type} по расписанию 📅",
+    "Сегодня {workout_type}. Жду",
+    "{workout_type} по плану. Когда будешь?",
+    "Напоминаю — {workout_type} сегодня",
   ],
+  // Streak motivation
   workout_reminder_streak: [
-    "{name}, у тебя {streak} дней стрик! 🔥 Не сломай его, сегодня {workout_type}!",
-    "Wow {name}! {streak} дней подряд! Сегодня {workout_type} - продолжаем? 🏆",
+    "{streak} тренировок подряд. Сегодня {workout_type}",
+    "Серия {streak}. {workout_type} по плану",
   ],
+  // Streak at risk
   streak_at_risk: [
-    "Эй {name}! 🔥\n\n{streak} дней подряд - отличный результат!\nДо конца дня осталось {hours} часов чтобы не потерять стрик.\n\nДаже 10 минут лучше чем ничего!",
-    "{name}, твой {streak}-дневный стрик под угрозой! 😱 Осталось {hours} часов!",
-    "Не дай стрику сгореть, {name}! {streak} дней работы... Зайди хотя бы на минуту! 🔥",
+    "Серия {streak} сгорит через {hours} ч. Зайди хоть на 20 минут",
+    "{streak} тренировок. Осталось {hours} ч.",
   ],
+  // Comeback - direct
   comeback: [
-    "Привет {name}! 👋\n\nКак ты? Давно не виделись...\nТвои мышцы скучают! 😢\n\nЕсли что-то пошло не так - просто напиши мне.\nЕсли просто забыл - давай вернёмся!",
-    "{name}, давно тебя не было! Соскучился 😢 Как ты?",
-    "Привет {name}! Всё в порядке? Твой план тренировок ждёт... 💪",
-    "{name}, прошла неделя... Может вернёмся к тренировкам? Я верю в тебя! 🙏",
+    "Давно не был. Когда вернёшься?",
+    "Неделю не тренировался. Всё в порядке?",
+    "Пора возвращаться. Напиши когда готов",
   ],
+  // Weekly summary
   weekly_summary: [
-    "📊 {name}, итоги недели!\n\n✅ Тренировок: {workouts}\n💪 Объём: {volume} кг\n🔥 Стрик: {streak} дней\n{trend_emoji} Прогресс: {trend}\n\n{comment}\n\nУвидимся на следующей неделе! 🚀",
+    "Итог недели: {workouts} тренировок. {comment}",
   ],
+  // Achievement
   achievement: [
-    "🏆 {name}, НОВЫЙ РЕКОРД!\n\n{exercise}: {weight} кг (+{delta} кг!)\n\nТы становишься сильнее! 💪",
-    "🎯 {name}, личный рекорд в {exercise}!\n\n{weight} кг - новая вершина! 🔥",
+    "Новый рекорд: {exercise} — {weight} кг",
+    "{exercise}: {weight} кг. Личный максимум",
   ],
 };
 
 const WORKOUT_NAMES = {
-  'upper': 'верха тела',
-  'lower': 'ног',
-  'push': 'жимов',
-  'pull': 'тяг',
-  'full': 'всего тела',
-  'chest': 'груди',
-  'back': 'спины',
-  'shoulders': 'плеч',
-  'arms': 'рук',
-  'legs': 'ног',
-  'core': 'кора',
+  'upper': 'верх тела',
+  'lower': 'ноги',
+  'push': 'жимовые',
+  'pull': 'тяговые',
+  'full': 'всё тело',
+  'chest': 'грудь',
+  'back': 'спина',
+  'shoulders': 'плечи',
+  'arms': 'руки',
+  'legs': 'ноги',
+  'core': 'пресс',
 };
 
 function getRandomTemplate(templates) {
@@ -231,34 +232,40 @@ function getRandomTemplate(templates) {
 
 function personalizeMessage(template, data) {
   return template
-    .replace(/{name}/g, data.name || 'Чемпион')
-    .replace(/{workout_type}/g, data.workoutType || 'тренировки')
+    .replace(/{name}/g, data.name || '')
+    .replace(/{workout_type}/g, data.workoutType || 'тренировка')
     .replace(/{streak}/g, data.streak || 0)
+    .replace(/{next_streak}/g, (data.streak || 0) + 1)
     .replace(/{hours}/g, data.hours || 4)
     .replace(/{workouts}/g, data.workouts || 0)
     .replace(/{volume}/g, data.volume || 0)
-    .replace(/{trend_emoji}/g, data.trendEmoji || '📈')
-    .replace(/{trend}/g, data.trend || 'стабильно')
-    .replace(/{comment}/g, data.comment || 'Продолжай в том же духе! 💪')
-    .replace(/{exercise}/g, data.exercise || 'упражнении')
+    .replace(/{total_volume}/g, data.totalVolume || 0)
+    .replace(/{next_volume}/g, data.nextVolume || 0)
+    .replace(/{progress}/g, data.progress || 0)
+    .replace(/{last_volume}/g, data.lastVolume || 0)
+    .replace(/{active_users}/g, data.activeUsers || 0)
+    .replace(/{avg_workouts}/g, data.avgWorkouts || 3)
+    .replace(/{trend}/g, data.trend || '')
+    .replace(/{comment}/g, data.comment || '')
+    .replace(/{exercise}/g, data.exercise || '')
     .replace(/{weight}/g, data.weight || 0)
     .replace(/{delta}/g, data.delta || 0);
 }
 
 function getPersonalizedComment(workouts, targetWorkouts, volumeDelta, streak) {
   if (workouts === 0) {
-    return "На этой неделе пропустили. Бывает! Главное - вернуться 💪";
+    return "На этой неделе пропустили. Бывает. Главное — вернуться.";
   }
   if (workouts >= (targetWorkouts || 3)) {
-    return "План выполнен! Ты машина! 🎉";
+    return "План выполнен. Отличная работа.";
   }
   if (volumeDelta > 0) {
-    return `Объём вырос на ${volumeDelta}кг! Прогресс идёт! 📈`;
+    return `Объём вырос на ${volumeDelta} кг. Прогресс идёт.`;
   }
   if (streak >= 7 && streak % 7 === 0) {
-    return `${streak} дней подряд - это уже привычка! 🔥`;
+    return `${streak} дней подряд — это уже привычка.`;
   }
-  return "Продолжай в том же духе! 💪";
+  return "Продолжай в том же духе.";
 }
 
 // Helper to check if can send notification
@@ -1758,26 +1765,44 @@ cron.schedule('0 5 * * *', async () => {
           continue;
         }
 
+        // Get user stats for personalized message
+        const userStats = await sql`
+          SELECT
+            COALESCE(total_volume, 0) as total_volume,
+            COALESCE(streak_days, 0) as streak_days,
+            (SELECT COALESCE(SUM(total_volume), 0) FROM workout_logs
+             WHERE user_id = ${user.id}
+             AND workout_date >= date_trunc('month', CURRENT_DATE)) as month_volume
+          FROM users WHERE id = ${user.id}
+        `;
+
+        const stats = userStats[0] || {};
         const workoutType = await getTodayWorkoutType(user.id, dayOfWeek);
         const streak = user.streak_days || 0;
+        const monthVolume = parseInt(stats.month_volume) || 0;
+        const monthGoal = 10000; // 10 tons per month goal
+        const progress = Math.min(100, Math.round((monthVolume / monthGoal) * 100));
 
         // Choose template based on streak
         let templates = MESSAGE_TEMPLATES.workout_reminder;
-        if (streak >= 7) {
+        if (streak >= 3) {
           templates = [...templates, ...MESSAGE_TEMPLATES.workout_reminder_streak];
         }
 
         const template = getRandomTemplate(templates);
         const message = personalizeMessage(template, {
-          name: user.first_name || 'Чемпион',
+          name: user.first_name,
           workoutType,
-          streak
+          streak,
+          totalVolume: Math.round(monthVolume),
+          nextVolume: Math.round(monthVolume + 2000), // avg workout ~2 tons
+          progress
         });
 
         await sendTelegramMessage(user.telegram_id, message, {
           reply_markup: {
             inline_keyboard: [[
-              { text: 'Открыть тренировку 💪', web_app: { url: WEBAPP_URL + '?ref=notif_workout' } }
+              { text: 'Начать', web_app: { url: WEBAPP_URL + '?ref=notif_workout' } }
             ]]
           }
         });
@@ -1822,7 +1847,7 @@ cron.schedule('0 17 * * *', async () => {
         const hoursLeft = 24 - new Date().getHours();
         const template = getRandomTemplate(MESSAGE_TEMPLATES.streak_at_risk);
         const message = personalizeMessage(template, {
-          name: user.first_name || 'Чемпион',
+          name: user.first_name,
           streak: user.streak_days,
           hours: hoursLeft
         });
@@ -1830,7 +1855,7 @@ cron.schedule('0 17 * * *', async () => {
         await sendTelegramMessage(user.telegram_id, message, {
           reply_markup: {
             inline_keyboard: [[
-              { text: 'Быстрая тренировка 🔥', web_app: { url: WEBAPP_URL + '?ref=notif_streak' } }
+              { text: 'Продолжить', web_app: { url: WEBAPP_URL + '?ref=notif_streak' } }
             ]]
           }
         });
@@ -1862,6 +1887,20 @@ cron.schedule('0 9 * * *', async () => {
       LIMIT 50
     `;
 
+    // Get global stats for social proof
+    const globalStats = await sql`
+      SELECT
+        COUNT(DISTINCT user_id) as active_users,
+        ROUND(AVG(workout_count), 1) as avg_workouts
+      FROM (
+        SELECT user_id, COUNT(*) as workout_count
+        FROM workout_logs
+        WHERE workout_date >= CURRENT_DATE - 7
+        GROUP BY user_id
+      ) weekly_stats
+    `;
+    const stats = globalStats[0] || { active_users: 50, avg_workouts: 3 };
+
     logger.info({ message: '[CRON] Found inactive users for comeback', count: users.length });
 
     for (const user of users) {
@@ -1876,15 +1915,26 @@ cron.schedule('0 9 * * *', async () => {
         const { canSend } = await canSendNotification(user.id);
         if (!canSend) continue;
 
+        // Get user's last workout volume
+        const lastWorkout = await sql`
+          SELECT total_volume FROM workout_logs
+          WHERE user_id = ${user.id}
+          ORDER BY workout_date DESC LIMIT 1
+        `;
+        const lastVolume = lastWorkout[0]?.total_volume || 0;
+
         const template = getRandomTemplate(MESSAGE_TEMPLATES.comeback);
         const message = personalizeMessage(template, {
-          name: user.first_name || 'Чемпион'
+          name: user.first_name,
+          activeUsers: stats.active_users || 50,
+          avgWorkouts: stats.avg_workouts || 3,
+          lastVolume: Math.round(lastVolume)
         });
 
         await sendTelegramMessage(user.telegram_id, message, {
           reply_markup: {
             inline_keyboard: [[
-              { text: 'Открыть план 📋', web_app: { url: WEBAPP_URL + '?ref=notif_comeback' } }
+              { text: 'Вернуться', web_app: { url: WEBAPP_URL + '?ref=notif_comeback' } }
             ]]
           }
         });
