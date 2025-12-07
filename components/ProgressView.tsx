@@ -127,6 +127,7 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
     const [currentDate, setCurrentDate] = React.useState(new Date());
     const [selectedDateToMove, setSelectedDateToMove] = React.useState<Date | null>(null);
     const [workoutToPreview, setWorkoutToPreview] = React.useState<WorkoutSession | null>(null);
+    const [workoutLogToView, setWorkoutLogToView] = React.useState<WorkoutLog | null>(null);
 
     // Get workout for specific date based on preferredDays rotation
     const getWorkoutForDate = (date: Date): WorkoutSession | null => {
@@ -204,23 +205,14 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
             const workout = getWorkoutForDate(date);
             if (workout) {
                 setWorkoutToPreview(workout);
+                setWorkoutLogToView(null);
             }
         }
 
-        // For completed days, also show what was planned (or get from logs)
+        // For completed days, show actual workout report
         if (status?.type === 'completed' && status.data) {
-            // Try to find the workout that matches the session from logs
-            const log = status.data;
-            const matchingSession = program?.sessions.find(s => s.name === log.sessionId);
-            if (matchingSession) {
-                setWorkoutToPreview(matchingSession);
-            } else {
-                // Fallback: get workout for that day of week
-                const workout = getWorkoutForDate(date);
-                if (workout) {
-                    setWorkoutToPreview(workout);
-                }
-            }
+            setWorkoutLogToView(status.data);
+            setWorkoutToPreview(null);
         }
     };
 
@@ -657,12 +649,15 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
                 </>
             )}
 
-            {/* Workout Preview Modal */}
+            {/* Workout Preview Modal (for planned days) */}
             {workoutToPreview && (
                 <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
                     <div className="bg-gray-800 rounded-2xl shadow-lg p-6 w-full max-w-md space-y-4 text-white animate-fade-in-up flex flex-col max-h-[90vh]">
                         <div className="flex justify-between items-center">
-                            <h2 className="text-xl font-bold text-indigo-300">{workoutToPreview.name}</h2>
+                            <div>
+                                <p className="text-xs text-gray-400 uppercase tracking-wide">План</p>
+                                <h2 className="text-xl font-bold text-indigo-300">{workoutToPreview.name}</h2>
+                            </div>
                             <button onClick={() => setWorkoutToPreview(null)} className="p-1 rounded-full hover:bg-gray-700">
                                 <X size={20} />
                             </button>
@@ -682,6 +677,65 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
 
                         <button
                             onClick={() => setWorkoutToPreview(null)}
+                            className="w-full bg-neutral-700 text-white font-bold py-3 px-4 rounded-lg hover:bg-neutral-600 transition-all duration-300"
+                        >
+                            Закрыть
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* Workout Report Modal (for completed days) */}
+            {workoutLogToView && (
+                <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+                    <div className="bg-gray-800 rounded-2xl shadow-lg p-6 w-full max-w-md space-y-4 text-white animate-fade-in-up flex flex-col max-h-[90vh]">
+                        <div className="flex justify-between items-center">
+                            <div>
+                                <p className="text-xs text-green-400 uppercase tracking-wide flex items-center gap-1">
+                                    <Check size={12} /> Выполнено
+                                </p>
+                                <h2 className="text-xl font-bold text-white">{workoutLogToView.sessionId}</h2>
+                                <p className="text-xs text-gray-400 mt-1">
+                                    {new Date(workoutLogToView.date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })}
+                                    {workoutLogToView.duration && ` • ${Math.round(workoutLogToView.duration / 60)} мин`}
+                                </p>
+                            </div>
+                            <button onClick={() => setWorkoutLogToView(null)} className="p-1 rounded-full hover:bg-gray-700">
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        {/* Total volume */}
+                        <div className="bg-green-500/10 border border-green-500/20 rounded-xl p-3 flex items-center justify-between">
+                            <span className="text-green-400 text-sm font-medium">Общий объём</span>
+                            <span className="text-white font-bold">
+                                {workoutLogToView.completedExercises.reduce((total, ex) =>
+                                    total + ex.completedSets.reduce((sum, set) => sum + (set.weight * set.reps), 0), 0
+                                ).toLocaleString()} кг
+                            </span>
+                        </div>
+
+                        <div className="flex-grow overflow-y-auto pr-2 space-y-3">
+                            {workoutLogToView.completedExercises.map((ex, index) => (
+                                <div key={index} className="bg-gray-700 p-4 rounded-lg">
+                                    <h3 className="font-semibold text-white mb-2">{ex.name}</h3>
+                                    <div className="space-y-1">
+                                        {ex.completedSets.map((set, setIdx) => (
+                                            <div key={setIdx} className="flex items-center justify-between text-sm">
+                                                <span className="text-gray-500">Подход {setIdx + 1}</span>
+                                                <span className="text-white font-medium">
+                                                    {set.weight} кг × {set.reps}
+                                                    {set.rir !== undefined && <span className="text-gray-400 ml-2">RIR {set.rir}</span>}
+                                                </span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
+                        <button
+                            onClick={() => setWorkoutLogToView(null)}
                             className="w-full bg-neutral-700 text-white font-bold py-3 px-4 rounded-lg hover:bg-neutral-600 transition-all duration-300"
                         >
                             Закрыть
