@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { OnboardingProfile, TelegramUser, Goal } from '../types';
-import { Trash2, Save, User, LogOut, Target, Calendar, Clock, Star, Check, Award, Loader2, MessageCircle } from 'lucide-react';
+import { Trash2, Save, User, LogOut, Target, Calendar, Clock, Award, Loader2, MessageCircle } from 'lucide-react';
 import { apiService, Badge } from '../services/apiService';
 
 interface SettingsViewProps {
@@ -31,8 +31,6 @@ const SettingsView: React.FC<SettingsViewProps> = ({ profile, telegramUser, onUp
     const [daysPerWeek, setDaysPerWeek] = useState(profile.daysPerWeek);
     const [timePerWorkout, setTimePerWorkout] = useState(profile.timePerWorkout);
     const [primaryGoal, setPrimaryGoal] = useState(profile.goals.primary);
-
-    const [activeTab, setActiveTab] = useState<'profile' | 'subscription'>('profile');
 
     const [isConfirmingReset, setIsConfirmingReset] = useState(false);
 
@@ -77,24 +75,8 @@ const SettingsView: React.FC<SettingsViewProps> = ({ profile, telegramUser, onUp
                 <h1 className="text-2xl font-bold">Настройки</h1>
             </header>
 
-            {/* Tab Switcher */}
-            <div className="flex p-1 bg-neutral-900 rounded-2xl mb-6 border border-white/5">
-                <button
-                    onClick={() => setActiveTab('profile')}
-                    className={`flex-1 py-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 ${activeTab === 'profile' ? 'bg-neutral-800 text-white shadow-lg' : 'text-gray-500'}`}
-                >
-                    <User size={16} /> Профиль
-                </button>
-                <button
-                    onClick={() => setActiveTab('subscription')}
-                    className={`flex-1 py-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 ${activeTab === 'subscription' ? 'bg-indigo-600 text-white shadow-lg' : 'text-gray-500'}`}
-                >
-                    <Star size={16} /> Pro
-                </button>
-            </div>
-
             {/* Profile Content */}
-            {activeTab === 'profile' && (
+            {(
                 <div className="space-y-8 animate-slide-up">
                     {/* Profile Card */}
                     <div className="bg-neutral-900 border border-white/5 rounded-3xl p-6 flex items-center gap-5">
@@ -313,29 +295,6 @@ const SettingsView: React.FC<SettingsViewProps> = ({ profile, telegramUser, onUp
                 </div>
             )}
 
-            {/* Subscription Content */}
-            {activeTab === 'subscription' && (
-                <div className="space-y-6 animate-slide-up">
-                    <SubscriptionCard
-                        title="Базовый"
-                        price="Бесплатно"
-                        features={["Персональный план тренировок", "Трекинг прогресса"]}
-                        isCurrent={!profile.isPro}
-                    />
-                    <SubscriptionCard
-                        title="PRO"
-                        price="500 ⭐ / мес"
-                        features={["AI-тренер в чате 24/7", "Детальный анализ силы", "Команды и лидерборды", "Социальные функции"]}
-                        isCurrent={profile.isPro}
-                        isPremium={true}
-                    />
-
-                    <p className="text-center text-xs text-gray-500 mt-8">
-                        Оплата через Telegram Stars. Отмена в любое время.
-                    </p>
-                </div>
-            )}
-
             {/* Cooperation / Contact Section */}
             <div className="mt-8 pt-6 border-t border-white/5">
                 <button
@@ -355,43 +314,5 @@ const SettingsView: React.FC<SettingsViewProps> = ({ profile, telegramUser, onUp
         </div>
     );
 };
-
-const SubscriptionCard = ({ title, price, features, isCurrent, isPremium }: any) => (
-    <div className={`rounded-3xl p-6 border relative overflow-hidden ${isPremium ? 'bg-gradient-to-br from-indigo-900/80 to-purple-900/80 border-indigo-500/50' : 'bg-neutral-900 border-white/5'}`}>
-        
-        {isPremium && (
-            <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/20 rounded-full blur-3xl -mr-10 -mt-10"></div>
-        )}
-
-        <div className="flex justify-between items-start mb-4 relative z-10">
-            <div>
-                <h3 className={`text-xl font-black ${isPremium ? 'text-white' : 'text-gray-300'}`}>{title}</h3>
-                <p className="text-2xl font-bold text-white mt-1">{price}</p>
-            </div>
-            {isCurrent ? (
-                <span className="px-3 py-1 bg-white/10 rounded-full text-xs font-bold text-white border border-white/10">Текущий</span>
-            ) : (
-                <div className="w-8 h-8 rounded-full bg-indigo-500 flex items-center justify-center text-white shadow-lg shadow-indigo-500/50">
-                    <Star size={16} fill="currentColor" />
-                </div>
-            )}
-        </div>
-
-        <ul className="space-y-3 mb-6 relative z-10">
-            {features.map((f: string, i: number) => (
-                <li key={i} className="flex items-center gap-3 text-sm text-gray-300">
-                    <Check size={16} className={isPremium ? 'text-indigo-400' : 'text-gray-500'} />
-                    {f}
-                </li>
-            ))}
-        </ul>
-
-        {!isCurrent && (
-            <button className="w-full py-4 bg-white text-black rounded-2xl font-bold hover:scale-[1.02] transition-transform shadow-lg relative z-10">
-                Подключить MAX
-            </button>
-        )}
-    </div>
-);
 
 export default SettingsView;

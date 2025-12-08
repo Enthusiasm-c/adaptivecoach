@@ -20,7 +20,6 @@ interface PricingPlan {
     monthlyPrice: number;
     days: number;
     discount?: string;
-    popular?: boolean;
 }
 
 const PRICING_PLANS: PricingPlan[] = [
@@ -30,8 +29,7 @@ const PRICING_PLANS: PricingPlan[] = [
         price: 3000,
         monthlyPrice: 250,
         days: 365,
-        discount: '-50%',
-        popular: true
+        discount: '-50%'
     },
     {
         id: 'pro_6month',
@@ -197,11 +195,6 @@ const PremiumModal: React.FC<PremiumModalProps> = ({
                                             : 'border-white/10 bg-neutral-900/50'
                                     }`}
                                 >
-                                    {plan.popular && (
-                                        <div className="absolute -top-2 left-1/2 -translate-x-1/2 px-2 py-0.5 bg-yellow-500 rounded-full">
-                                            <span className="text-[8px] font-black text-black uppercase">Хит</span>
-                                        </div>
-                                    )}
                                     {plan.discount && (
                                         <div className="absolute -top-2 -right-1 px-1.5 py-0.5 bg-green-500 rounded-full">
                                             <span className="text-[8px] font-bold text-white">{plan.discount}</span>
