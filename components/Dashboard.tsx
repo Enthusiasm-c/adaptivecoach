@@ -784,14 +784,16 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
             </header>
 
             {/* Main Content */}
-            <main className="px-6 py-6 space-y-6 pb-32">
+            <main className="px-6 py-6 pb-24">
                 {renderContent()}
-            </main>
 
-            {/* Chat Input Bar - show only on 'today' view when no active workout */}
-            {activeView === 'today' && !activeWorkout && (
-                <ChatInputBar onSendMessage={onSendMessage} />
-            )}
+                {/* Chat Input Bar - show only on 'today' view when no active workout */}
+                {activeView === 'today' && !activeWorkout && (
+                    <div className="mt-4">
+                        <ChatInputBar onSendMessage={onSendMessage} />
+                    </div>
+                )}
+            </main>
 
             {/* Navigation Bar */}
             <nav className="fixed bottom-6 left-6 right-6 bg-[#111]/90 backdrop-blur-xl border border-white/10 rounded-2xl p-2 flex justify-between items-center shadow-2xl z-40">

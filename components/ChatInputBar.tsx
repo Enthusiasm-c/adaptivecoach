@@ -26,10 +26,10 @@ const ChatInputBar: React.FC<ChatInputBarProps> = ({
     return (
         <form
             onSubmit={handleSubmit}
-            className={`fixed bottom-24 left-6 right-6 z-30 bg-[#111]/90 backdrop-blur-xl border rounded-2xl transition-all duration-200 ${
+            className={`bg-neutral-900/50 border rounded-2xl transition-all duration-200 ${
                 isFocused
-                    ? 'border-indigo-500/50 shadow-lg shadow-indigo-500/20'
-                    : 'border-white/10'
+                    ? 'border-indigo-500/50 shadow-lg shadow-indigo-500/20 bg-neutral-900'
+                    : 'border-white/5'
             }`}
         >
             <div className="flex items-center gap-2 p-2">
