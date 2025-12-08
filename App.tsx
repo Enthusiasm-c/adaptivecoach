@@ -24,8 +24,23 @@ const App: React.FC = () => {
   const [telegramUser, setTelegramUser] = useState<TelegramUser | null>(null);
 
   const [isChatbotOpen, setIsChatbotOpen] = useState(false);
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>(() => {
+    // Load chat history from localStorage
+    try {
+      const saved = localStorage.getItem('chatMessages');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
   const [isChatbotLoading, setIsChatbotLoading] = useState(false);
+
+  // Persist chat messages to localStorage
+  useEffect(() => {
+    if (chatMessages.length > 0) {
+      localStorage.setItem('chatMessages', JSON.stringify(chatMessages));
+    }
+  }, [chatMessages]);
   
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
@@ -277,6 +292,12 @@ const App: React.FC = () => {
     }
   };
 
+  // Handler for sending message from Dashboard mini input - opens chat and sends
+  const handleSendFromDashboard = (message: string) => {
+    setIsChatbotOpen(true);
+    handleChatbotSend(message);
+  };
+
   const handleUpdateProfile = (newProfile: OnboardingProfile) => {
       setOnboardingProfile(newProfile);
       localStorage.setItem('onboardingProfile', JSON.stringify(newProfile));
@@ -294,6 +315,8 @@ const App: React.FC = () => {
     setWorkoutLogs([]);
     setChatMessages([]);
     setError(null);
+    // Clear chat messages from localStorage explicitly
+    localStorage.removeItem('chatMessages');
   };
 
   if (error && !trainingProgram) {
@@ -408,15 +431,16 @@ const App: React.FC = () => {
        <div className="relative z-10 h-full">
         {onboardingProfile && trainingProgram ? (
             <>
-            <Dashboard 
+            <Dashboard
                 profile={onboardingProfile}
-                program={trainingProgram} 
+                program={trainingProgram}
                 logs={workoutLogs}
                 telegramUser={telegramUser}
                 onWorkoutComplete={handleWorkoutComplete}
                 onUpdateProfile={handleUpdateProfile}
                 onResetAccount={resetOnboarding}
                 onOpenChat={() => setIsChatbotOpen(true)}
+                onSendMessage={handleSendFromDashboard}
             />
             <Chatbot 
                 isOpen={isChatbotOpen}

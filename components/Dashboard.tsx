@@ -4,6 +4,7 @@ import WorkoutView from './WorkoutView';
 import ProgressView from './ProgressView';
 import SettingsView from './SettingsView';
 import SquadView from './SquadView';
+import ChatInputBar from './ChatInputBar';
 import { Dumbbell, Calendar as CalendarIcon, BarChart2, Settings, Play, ChevronRight, Info, Battery, Zap, Trophy, Users, Crown, Bot, MessageCircle, Flame, Activity, Clock, TrendingUp, Sparkles, MessageSquarePlus, HelpCircle, Coffee, Sun, Moon, Check, LayoutGrid, Shield, AlertTriangle } from 'lucide-react';
 import WorkoutPreviewModal from './WorkoutPreviewModal';
 import ReadinessModal from './ReadinessModal';
@@ -28,9 +29,10 @@ interface DashboardProps {
     onWorkoutComplete: (log: WorkoutLog) => void;
     onResetAccount: () => void;
     onOpenChat: () => void;
+    onSendMessage: (message: string) => void;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramUser, onUpdateProgram, onUpdateProfile, onWorkoutComplete, onResetAccount, onOpenChat }) => {
+const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramUser, onUpdateProgram, onUpdateProfile, onWorkoutComplete, onResetAccount, onOpenChat, onSendMessage }) => {
     const [activeView, setActiveView] = useState<'today' | 'squad' | 'progress' | 'settings'>('today');
     const [activeWorkout, setActiveWorkout] = useState<string | null>(null);
     const [workoutToPreview, setWorkoutToPreview] = useState<WorkoutSession | null>(null);
@@ -782,9 +784,14 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
             </header>
 
             {/* Main Content */}
-            <main className="px-6 py-6 space-y-6">
+            <main className="px-6 py-6 space-y-6 pb-32">
                 {renderContent()}
             </main>
+
+            {/* Chat Input Bar - show only on 'today' view when no active workout */}
+            {activeView === 'today' && !activeWorkout && (
+                <ChatInputBar onSendMessage={onSendMessage} />
+            )}
 
             {/* Navigation Bar */}
             <nav className="fixed bottom-6 left-6 right-6 bg-[#111]/90 backdrop-blur-xl border border-white/10 rounded-2xl p-2 flex justify-between items-center shadow-2xl z-40">
