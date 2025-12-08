@@ -400,7 +400,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
 
         // Default 'today' view
         return (
-            <div className="grid grid-cols-2 gap-4 pb-32 animate-fade-in">
+            <div className="grid grid-cols-2 gap-4 animate-fade-in">
                 {/* Header with Weekly Progress Ring */}
                 <div className="col-span-2 flex justify-between items-center py-2 px-1 pt-[env(safe-area-inset-top)]">
                     <div className="flex items-center gap-3">
