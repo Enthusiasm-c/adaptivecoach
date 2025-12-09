@@ -116,11 +116,15 @@ export interface TelegramUser {
   photo_url?: string;
 }
 
+// Exercise type determines if weight input is required
+export type ExerciseType = 'strength' | 'bodyweight' | 'cardio' | 'isometric';
+
 export interface Exercise {
   name: string;
+  exerciseType?: ExerciseType; // strength=needs weight, bodyweight/cardio/isometric=no weight needed
   sets: number;
   reps: string; // e.g., "8-12" or "5"
-  weight?: number; // Starting weight suggestion
+  weight?: number; // Starting weight suggestion (only for strength exercises)
   rest: number; // in seconds
   isWarmup?: boolean; // New: to distinguish warmup sets
   description?: string; // Short technical instruction

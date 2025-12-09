@@ -3,10 +3,11 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { OnboardingProfile, TrainingProgram, WorkoutLog, ChatMessage, TelegramUser } from './types';
 import Onboarding from './components/Onboarding';
 import Dashboard from './components/Dashboard';
-import { generateInitialPlan, adaptPlan, getChatbotResponse, currentApiKey } from './services/geminiService';
+import { generateInitialPlan, adaptPlan, getChatbotResponse, currentApiKey, adjustProgramForPain } from './services/geminiService';
 import { apiService } from './services/apiService';
 import Chatbot from './components/Chatbot';
 import { AlertTriangle, RefreshCw, Copy, Settings, Globe, Brain, Dumbbell, Activity, CalendarCheck } from 'lucide-react';
+import { useSessionTracking } from './utils/useSessionTracking';
 
 declare global {
   interface Window {
@@ -22,6 +23,9 @@ const App: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [errorDetails, setErrorDetails] = useState<string | null>(null);
   const [telegramUser, setTelegramUser] = useState<TelegramUser | null>(null);
+
+  // Session tracking for analytics
+  const { trackPageView, trackFeature } = useSessionTracking();
 
   const [isChatbotOpen, setIsChatbotOpen] = useState(false);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>(() => {
@@ -246,6 +250,32 @@ const App: React.FC = () => {
       }
     } catch (e) {
       console.warn("Could not sync workout to server", e);
+    }
+
+    // Immediate pain-based program adjustment (doesn't wait for 3-workout cycle)
+    if (log.feedback.pain.hasPain && trainingProgram) {
+      const painDetails = log.feedback.pain.details || log.feedback.pain.location || 'не указано';
+      try {
+        const adjustedProgram = await adjustProgramForPain(
+          trainingProgram,
+          painDetails,
+          log.completedExercises
+        );
+        if (adjustedProgram) {
+          setTrainingProgram(adjustedProgram);
+          try {
+            localStorage.setItem('trainingProgram', JSON.stringify(adjustedProgram));
+          } catch (e) {
+            console.warn("Could not save adjusted program to localStorage", e);
+          }
+          // Human-friendly message about what changed
+          const painLocation = painDetails !== 'не указано' ? ` (${painDetails})` : '';
+          setToastMessage(`Понял тебя${painLocation}! Снизил веса и адаптировал упражнения 💪`);
+          return; // Skip regular adaptation since we just adjusted
+        }
+      } catch (e) {
+        console.error("Failed to adjust program for pain:", e);
+      }
     }
 
     if (updatedLogs.length > 0 && updatedLogs.length % 3 === 0 && trainingProgram) {

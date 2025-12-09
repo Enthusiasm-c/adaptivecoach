@@ -48,6 +48,11 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
     const [showHardPaywall, setShowHardPaywall] = useState(false);
     const [workoutLimitStatus, setWorkoutLimitStatus] = useState<WorkoutLimitStatus | null>(null);
     const [streakShieldAvailable, setStreakShieldAvailable] = useState(false);
+
+    // Track page views for analytics
+    useEffect(() => {
+        apiService.analytics.track('page_view', { page: activeView }).catch(() => {});
+    }, [activeView]);
     const [shieldNotification, setShieldNotification] = useState<string | null>(null);
     const [showFirstWorkoutPaywall, setShowFirstWorkoutPaywall] = useState(false);
     const [streakMilestone, setStreakMilestone] = useState<number | null>(null);

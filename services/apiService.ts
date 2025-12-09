@@ -332,19 +332,48 @@ export const apiService = {
   analytics: {
     track: async (
       eventType:
+        // Paywall events
         | 'paywall_impression'
         | 'paywall_cta_click'
         | 'paywall_dismissed'
+        // Monetization events
         | 'trial_started'
         | 'trial_converted'
         | 'shield_used'
         | 'workout_limit_reached'
-        | 'premium_feature_blocked',
+        | 'premium_feature_blocked'
+        // Session & navigation events
+        | 'app_opened'
+        | 'session_start'
+        | 'session_end'
+        | 'session_heartbeat'
+        | 'page_view'
+        // Feature usage events
+        | 'feature_used'
+        | 'workout_started'
+        | 'workout_completed'
+        | 'chat_opened'
+        | 'chat_message_sent'
+        // Onboarding events
+        | 'onboarding_step'
+        | 'onboarding_completed',
       eventData?: Record<string, unknown>
     ): Promise<{ success: boolean }> => {
       return apiRequest('/api/analytics/track', {
         method: 'POST',
         body: JSON.stringify({ eventType, eventData }),
+      });
+    },
+
+    // Session tracking
+    trackSession: async (
+      sessionToken: string,
+      action: 'start' | 'heartbeat' | 'end',
+      deviceInfo?: Record<string, unknown>
+    ): Promise<{ success: boolean }> => {
+      return apiRequest('/api/analytics/session', {
+        method: 'POST',
+        body: JSON.stringify({ sessionToken, action, deviceInfo }),
       });
     },
   },

@@ -48,6 +48,9 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
   const [exerciseHistory, setExerciseHistory] = useState<{ date: string, sets: { weight: number, reps: number }[] }[]>([]);
   const [showHistory, setShowHistory] = useState(true);
 
+  // RIR Info Modal
+  const [showRirInfo, setShowRirInfo] = useState(false);
+
   useEffect(() => {
     if (initialState) {
       setCurrentSession({ ...session }); // Keep original session structure
@@ -160,14 +163,28 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
     setShowRestTimer(true);
   }
 
+  // Helper: check if exercise requires weight input
+  const exerciseNeedsWeight = (ex: typeof completedExercises[0]): boolean => {
+    // Only 'strength' exercises need weight > 0
+    // bodyweight, cardio, isometric exercises don't need weight
+    return ex.exerciseType === 'strength' || ex.exerciseType === undefined;
+  };
+
+  // Helper: check if all sets are complete for an exercise
+  const isExerciseComplete = (ex: typeof completedExercises[0]): boolean => {
+    const needsWeight = exerciseNeedsWeight(ex);
+    return ex.completedSets.every(s =>
+      s.reps > 0 && (needsWeight ? s.weight > 0 : true)
+    );
+  };
+
   // Navigation functions
   const findNextIncomplete = (fromIndex: number): number => {
     const total = completedExercises.length;
     for (let i = 1; i <= total; i++) {
       const idx = (fromIndex + i) % total;
       const ex = completedExercises[idx];
-      const allSetsComplete = ex.completedSets.every(s => s.reps > 0 && s.weight > 0);
-      if (!allSetsComplete) return idx;
+      if (!isExerciseComplete(ex)) return idx;
     }
     return -1; // all complete
   };
@@ -190,10 +207,8 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
     }
   };
 
-  // Check if all exercises are complete
-  const canFinish = completedExercises.every(ex =>
-    ex.completedSets.every(s => s.reps > 0 && s.weight > 0)
-  );
+  // Check if all exercises are complete (uses helper that respects exerciseType)
+  const canFinish = completedExercises.every(isExerciseComplete);
 
   const finishWorkout = () => {
     if (!canFinish) {
@@ -396,22 +411,24 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
               {/* Sets */}
               <div className="space-y-3">
                 {currentExercise.completedSets.map((set, setIndex) => (
-                  <div key={setIndex} className={`grid grid-cols-[auto_1fr_1fr_1fr] gap-3 items-center p-3 rounded-xl transition-all ${set.isCompleted
+                  <div key={setIndex} className={`grid ${exerciseNeedsWeight(currentExercise) ? 'grid-cols-[auto_1fr_1fr_0.7fr_auto]' : 'grid-cols-[auto_1fr_0.7fr_auto]'} gap-2 items-center p-3 rounded-xl transition-all ${set.isCompleted
                     ? 'bg-emerald-500/10 border border-emerald-500/20'
                     : 'bg-neutral-900/50 border border-white/5'
                     }`}>
-                    <div className="w-8 text-center font-mono text-gray-500 text-sm">#{setIndex + 1}</div>
+                    <div className="w-6 text-center font-mono text-gray-500 text-sm">#{setIndex + 1}</div>
 
-                    <div className="relative">
-                      <input
-                        type="number"
-                        value={set.weight || ''}
-                        onChange={(e) => handleValueChange(currentExerciseIndex, setIndex, 'weight', parseInt(e.target.value))}
-                        placeholder={currentExercise.weight?.toString() || "kg"}
-                        className="w-full bg-transparent text-center font-mono font-bold text-white outline-none border-b border-gray-700 focus:border-indigo-500 transition py-1"
-                      />
-                      <span className="absolute right-0 top-1/2 -translate-y-1/2 text-[10px] text-gray-600 pointer-events-none">KG</span>
-                    </div>
+                    {exerciseNeedsWeight(currentExercise) && (
+                      <div className="relative">
+                        <input
+                          type="number"
+                          value={set.weight || ''}
+                          onChange={(e) => handleValueChange(currentExerciseIndex, setIndex, 'weight', parseInt(e.target.value))}
+                          placeholder={currentExercise.weight?.toString() || "kg"}
+                          className="w-full bg-transparent text-center font-mono font-bold text-white outline-none border-b border-gray-700 focus:border-indigo-500 transition py-1"
+                        />
+                        <span className="absolute right-0 top-1/2 -translate-y-1/2 text-[10px] text-gray-600 pointer-events-none">KG</span>
+                      </div>
+                    )}
 
                     <div className="relative">
                       <input
@@ -421,12 +438,33 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
                         placeholder={currentExercise.reps.split('-')[0]}
                         className="w-full bg-transparent text-center font-mono font-bold text-white outline-none border-b border-gray-700 focus:border-indigo-500 transition py-1"
                       />
-                      <span className="absolute right-0 top-1/2 -translate-y-1/2 text-[10px] text-gray-600 pointer-events-none">REPS</span>
+                      <span className="absolute right-0 top-1/2 -translate-y-1/2 text-[10px] text-gray-600 pointer-events-none">REP</span>
+                    </div>
+
+                    {/* RIR - Reps In Reserve */}
+                    <div className="relative flex items-center gap-1">
+                      <select
+                        value={set.rir ?? ''}
+                        onChange={(e) => handleValueChange(currentExerciseIndex, setIndex, 'rir', parseInt(e.target.value))}
+                        className="w-full bg-transparent text-center font-mono font-bold text-white outline-none border-b border-gray-700 focus:border-indigo-500 transition py-1 appearance-none cursor-pointer"
+                      >
+                        <option value="" className="bg-neutral-900">-</option>
+                        <option value="0" className="bg-neutral-900">0</option>
+                        <option value="1" className="bg-neutral-900">1</option>
+                        <option value="2" className="bg-neutral-900">2</option>
+                        <option value="3" className="bg-neutral-900">3+</option>
+                      </select>
+                      <button
+                        onClick={() => setShowRirInfo(true)}
+                        className="text-gray-500 hover:text-indigo-400 transition p-0.5"
+                      >
+                        <Info size={14} />
+                      </button>
                     </div>
 
                     <button
                       onClick={() => toggleSetComplete(currentExerciseIndex, setIndex)}
-                      className={`w-full h-10 rounded-lg flex items-center justify-center transition-all active:scale-95 ${set.isCompleted
+                      className={`w-10 h-10 rounded-lg flex items-center justify-center transition-all active:scale-95 ${set.isCompleted
                         ? 'bg-emerald-500 text-white shadow-[0_0_15px_rgba(16,185,129,0.3)]'
                         : 'bg-neutral-800 text-gray-400 hover:bg-neutral-700'
                         }`}
@@ -523,6 +561,47 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
         initialSeconds={timerSeconds}
         onClose={() => setShowRestTimer(false)}
       />
+
+      {/* RIR Info Modal */}
+      {showRirInfo && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" onClick={() => setShowRirInfo(false)}>
+          <div className="bg-neutral-900 rounded-2xl p-6 max-w-sm w-full border border-white/10 space-y-4" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg font-bold text-white">Что такое RIR?</h3>
+              <button onClick={() => setShowRirInfo(false)} className="text-gray-500 hover:text-white">
+                <ChevronDown size={20} />
+              </button>
+            </div>
+
+            <p className="text-gray-400 text-sm">
+              <strong className="text-indigo-400">RIR (Reps In Reserve)</strong> — сколько повторений ты мог бы ещё сделать после завершения подхода.
+            </p>
+
+            <div className="space-y-2 text-sm">
+              <div className="flex items-center gap-3 bg-red-500/10 p-3 rounded-xl">
+                <span className="text-red-500 font-bold w-8">0</span>
+                <span className="text-gray-300">Отказ — не мог сделать ни одного повтора</span>
+              </div>
+              <div className="flex items-center gap-3 bg-orange-500/10 p-3 rounded-xl">
+                <span className="text-orange-500 font-bold w-8">1</span>
+                <span className="text-gray-300">Мог бы сделать ещё 1 повтор</span>
+              </div>
+              <div className="flex items-center gap-3 bg-yellow-500/10 p-3 rounded-xl">
+                <span className="text-yellow-500 font-bold w-8">2</span>
+                <span className="text-gray-300">Мог бы сделать ещё 2 повтора</span>
+              </div>
+              <div className="flex items-center gap-3 bg-emerald-500/10 p-3 rounded-xl">
+                <span className="text-emerald-500 font-bold w-8">3+</span>
+                <span className="text-gray-300">Легко — мог бы сделать 3+ повтора</span>
+              </div>
+            </div>
+
+            <p className="text-gray-500 text-xs">
+              💡 RIR помогает тренеру понять насколько тяжело тебе было и адаптировать программу — повысить или снизить вес на следующей тренировке.
+            </p>
+          </div>
+        </div>
+      )}
 
     </div>
   );

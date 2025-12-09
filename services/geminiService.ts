@@ -1,6 +1,6 @@
 
 import { Type } from "@google/genai";
-import { OnboardingProfile, TrainingProgram, WorkoutLog, ChatMessage, Exercise, WorkoutSession, ChatResponse, ActivityLevel, StrengthInsightsData, Gender } from '../types';
+import { OnboardingProfile, TrainingProgram, WorkoutLog, ChatMessage, Exercise, WorkoutSession, ChatResponse, ActivityLevel, StrengthInsightsData, Gender, CompletedExercise } from '../types';
 
 // ============================================
 // PROXY CONFIGURATION - DO NOT CHANGE TO SDK!
@@ -98,13 +98,18 @@ const exerciseSchema = {
     type: Type.OBJECT,
     properties: {
         name: { type: Type.STRING },
+        exerciseType: {
+            type: Type.STRING,
+            enum: ['strength', 'bodyweight', 'cardio', 'isometric'],
+            description: 'strength=weighted exercises (bench, squat), bodyweight=pushups/pullups, cardio=walking/running, isometric=plank/hold'
+        },
         description: { type: Type.STRING, description: 'Short instructions on form/technique (1-2 sentences) in Russian' },
         sets: { type: Type.INTEGER },
-        reps: { type: Type.STRING, description: 'Range like "8-12" or number "5"' },
-        weight: { type: Type.NUMBER, description: 'Starting weight in kg. 0 for bodyweight.' },
+        reps: { type: Type.STRING, description: 'Range like "8-12" or number "5" or "60" for seconds' },
+        weight: { type: Type.NUMBER, description: 'Starting weight in kg. Set 0 for bodyweight/cardio/isometric exercises.' },
         rest: { type: Type.INTEGER, description: 'Rest in seconds' },
     },
-    required: ['name', 'description', 'sets', 'reps', 'weight', 'rest'],
+    required: ['name', 'exerciseType', 'description', 'sets', 'reps', 'weight', 'rest'],
 };
 
 const exerciseAlternativesSchema = {
@@ -243,8 +248,12 @@ function buildAdaptationPrompt(currentProgram: TrainingProgram, logs: WorkoutLog
         - RIR 3+: Слишком легко -> Увеличь вес на 2.5-5%.
         - RIR 1-2: Оптимально -> Оставь вес или минимальный прогресс.
         - RIR 0 (Отказ): Тяжело -> Снизь вес или оставь тот же.
-    2. Дискомфорт:
-       - Если пользователь отметил боль, замени упражнение на биомеханически более комфортный аналог.
+    2. ВАЖНО - Боль/Дискомфорт (приоритетное правило):
+       - Первичная боль: СНАЧАЛА снизь вес на 15-20% для упражнения на эту мышечную группу
+       - Повторная боль (в том же месте): Замени упражнение на более безопасный аналог
+       - Если RIR=0 и была боль: Снизь вес на 25% - вес точно слишком тяжелый
+       - Если RIR>2 и была боль: Проблема в технике, добавь разминочные подходы
+       - Боль в суставе: Замени на упражнение с меньшей амплитудой или свободным весом
     3. Структура:
        - Не меняй название дней без причины, корректируй нагрузку.
     4. Если пользователь увеличил веса вручную в логах, обязательно обнови программу, чтобы следующий раз веса были актуальными.
@@ -274,28 +283,49 @@ function buildModificationPrompt(currentProgram: TrainingProgram, reason: string
 
 
 function buildCoachFeedbackPrompt(profile: OnboardingProfile, log: WorkoutLog): string {
+    // Build exercise summary with weights for pain analysis
+    const exerciseSummary = log.completedExercises.map(ex => {
+        const avgWeight = ex.completedSets.length > 0
+            ? Math.round(ex.completedSets.reduce((sum, s) => sum + (s.weight || 0), 0) / ex.completedSets.length)
+            : 0;
+        const hadFailure = ex.completedSets.some(s => s.rir === 0);
+        return `${ex.name}: ${avgWeight}кг (${hadFailure ? 'отказ' : 'запас есть'})`;
+    }).join('\n    ');
+
     return `
     Ты "ИИ тренер" - умный помощник.
-    Пользователь закончил тренировку. Дай короткий, живой комментарий (2-3 предложения) на РУССКОМ языке.
+    Пользователь закончил тренировку. Дай короткий, живой комментарий (2-4 предложения) на РУССКОМ языке.
     Обращайся на "Ты".
 
     Контекст:
     - Цель: ${profile.goals.primary}
-    - Вес: ${profile.weight}
+    - Вес пользователя: ${profile.weight}кг
     - Тренировка: ${log.sessionId}
     - Время тренировки: ${log.duration ? Math.round(log.duration / 60) + ' мин' : 'Неизвестно'}
     - Выполнение: ${log.feedback.completion}
-    - Боль/Дискомфорт: ${log.feedback.pain.hasPain ? `Да - ${log.feedback.pain.details}` : 'Нет'}
-    - Запас сил (RIR): ${log.completedExercises.some(e => e.completedSets.some(s => s.rir === 0)) ? 'Работал в отказ' : 'Остался запас'}
+    - Боль/Дискомфорт: ${log.feedback.pain.hasPain ? `ДА - ${log.feedback.pain.details || 'не указано где'}` : 'Нет'}
+
+    Выполненные упражнения:
+    ${exerciseSummary}
 
     Задание:
     1. Сравни План и Факт. Если пользователь поднял больше, чем было в плане - похвали за прогресс.
     2. Если тренировка заняла слишком мало времени (<20 мин) - спроси, не халтурил ли он.
-    3. Если была боль - посоветуй отдых.
-    
+    3. ВАЖНО - Если была боль:
+       - Определи какое упражнение скорее всего вызвало боль (по локации боли и списку упражнений)
+       - Дай КОНКРЕТНЫЙ план действий: "На следующей тренировке снизим вес на [упражнение] с Xкг до Yкг"
+       - Если RIR=0 при боли - вес точно был слишком тяжелый
+       - НЕ говори просто "отдохни" - дай конкретную корректировку
+
     Стиль:
-    - Дружелюбный, мотивирующий, как реальный бро-тренер.
-    - Используй эмодзи.
+    - Дружелюбный, мотивирующий, как реальный бро-тренер который искренне заботится.
+    - Используй эмодзи умеренно (1-2).
+    - При боли:
+      * Сначала эмпатия и поддержка ("Понимаю, это неприятно...")
+      * Затем объясни ПОЧЕМУ это могло произойти
+      * И конкретный план что ТЫ (тренер) сделаешь: "Я уже снизил вес на выпадах с 20кг до 15кг"
+      * Закончи позитивно
+    - НЕ пиши шаблонные фразы типа "береги себя" или "слушай своё тело" - будь конкретным.
     `;
 }
 
@@ -409,6 +439,50 @@ export const getCoachFeedback = async (profile: OnboardingProfile, log: WorkoutL
     });
 
     return extractText(response);
+};
+
+/**
+ * Immediately adjust program when user reports pain
+ * This runs right after workout completion, not waiting for regular 3-workout adaptation cycle
+ */
+export const adjustProgramForPain = async (
+    currentProgram: TrainingProgram,
+    painDetails: string,
+    completedExercises: CompletedExercise[]
+): Promise<TrainingProgram | null> => {
+    // Build exercise summary for context
+    const exerciseSummary = completedExercises.map(ex => {
+        const avgWeight = ex.completedSets.length > 0
+            ? Math.round(ex.completedSets.reduce((sum, s) => sum + (s.weight || 0), 0) / ex.completedSets.length)
+            : 0;
+        const hadFailure = ex.completedSets.some(s => s.rir === 0);
+        return `${ex.name}: ${avgWeight}кг (RIR: ${hadFailure ? '0 - отказ' : '1+'})`;
+    }).join(', ');
+
+    const reason = `Пользователь сообщил о боли/дискомфорте: "${painDetails}"`;
+    const instructions = `
+    НЕМЕДЛЕННАЯ корректировка программы из-за боли:
+
+    Упражнения на тренировке: ${exerciseSummary}
+
+    Правила:
+    1. Найди упражнения на группу мышц, где была боль
+    2. Снизь вес на 15-20% для этих упражнений ВО ВСЕХ сессиях программы
+    3. Если боль в суставе (колено, плечо, поясница) - замени на более безопасный вариант:
+       - Колено: выпады → румынская тяга, присед → жим ногами
+       - Плечо: жим стоя → жим лежа, разводки → тяга к лицу
+       - Поясница: становая → гиперэкстензия, скручивания → планка
+    4. Добавь разминочный подход если его не было
+    5. НЕ удаляй упражнения полностью - адаптируй
+
+    Верни обновленную программу с пониженными весами.`;
+
+    try {
+        return await modifyPlanWithInstructions(currentProgram, reason, instructions);
+    } catch (error) {
+        console.error('Failed to adjust program for pain:', error);
+        return null;
+    }
 };
 
 export const getDashboardInsight = async (profile: OnboardingProfile, logs: WorkoutLog[]): Promise<string> => {
