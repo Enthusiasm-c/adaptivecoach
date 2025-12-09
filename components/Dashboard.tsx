@@ -719,13 +719,6 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
                                             </div>
                                         </div>
 
-                                        <button
-                                            onClick={onOpenChat}
-                                            className="w-full mt-4 py-3 bg-indigo-600 text-white rounded-xl font-bold text-sm hover:bg-indigo-500 transition shadow-lg shadow-indigo-500/20 flex items-center justify-center gap-2"
-                                        >
-                                            <MessageSquarePlus size={16} />
-                                            Написать тренеру
-                                        </button>
                                     </div>
                                 </div>
                                 <button
