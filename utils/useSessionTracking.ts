@@ -22,9 +22,27 @@ function getDeviceInfo(): Record<string, unknown> {
 export function useSessionTracking() {
   const sessionTokenRef = useRef<string | null>(null);
   const heartbeatIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  // Track page duration
+  const lastPageRef = useRef<string | null>(null);
+  const lastPageTimeRef = useRef<number | null>(null);
 
-  // Track page view
+  // Track page view with duration tracking
   const trackPageView = useCallback((page: string) => {
+    // Send duration of previous page before tracking new one
+    if (lastPageRef.current && lastPageTimeRef.current) {
+      const durationMs = Date.now() - lastPageTimeRef.current;
+      apiService.analytics.track('page_duration', {
+        page: lastPageRef.current,
+        duration_ms: durationMs,
+        sessionToken: sessionTokenRef.current,
+      }).catch(() => {});
+    }
+
+    // Remember new page and time
+    lastPageRef.current = page;
+    lastPageTimeRef.current = Date.now();
+
+    // Standard page_view event
     apiService.analytics.track('page_view', {
       page,
       sessionToken: sessionTokenRef.current,
@@ -61,11 +79,27 @@ export function useSessionTracking() {
       }
     }, 30000);
 
-    // Cleanup on unmount - end session
+    // Cleanup on unmount - end session and track exit page
     return () => {
       if (heartbeatIntervalRef.current) {
         clearInterval(heartbeatIntervalRef.current);
       }
+
+      // Track exit page and final page duration
+      if (lastPageRef.current && lastPageTimeRef.current) {
+        const durationMs = Date.now() - lastPageTimeRef.current;
+        apiService.analytics.track('page_duration', {
+          page: lastPageRef.current,
+          duration_ms: durationMs,
+          sessionToken: sessionTokenRef.current,
+        }).catch(() => {});
+
+        apiService.analytics.track('session_exit', {
+          exitPage: lastPageRef.current,
+          sessionToken: sessionTokenRef.current,
+        }).catch(() => {});
+      }
+
       if (sessionTokenRef.current) {
         apiService.analytics.trackSession(sessionTokenRef.current, 'end').catch(() => {});
       }
