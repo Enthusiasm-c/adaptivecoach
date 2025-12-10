@@ -137,9 +137,22 @@ const App: React.FC = () => {
             }
         }
 
-        // Register user in backend database (for friend search)
+        // Register user in backend database and check for partner source
         if (window.Telegram.WebApp.initData) {
-            apiService.auth.validate().catch(err => {
+            apiService.auth.validate().then(response => {
+                if (response?.success && response?.user) {
+                    console.log('[FitCube] API returned partnerSource:', response.user.partnerSource);
+                    // If user came from FitCube partner (via /start fitcube command)
+                    if (response.user.partnerSource === 'fitcube') {
+                        setPartnerSource('fitcube');
+                        localStorage.setItem('partnerSource', 'fitcube');
+                        // Show FitCube welcome only if no profile exists yet
+                        if (!localStorage.getItem('onboardingProfile')) {
+                            setShowFitCubeWelcome(true);
+                        }
+                    }
+                }
+            }).catch(err => {
                 console.warn('Auth validation failed:', err);
             });
         }
@@ -199,8 +212,15 @@ const App: React.FC = () => {
           window.history.replaceState({}, document.title, cleanUrl);
       }
 
-      // Check for partner parameter: ?startapp=fitcube or tgWebAppStartParam=fitcube
-      const startapp = urlParams.get('startapp') || urlParams.get('tgWebAppStartParam');
+      // Check for partner parameter from multiple sources:
+      // 1. URL params: ?startapp=fitcube or tgWebAppStartParam=fitcube
+      // 2. Telegram WebApp: window.Telegram.WebApp.initDataUnsafe.start_param
+      const urlStartapp = urlParams.get('startapp') || urlParams.get('tgWebAppStartParam');
+      const tgStartapp = window.Telegram?.WebApp?.initDataUnsafe?.start_param;
+      const startapp = urlStartapp || tgStartapp;
+
+      console.log('[FitCube] Checking startapp:', { urlStartapp, tgStartapp, startapp });
+
       if (startapp === 'fitcube') {
           setPartnerSource('fitcube');
           localStorage.setItem('partnerSource', 'fitcube');
