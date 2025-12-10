@@ -179,7 +179,11 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete, isLoading, error, p
                             {!showPrediction ? (
                                 <button
                                     onClick={() => { nextStep(); hapticFeedback.impactOccurred('light'); }}
-                                    disabled={isLoading || (step === 6 && (!profile.preferredDays || profile.preferredDays.length === 0))}
+                                    disabled={
+                                        isLoading ||
+                                        (step === 6 && (!profile.preferredDays || profile.preferredDays.length === 0)) ||
+                                        (step === 8 && Array.isArray(profile.knownWeights) && !profile.knownWeights.some((w: KnownWeight) => w.weight > 0))
+                                    }
                                     className="flex-1 py-4 bg-white text-black rounded-2xl hover:bg-gray-200 transition disabled:opacity-50 disabled:bg-neutral-800 disabled:text-gray-500 font-bold text-lg flex items-center justify-center gap-2 shadow-lg shadow-white/10 active:scale-[0.98]"
                                 >
                                     Дальше <ArrowRight size={20} />
@@ -637,7 +641,11 @@ const KnownWeightsStep = ({ profile, updateProfile, setProfile }: any) => {
                         <span className="text-xs text-gray-500 font-bold uppercase">Не помню</span>
                     </button>
                     <button
-                        onClick={() => setKnowsWeights(true)}
+                        onClick={() => {
+                            setKnowsWeights(true);
+                            // Set empty array as marker that user chose "Yes" - will be validated before next step
+                            setProfile((prev: any) => ({ ...prev, knownWeights: prev.knownWeights?.length > 0 ? prev.knownWeights : [] }));
+                        }}
                         className="p-6 rounded-3xl border-2 border-indigo-500 bg-indigo-500/10 hover:bg-indigo-500/20 transition"
                     >
                         <span className="block text-2xl font-black mb-1 text-indigo-400">Да</span>

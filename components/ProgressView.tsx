@@ -13,7 +13,7 @@ import {
     calculateWeekComparison, getNextScheduledDay, pluralizeRu,
     formatKg, calculateWeightProgression, WeightProgressionEntry
 } from '../utils/progressUtils';
-import { Dumbbell, Flame, TrendingUp, TrendingDown, Minus, Trophy, Battery, PieChart as PieIcon, Calendar, Eye, Crown, Star, Activity, HeartPulse, ChevronLeft, ChevronRight, Check, Target, BarChart2, X, Repeat, Timer } from 'lucide-react';
+import { Dumbbell, Flame, TrendingUp, TrendingDown, Minus, Trophy, Battery, PieChart as PieIcon, Calendar, Eye, Crown, Star, Activity, HeartPulse, ChevronLeft, ChevronRight, Check, Target, BarChart2, X, Repeat, Timer, AlertTriangle } from 'lucide-react';
 import { hapticFeedback } from '../utils/hapticUtils';
 import BlurredContent from './BlurredContent';
 import CalibrationCard from './CalibrationCard';
@@ -129,6 +129,21 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
     const weekComparison = useMemo(() => calculateWeekComparison(displayLogs), [displayLogs]);
     const nextScheduledDay = useMemo(() => getNextScheduledDay(preferredDays), [preferredDays]);
     const weightProgression = useMemo(() => calculateWeightProgression(displayLogs), [displayLogs]);
+
+    // Pain diary data
+    const painLogs = useMemo(() => {
+        return displayLogs.filter(l => l.feedback?.pain?.hasPain);
+    }, [displayLogs]);
+
+    const painByLocation = useMemo(() => {
+        const grouped: { [key: string]: WorkoutLog[] } = {};
+        painLogs.forEach(log => {
+            const location = log.feedback?.pain?.location || 'Не указано';
+            if (!grouped[location]) grouped[location] = [];
+            grouped[location].push(log);
+        });
+        return grouped;
+    }, [painLogs]);
 
     // --- Calendar Logic ---
     const [currentDate, setCurrentDate] = React.useState(new Date());
@@ -418,6 +433,79 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
 
             {/* Calibration Card - shows progress toward strength analysis */}
             <CalibrationCard logs={displayLogs} />
+
+            {/* Pain Diary Section */}
+            {painLogs.length > 0 && (
+                <div className="bg-neutral-900 border border-white/5 rounded-3xl p-5 shadow-lg">
+                    <h3 className="font-bold text-white mb-4 flex items-center gap-2">
+                        <AlertTriangle size={18} className="text-red-400" />
+                        Дневник боли
+                    </h3>
+
+                    <div className="space-y-3">
+                        {painLogs.slice(0, 5).map((log, idx) => {
+                            // Get max weight for each exercise
+                            const exerciseWeights = log.completedExercises.slice(0, 3).map(ex => ({
+                                name: ex.name,
+                                maxWeight: Math.max(...ex.completedSets.map(s => s.weight || 0))
+                            })).filter(e => e.maxWeight > 0);
+
+                            return (
+                                <div key={`${log.date}-${idx}`} className="bg-neutral-800 rounded-xl p-3">
+                                    <div className="flex justify-between text-sm mb-1">
+                                        <span className="text-red-400 font-medium">
+                                            {log.feedback?.pain?.location || 'Не указано'}
+                                        </span>
+                                        <span className="text-gray-500">
+                                            {new Date(log.date).toLocaleDateString('ru-RU', {
+                                                day: 'numeric',
+                                                month: 'short'
+                                            })}
+                                        </span>
+                                    </div>
+                                    <p className="text-xs text-gray-400 mb-2">{log.sessionId}</p>
+                                    {log.feedback?.pain?.details && (
+                                        <p className="text-xs text-gray-500 mb-2 italic">
+                                            "{log.feedback.pain.details}"
+                                        </p>
+                                    )}
+                                    {/* Show exercises + weights from that workout */}
+                                    {exerciseWeights.length > 0 && (
+                                        <div className="flex flex-wrap gap-1">
+                                            {exerciseWeights.map(ex => (
+                                                <span key={ex.name} className="text-[10px] bg-neutral-700 px-2 py-0.5 rounded">
+                                                    {ex.name.length > 15 ? ex.name.slice(0, 15) + '...' : ex.name}: {ex.maxWeight}кг
+                                                </span>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
+
+                    {/* Pain patterns summary */}
+                    {Object.keys(painByLocation).length > 0 && (
+                        <div className="mt-4 bg-red-500/10 border border-red-500/20 rounded-xl p-3">
+                            <p className="text-red-300 text-sm font-bold mb-2">Частые зоны:</p>
+                            <div className="flex flex-wrap gap-2">
+                                {(Object.entries(painByLocation) as [string, WorkoutLog[]][])
+                                    .sort((a, b) => b[1].length - a[1].length)
+                                    .slice(0, 4)
+                                    .map(([location, locationLogs]) => (
+                                        <span
+                                            key={location}
+                                            className="px-2 py-1 bg-red-500/20 text-red-200 rounded-full text-xs font-medium"
+                                        >
+                                            {location}: {locationLogs.length}×
+                                        </span>
+                                    ))
+                                }
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
 
             {/* Enhanced Stats Grid */}
             <div className="grid grid-cols-2 gap-3">

@@ -59,6 +59,13 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
   // Bug fix: mid-workout pain reporting
   const [showPainModal, setShowPainModal] = useState(false);
   const [midWorkoutPain, setMidWorkoutPain] = useState<string>('');
+  const [midWorkoutPainLocation, setMidWorkoutPainLocation] = useState<string>('');
+
+  // Pain location options (same as FeedbackModal)
+  const PAIN_LOCATIONS = [
+    'Поясница', 'Колени', 'Плечи', 'Шея',
+    'Локти', 'Запястья', 'Спина (верх)', 'Другое'
+  ];
 
   useEffect(() => {
     if (initialState) {
@@ -266,12 +273,23 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
 
     const mainExercises = completedExercises.filter(ex => !ex.isWarmup);
 
+    // Merge mid-workout pain with feedback pain data
+    const hasMidWorkoutPain = !!midWorkoutPainLocation || !!midWorkoutPain.trim();
+    const mergedPain = {
+      hasPain: feedback.pain.hasPain || hasMidWorkoutPain,
+      location: feedback.pain.location || midWorkoutPainLocation || undefined,
+      details: [
+        feedback.pain.details,
+        hasMidWorkoutPain && midWorkoutPain.trim() ? `[Во время тренировки: ${midWorkoutPain.trim()}]` : null
+      ].filter(Boolean).join(' ') || undefined,
+    };
+
     const log: WorkoutLog = {
       sessionId: session.name,
       date: new Date().toLocaleDateString('sv-SE'), // YYYY-MM-DD format in local timezone
       startTime: startTimeRef.current,
       duration: Math.floor((Date.now() - startTimeRef.current) / 1000),
-      feedback: { ...feedback, readiness },
+      feedback: { ...feedback, pain: mergedPain, readiness },
       completedExercises: mainExercises,
     };
     setFinalLog(log);
@@ -689,14 +707,34 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
             </div>
 
             <p className="text-sm text-gray-400 mb-4">
-              Опиши ощущения — мы адаптируем программу с учётом этого.
+              Отметь место и опиши ощущения — мы адаптируем программу с учётом этого.
             </p>
+
+            {/* Pain location chips */}
+            <div className="mb-4">
+              <label className="text-xs font-bold text-gray-500 uppercase mb-2 block">Где именно?</label>
+              <div className="flex flex-wrap gap-2">
+                {PAIN_LOCATIONS.map(loc => (
+                  <button
+                    key={loc}
+                    onClick={() => setMidWorkoutPainLocation(loc)}
+                    className={`px-3 py-1.5 rounded-full text-sm font-medium transition ${
+                      midWorkoutPainLocation === loc
+                        ? 'bg-red-500 text-white'
+                        : 'bg-neutral-700 text-gray-300 hover:bg-neutral-600'
+                    }`}
+                  >
+                    {loc}
+                  </button>
+                ))}
+              </div>
+            </div>
 
             <textarea
               value={midWorkoutPain}
               onChange={e => setMidWorkoutPain(e.target.value)}
-              placeholder="Например: Тянет в пояснице, дискомфорт в левом плече..."
-              className="w-full bg-neutral-800 rounded-xl p-4 text-white mb-4 min-h-[100px] border border-white/5 focus:border-indigo-500 outline-none transition"
+              placeholder="Опиши подробнее (необязательно)..."
+              className="w-full bg-neutral-800 rounded-xl p-4 text-white mb-4 min-h-[80px] border border-white/5 focus:border-indigo-500 outline-none transition"
             />
 
             <div className="flex gap-3">

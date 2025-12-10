@@ -2,6 +2,12 @@
 import React, { useState } from 'react';
 import { WorkoutFeedback, WorkoutCompletion } from '../types';
 
+// Pain location options
+const PAIN_LOCATIONS = [
+  'Поясница', 'Колени', 'Плечи', 'Шея',
+  'Локти', 'Запястья', 'Спина (верх)', 'Другое'
+];
+
 interface FeedbackModalProps {
   onSubmit: (feedback: WorkoutFeedback) => void;
   onClose: () => void;
@@ -10,6 +16,7 @@ interface FeedbackModalProps {
 const FeedbackModal: React.FC<FeedbackModalProps> = ({ onSubmit, onClose }) => {
   const [completion, setCompletion] = useState<WorkoutCompletion>(WorkoutCompletion.Yes);
   const [hasPain, setHasPain] = useState(false);
+  const [painLocation, setPainLocation] = useState<string>('');
   const [painDetails, setPainDetails] = useState('');
 
   const handleSubmit = () => {
@@ -17,6 +24,7 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({ onSubmit, onClose }) => {
       completion,
       pain: {
         hasPain,
+        location: hasPain ? painLocation : undefined,
         details: hasPain ? painDetails : undefined,
       },
     });
@@ -44,12 +52,32 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({ onSubmit, onClose }) => {
                 <button onClick={() => setHasPain(true)} className={`w-full p-3 rounded-lg transition ${hasPain ? 'bg-indigo-600 font-bold' : 'bg-gray-700 hover:bg-gray-600'}`}>Да</button>
             </div>
              {hasPain && (
-                <div className="animate-fade-in pt-2">
-                    <textarea 
-                        value={painDetails} 
-                        onChange={e => setPainDetails(e.target.value)} 
+                <div className="animate-fade-in pt-2 space-y-3">
+                    {/* Pain location chips */}
+                    <div>
+                        <label className="text-sm text-gray-400 block mb-2">Где именно?</label>
+                        <div className="flex flex-wrap gap-2">
+                            {PAIN_LOCATIONS.map(loc => (
+                                <button
+                                    key={loc}
+                                    onClick={() => setPainLocation(loc)}
+                                    className={`px-3 py-1.5 rounded-full text-sm font-medium transition ${
+                                        painLocation === loc
+                                            ? 'bg-red-500 text-white'
+                                            : 'bg-neutral-700 text-gray-300 hover:bg-neutral-600'
+                                    }`}
+                                >
+                                    {loc}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                    {/* Pain details textarea */}
+                    <textarea
+                        value={painDetails}
+                        onChange={e => setPainDetails(e.target.value)}
                         className="w-full p-2 bg-gray-700 rounded-lg border border-gray-600 focus:ring-indigo-500 focus:border-indigo-500 h-20"
-                        placeholder="Например: Левое плечо болело при жиме..."
+                        placeholder="Опиши подробнее (необязательно)..."
                     />
                 </div>
             )}
