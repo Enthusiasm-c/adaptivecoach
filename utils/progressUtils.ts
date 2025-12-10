@@ -1,6 +1,24 @@
 
 import { WorkoutLog, PersonalRecord, ReadinessData, Exercise, WorkoutSession } from '../types';
 
+// Russian plural forms: 1 тренировка, 2-4 тренировки, 5-20 тренировок
+export const pluralizeRu = (n: number, one: string, few: string, many: string): string => {
+    const absN = Math.abs(n);
+    const mod10 = absN % 10;
+    const mod100 = absN % 100;
+
+    if (mod100 >= 11 && mod100 <= 19) {
+        return many;
+    }
+    if (mod10 === 1) {
+        return one;
+    }
+    if (mod10 >= 2 && mod10 <= 4) {
+        return few;
+    }
+    return many;
+};
+
 // Helper to get the ISO week number for a date
 const getWeekNumber = (d: Date): [number, number] => {
     d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));

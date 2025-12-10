@@ -13,7 +13,7 @@ import HardPaywall from './HardPaywall';
 import TrialBanner from './TrialBanner';
 import FirstWorkoutPaywall from './FirstWorkoutPaywall';
 import StreakMilestonePaywall from './StreakMilestonePaywall';
-import { calculateStreaks, calculateWorkoutVolume, calculateWeeklyProgress, getMuscleFocus, calculateLevel } from '../utils/progressUtils';
+import { calculateStreaks, calculateWorkoutVolume, calculateWeeklyProgress, getMuscleFocus, calculateLevel, pluralizeRu } from '../utils/progressUtils';
 import { getDashboardInsight } from '../services/geminiService';
 import { hapticFeedback } from '../utils/hapticUtils';
 import SkeletonLoader from './SkeletonLoader';
@@ -477,7 +477,9 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
                         </div>
                         <span className="text-xl font-black text-white leading-none">{currentStreak}</span>
                         <span className="text-[10px] text-gray-500 font-bold uppercase">
-                            {streakShieldAvailable && workoutLimitStatus?.isPro ? 'Защищён' : 'Тренировок'}
+                            {streakShieldAvailable && workoutLimitStatus?.isPro
+                                ? 'Защищён'
+                                : pluralizeRu(currentStreak, 'день подряд', 'дня подряд', 'дней подряд')}
                         </span>
                     </div>
 

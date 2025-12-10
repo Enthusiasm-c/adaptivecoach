@@ -10,11 +10,10 @@ import {
     calculateStreaks, calculateTotalVolume, calculateWeeklyVolume,
     calculatePersonalRecords, calculateReadinessHistory, calculateMovementPatterns, getHeatmapData,
     calculateLevel, getStrengthProgression, getVolumeDistribution,
-    calculateWeekComparison, getNextScheduledDay
+    calculateWeekComparison, getNextScheduledDay, pluralizeRu
 } from '../utils/progressUtils';
 import { Dumbbell, Flame, TrendingUp, TrendingDown, Minus, Trophy, Battery, PieChart as PieIcon, Calendar, Eye, Crown, Star, Activity, HeartPulse, ChevronLeft, ChevronRight, Check, Target, BarChart2, X, Repeat, Timer } from 'lucide-react';
 import { hapticFeedback } from '../utils/hapticUtils';
-import StrengthAnalysisView from './StrengthAnalysisView';
 import BlurredContent from './BlurredContent';
 import CalibrationCard from './CalibrationCard';
 
@@ -107,7 +106,6 @@ const generateMockLogs = (): WorkoutLog[] => {
 
 const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProgram, preferredDays = [], profile, onOpenPremium }) => {
     const isDemoMode = logs.length === 0;
-    const [activeTab, setActiveTab] = useState<'stats' | 'analysis'>('stats');
 
     const displayLogs = useMemo(() => {
         return isDemoMode ? generateMockLogs() : logs;
@@ -363,48 +361,43 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
     return (
         <div className="pb-40 space-y-6 animate-fade-in px-1 relative pt-[env(safe-area-inset-top)]">
 
-            <h2 className="text-2xl font-bold text-white mb-4 px-2">Мой Прогресс</h2>
+            {/* Level Header - moved to top */}
+            <div className="bg-gradient-to-br from-neutral-900 to-neutral-900/50 border border-white/10 rounded-3xl p-5 shadow-2xl relative overflow-hidden mx-1">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full blur-3xl -mr-10 -mt-10"></div>
 
-            {/* Tab Switcher */}
-            <div className="flex p-1 bg-neutral-900 rounded-xl border border-white/5 mx-1">
-                <button
-                    onClick={() => {
-                        hapticFeedback.selectionChanged();
-                        setActiveTab('stats');
-                    }}
-                    className={`flex-1 py-2.5 rounded-lg font-bold text-xs transition-all flex items-center justify-center gap-1.5 ${activeTab === 'stats' ? 'bg-neutral-800 text-white shadow-lg' : 'text-gray-500'
-                        }`}
-                >
-                    <BarChart2 size={14} /> Статистика
-                </button>
-                <button
-                    onClick={() => {
-                        hapticFeedback.selectionChanged();
-                        setActiveTab('analysis');
-                    }}
-                    className={`flex-1 py-2.5 rounded-lg font-bold text-xs transition-all flex items-center justify-center gap-1.5 ${activeTab === 'analysis' ? 'bg-indigo-600 text-white shadow-lg' : 'text-gray-500'
-                        }`}
-                >
-                    <Target size={14} /> Анализ
-                    {!profile?.isPro && <Crown size={10} className="text-yellow-400" />}
-                </button>
+                <div className="flex items-center gap-4 mb-3 relative z-10">
+                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-600 to-violet-600 flex items-center justify-center text-white font-black text-xl shadow-lg shadow-indigo-500/30 transform rotate-3 border border-white/10">
+                        {userLevel.level}
+                    </div>
+                    <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                            <h2 className="text-xl font-black text-white">{userLevel.title}</h2>
+                            <Crown size={16} className="text-yellow-400 fill-yellow-400" />
+                        </div>
+                        <p className="text-xs text-gray-400 font-medium">{userLevel.xp} XP</p>
+                    </div>
+                </div>
+
+                <div className="relative z-10">
+                    <div className="flex justify-between text-[10px] font-bold text-gray-500 mb-1 uppercase tracking-wider">
+                        <span>До следующего уровня</span>
+                        <span>{userLevel.levelProgress.toFixed(0)}%</span>
+                    </div>
+                    <div className="h-2.5 bg-neutral-800 rounded-full overflow-hidden border border-white/5">
+                        <div
+                            className="h-full bg-indigo-500 rounded-full relative"
+                            style={{ width: `${userLevel.levelProgress}%` }}
+                        >
+                            <div className="absolute inset-0 bg-white/20 animate-pulse"></div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            {/* Analysis Tab */}
-            {activeTab === 'analysis' && profile && (
-                <StrengthAnalysisView
-                    profile={profile}
-                    logs={logs}
-                    isPro={profile.isPro || false}
-                    onUpgrade={onOpenPremium || (() => {})}
-                />
-            )}
+            <h2 className="text-xl font-bold text-white px-2">Статистика</h2>
 
-            {/* Stats Tab Content */}
-            {activeTab === 'stats' && (
-                <>
-                    {/* Calendar Section */}
-                    {renderCalendar()}
+            {/* Calendar Section */}
+            {renderCalendar()}
 
             {/* Demo Mode Banner */}
             {isDemoMode && (
@@ -421,41 +414,8 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
                 </div>
             )}
 
-            {/* Gamification Header */}
-            <div className="bg-gradient-to-br from-neutral-900 to-neutral-900/50 border border-white/10 rounded-3xl p-6 shadow-2xl relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full blur-3xl -mr-10 -mt-10"></div>
-
-                <div className="flex items-center gap-4 mb-4 relative z-10">
-                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-600 to-violet-600 flex items-center justify-center text-white font-black text-2xl shadow-lg shadow-indigo-500/30 transform rotate-3 border border-white/10">
-                        {userLevel.level}
-                    </div>
-                    <div>
-                        <div className="flex items-center gap-2">
-                            <h2 className="text-2xl font-black text-white">{userLevel.title}</h2>
-                            <Crown size={18} className="text-yellow-400 fill-yellow-400" />
-                        </div>
-                        <p className="text-sm text-gray-400 font-medium">{userLevel.xp} XP</p>
-                    </div>
-                </div>
-
-                <div className="relative z-10">
-                    <div className="flex justify-between text-xs font-bold text-gray-500 mb-1.5 uppercase tracking-wider">
-                        <span>Прогресс уровня</span>
-                        <span>{userLevel.levelProgress.toFixed(0)}%</span>
-                    </div>
-                    <div className="h-3 bg-neutral-800 rounded-full overflow-hidden border border-white/5">
-                        <div
-                            className="h-full bg-indigo-500 rounded-full relative"
-                            style={{ width: `${userLevel.levelProgress}%` }}
-                        >
-                            <div className="absolute inset-0 bg-white/20 animate-pulse"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
             {/* Calibration Card - shows progress toward strength analysis */}
-            <CalibrationCard logs={displayLogs} onViewAnalysis={() => setActiveTab('analysis')} />
+            <CalibrationCard logs={displayLogs} />
 
             {/* Enhanced Stats Grid */}
             <div className="grid grid-cols-2 gap-3">
@@ -475,11 +435,13 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
                 <div className="bg-neutral-900 border border-white/5 rounded-2xl p-4">
                     <div className="flex items-center gap-2 text-gray-400 text-xs mb-2">
                         <Flame size={14} className="text-orange-500" />
-                        <span>Серия</span>
+                        <span>Серия тренировок</span>
                     </div>
                     <div className="text-2xl font-black text-white">
                         {currentStreak}
-                        <span className="text-sm text-gray-500 ml-1">тр.</span>
+                        <span className="text-sm text-gray-500 ml-1">
+                            {pluralizeRu(currentStreak, 'день', 'дня', 'дней')}
+                        </span>
                     </div>
                     {nextScheduledDay && (
                         <div className="text-[10px] text-gray-500 mt-1">
@@ -679,8 +641,6 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
                         ))}
                     </div>
                 </div>
-            )}
-                </>
             )}
 
             {/* Workout Preview Modal (for planned days) */}
