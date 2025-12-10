@@ -56,6 +56,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
     const [shieldNotification, setShieldNotification] = useState<string | null>(null);
     const [showFirstWorkoutPaywall, setShowFirstWorkoutPaywall] = useState(false);
     const [streakMilestone, setStreakMilestone] = useState<number | null>(null);
+    const [isInputFocused, setIsInputFocused] = useState(false);
 
     // Calendar State (Removed calendarDate, isEditingSchedule, selectedDateToMove, scheduleOverrides)
 
@@ -214,7 +215,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
 
     const nextWorkout = getNextWorkout();
 
-    const { currentStreak } = calculateStreaks(logs);
+    const { currentStreak } = calculateStreaks(logs, undefined, profile.preferredDays);
     const lastWorkoutVolume = logs.length > 0 ? calculateWorkoutVolume(logs[logs.length - 1]) : 0;
     const weeklyProgress = calculateWeeklyProgress(logs);
     const userLevel = calculateLevel(logs);
@@ -788,13 +789,15 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
                 {/* Chat Input Bar - show only on 'today' view when no active workout */}
                 {activeView === 'today' && !activeWorkout && (
                     <div className="mt-4">
-                        <ChatInputBar onSendMessage={onSendMessage} />
+                        <ChatInputBar onSendMessage={onSendMessage} onFocusChange={setIsInputFocused} />
                     </div>
                 )}
             </main>
 
-            {/* Navigation Bar */}
-            <nav className="fixed bottom-6 left-6 right-6 bg-[#111]/90 backdrop-blur-xl border border-white/10 rounded-2xl p-2 flex justify-between items-center shadow-2xl z-40">
+            {/* Navigation Bar - hide when keyboard is visible */}
+            <nav className={`fixed bottom-6 left-6 right-6 bg-[#111]/90 backdrop-blur-xl border border-white/10 rounded-2xl p-2 flex justify-between items-center shadow-2xl z-40 transition-all duration-200 ${
+                isInputFocused ? 'translate-y-full opacity-0 pointer-events-none' : ''
+            }`}>
                 <NavButton
                     icon={<Dumbbell size={24} />}
                     label="Today"

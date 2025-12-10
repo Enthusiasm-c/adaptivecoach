@@ -5,11 +5,13 @@ import { hapticFeedback } from '../utils/hapticUtils';
 interface ChatInputBarProps {
     onSendMessage: (message: string) => void;
     placeholder?: string;
+    onFocusChange?: (focused: boolean) => void;
 }
 
 const ChatInputBar: React.FC<ChatInputBarProps> = ({
     onSendMessage,
-    placeholder = 'Спросить тренера...'
+    placeholder = 'Спросить тренера...',
+    onFocusChange
 }) => {
     const [message, setMessage] = useState('');
     const [isFocused, setIsFocused] = useState(false);
@@ -40,8 +42,14 @@ const ChatInputBar: React.FC<ChatInputBarProps> = ({
                     type="text"
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
-                    onFocus={() => setIsFocused(true)}
-                    onBlur={() => setIsFocused(false)}
+                    onFocus={() => {
+                        setIsFocused(true);
+                        onFocusChange?.(true);
+                    }}
+                    onBlur={() => {
+                        setIsFocused(false);
+                        onFocusChange?.(false);
+                    }}
                     placeholder={placeholder}
                     className="flex-1 bg-transparent text-white placeholder-gray-500 text-sm focus:outline-none py-2"
                 />

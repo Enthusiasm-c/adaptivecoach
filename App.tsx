@@ -76,14 +76,28 @@ const App: React.FC = () => {
   useEffect(() => {
     // Initialize Telegram Web App if available
     if (window.Telegram?.WebApp) {
-        window.Telegram.WebApp.ready();
-        window.Telegram.WebApp.expand();
-        // Ensure proper viewport height for Telegram
-        document.documentElement.style.setProperty('--tg-viewport-height', window.Telegram.WebApp.viewportHeight + 'px');
+        const webapp = window.Telegram.WebApp;
+        webapp.ready();
+        webapp.expand();
+
+        // Функция обновления viewport и детекции клавиатуры
+        const updateViewport = () => {
+            const vh = webapp.viewportHeight;
+            document.documentElement.style.setProperty('--tg-viewport-height', `${vh}px`);
+            // Детектим клавиатуру: если viewport значительно уменьшился
+            const keyboardVisible = webapp.isExpanded && vh < window.innerHeight * 0.7;
+            document.documentElement.style.setProperty('--keyboard-visible', keyboardVisible ? '1' : '0');
+        };
+
+        // Начальная установка viewport
+        updateViewport();
+
+        // Слушаем изменения viewport (появление/скрытие клавиатуры)
+        webapp.onEvent('viewportChanged', updateViewport);
 
         // Set header color
-        window.Telegram.WebApp.setHeaderColor('#0a0a0a');
-        window.Telegram.WebApp.setBackgroundColor('#0a0a0a');
+        webapp.setHeaderColor('#0a0a0a');
+        webapp.setBackgroundColor('#0a0a0a');
 
         // Extract User Data
         if (window.Telegram.WebApp.initDataUnsafe?.user) {
