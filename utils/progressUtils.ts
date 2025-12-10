@@ -637,3 +637,125 @@ export const getMuscleFocus = (session: WorkoutSession): string[] => {
 
     return Array.from(focus).slice(0, 3);
 };
+
+// --- READINESS & PROGRESS INSIGHTS ---
+
+export interface ReadinessRecommendation {
+    level: 'high' | 'medium' | 'low';
+    percentage: number;
+    message: string;
+    color: string;
+}
+
+export const getReadinessRecommendation = (readiness: ReadinessData | null): ReadinessRecommendation => {
+    if (!readiness) {
+        return {
+            level: 'medium',
+            percentage: 50,
+            message: 'Заполните данные о готовности',
+            color: 'gray'
+        };
+    }
+
+    const percentage = Math.round((readiness.score / 20) * 100);
+
+    if (percentage >= 75) {
+        return {
+            level: 'high',
+            percentage,
+            message: 'Отличный день для интенсивной тренировки!',
+            color: 'green'
+        };
+    } else if (percentage >= 50) {
+        return {
+            level: 'medium',
+            percentage,
+            message: 'Умеренная нагрузка будет оптимальной',
+            color: 'yellow'
+        };
+    } else {
+        return {
+            level: 'low',
+            percentage,
+            message: 'Рекомендуется легкая тренировка или отдых',
+            color: 'red'
+        };
+    }
+};
+
+export interface WeekComparison {
+    currentWeekVolume: number;
+    previousWeekVolume: number;
+    changePercent: number;
+    trend: 'up' | 'down' | 'same';
+}
+
+export const calculateWeekComparison = (logs: WorkoutLog[]): WeekComparison => {
+    const today = new Date();
+    const currentWeekStart = new Date(today);
+    currentWeekStart.setDate(today.getDate() - today.getDay() + 1); // Monday
+    currentWeekStart.setHours(0, 0, 0, 0);
+
+    const previousWeekStart = new Date(currentWeekStart);
+    previousWeekStart.setDate(previousWeekStart.getDate() - 7);
+
+    const previousWeekEnd = new Date(currentWeekStart);
+    previousWeekEnd.setMilliseconds(-1);
+
+    let currentWeekVolume = 0;
+    let previousWeekVolume = 0;
+
+    logs.forEach(log => {
+        const logDate = new Date(log.date);
+        const volume = calculateWorkoutVolume(log);
+
+        if (logDate >= currentWeekStart) {
+            currentWeekVolume += volume;
+        } else if (logDate >= previousWeekStart && logDate <= previousWeekEnd) {
+            previousWeekVolume += volume;
+        }
+    });
+
+    const changePercent = previousWeekVolume > 0
+        ? Math.round(((currentWeekVolume - previousWeekVolume) / previousWeekVolume) * 100)
+        : 0;
+
+    return {
+        currentWeekVolume,
+        previousWeekVolume,
+        changePercent,
+        trend: changePercent > 0 ? 'up' : changePercent < 0 ? 'down' : 'same'
+    };
+};
+
+export interface NextScheduledDay {
+    date: Date;
+    dayName: string;
+    daysUntil: number;
+}
+
+export const getNextScheduledDay = (preferredDays: number[]): NextScheduledDay | null => {
+    if (!preferredDays || preferredDays.length === 0) return null;
+
+    const today = new Date();
+    const todayDay = today.getDay();
+
+    const dayNames = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+    const sortedDays = [...preferredDays].sort((a, b) => a - b);
+
+    // Find next scheduled day
+    for (let i = 0; i < 7; i++) {
+        const checkDay = (todayDay + i) % 7;
+        if (sortedDays.includes(checkDay)) {
+            const nextDate = new Date(today);
+            nextDate.setDate(today.getDate() + i);
+            return {
+                date: nextDate,
+                dayName: dayNames[checkDay],
+                daysUntil: i
+            };
+        }
+    }
+
+    return null;
+};

@@ -9,12 +9,14 @@ import {
 import {
     calculateStreaks, calculateTotalVolume, calculateWeeklyVolume,
     calculatePersonalRecords, calculateReadinessHistory, calculateMovementPatterns, getHeatmapData,
-    calculateLevel, getStrengthProgression, getVolumeDistribution
+    calculateLevel, getStrengthProgression, getVolumeDistribution,
+    calculateWeekComparison, getNextScheduledDay
 } from '../utils/progressUtils';
-import { Dumbbell, Flame, TrendingUp, Trophy, Battery, PieChart as PieIcon, Calendar, Eye, Crown, Star, Activity, HeartPulse, ChevronLeft, ChevronRight, Check, Target, BarChart2, X, Repeat, Timer } from 'lucide-react';
+import { Dumbbell, Flame, TrendingUp, TrendingDown, Minus, Trophy, Battery, PieChart as PieIcon, Calendar, Eye, Crown, Star, Activity, HeartPulse, ChevronLeft, ChevronRight, Check, Target, BarChart2, X, Repeat, Timer } from 'lucide-react';
 import { hapticFeedback } from '../utils/hapticUtils';
 import StrengthAnalysisView from './StrengthAnalysisView';
 import BlurredContent from './BlurredContent';
+import ReadinessCard from './ReadinessCard';
 
 interface ProgressViewProps {
     logs: WorkoutLog[];
@@ -123,6 +125,17 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
     const userLevel = useMemo(() => calculateLevel(displayLogs), [displayLogs]);
     const strengthData = useMemo(() => getStrengthProgression(displayLogs), [displayLogs]);
     const volumeDistData = useMemo(() => getVolumeDistribution(displayLogs), [displayLogs]);
+
+    // Progress Insights
+    const weekComparison = useMemo(() => calculateWeekComparison(displayLogs), [displayLogs]);
+    const nextScheduledDay = useMemo(() => getNextScheduledDay(preferredDays), [preferredDays]);
+    const latestReadiness = useMemo(() => {
+        if (displayLogs.length === 0) return null;
+        const sorted = [...displayLogs].sort((a, b) =>
+            new Date(b.date).getTime() - new Date(a.date).getTime()
+        );
+        return sorted[0]?.feedback?.readiness || null;
+    }, [displayLogs]);
 
     // --- Calendar Logic ---
     const [currentDate, setCurrentDate] = React.useState(new Date());
@@ -448,24 +461,42 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
                 </div>
             </div>
 
-            {/* Top Stats Grid */}
+            {/* Readiness Card - NEW */}
+            <ReadinessCard readiness={latestReadiness} />
+
+            {/* Enhanced Stats Grid */}
             <div className="grid grid-cols-2 gap-3">
-                <StatCard
-                    label="Веса поднято"
-                    value={`${totalVolume.toLocaleString('ru-RU')} кг`}
-                    sub="За все время"
-                    icon={<Dumbbell size={16} />}
-                    color="text-indigo-400"
-                    bg="bg-indigo-500/10"
-                />
-                <StatCard
-                    label="Серия"
-                    value={`${currentStreak}`}
-                    sub={`Рекорд: ${bestStreak} тренировок`}
-                    icon={<Flame size={16} />}
-                    color="text-orange-400"
-                    bg="bg-orange-500/10"
-                />
+                {/* Total Volume Card */}
+                <div className="bg-neutral-900 border border-white/5 rounded-2xl p-4">
+                    <div className="flex items-center gap-2 text-gray-400 text-xs mb-2">
+                        <Dumbbell size={14} />
+                        <span>Объем всего</span>
+                    </div>
+                    <div className="text-2xl font-black text-white">
+                        {(totalVolume / 1000).toFixed(1)}
+                        <span className="text-sm text-gray-500 ml-1">т</span>
+                    </div>
+                </div>
+
+                {/* Streak Card - Enhanced */}
+                <div className="bg-neutral-900 border border-white/5 rounded-2xl p-4">
+                    <div className="flex items-center gap-2 text-gray-400 text-xs mb-2">
+                        <Flame size={14} className="text-orange-500" />
+                        <span>Серия</span>
+                    </div>
+                    <div className="text-2xl font-black text-white">
+                        {currentStreak}
+                        <span className="text-sm text-gray-500 ml-1">тр.</span>
+                    </div>
+                    {nextScheduledDay && (
+                        <div className="text-[10px] text-gray-500 mt-1">
+                            След: {nextScheduledDay.dayName}
+                            {nextScheduledDay.daysUntil === 0 ? ' (сегодня)' :
+                             nextScheduledDay.daysUntil === 1 ? ' (завтра)' :
+                             ` (через ${nextScheduledDay.daysUntil} дн.)`}
+                        </div>
+                    )}
+                </div>
             </div>
 
             {/* Strength Progression Chart - Premium */}
@@ -507,70 +538,42 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
                 </BlurredContent>
             )}
 
-            {/* Detailed Readiness Trends (Health & Recovery) - Premium */}
-            <BlurredContent
-                title="Здоровье и Восстановление"
-                description="Анализ сна, питания и стресса"
-                onUnlock={onOpenPremium || (() => {})}
-                isPro={profile?.isPro || false}
-            >
-                <div className="bg-neutral-900 border border-white/5 rounded-3xl p-5 shadow-lg overflow-hidden relative">
-                    <div className="flex items-center gap-2 mb-4 text-gray-300 font-bold text-sm z-10 relative">
-                        <HeartPulse size={16} className="text-pink-400" />
-                        Здоровье и Восстановление
-                    </div>
-                    <div className="h-48 -ml-2">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={readinessData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                                <CartesianGrid stroke={chartTheme.grid} vertical={false} strokeDasharray="3 3" />
-                                <XAxis dataKey="date" stroke={chartTheme.text} fontSize={10} tickLine={false} axisLine={false} dy={10} />
-                                <YAxis stroke={chartTheme.text} fontSize={10} tickLine={false} axisLine={false} domain={[0, 6]} hide />
-                                <Tooltip contentStyle={{ backgroundColor: '#171717', border: '1px solid #333', borderRadius: '8px', color: '#fff' }} />
-                                <Legend wrapperStyle={{ fontSize: '10px', paddingTop: '10px' }} iconType="circle" />
-
-                                <Line type="monotone" dataKey="sleep" name="Сон" stroke="#818cf8" strokeWidth={2} dot={false} />
-                                <Line type="monotone" dataKey="food" name="Еда" stroke="#34d399" strokeWidth={2} dot={false} />
-                                <Line type="monotone" dataKey="stress" name="Стресс" stroke="#f472b6" strokeWidth={2} dot={false} />
-                            </LineChart>
-                        </ResponsiveContainer>
-                    </div>
-                </div>
-            </BlurredContent>
-
-            {/* Total Readiness Score Area Chart */}
-            <div className="bg-neutral-900 border border-white/5 rounded-3xl p-5 shadow-lg overflow-hidden relative">
-                <div className="flex items-center gap-2 mb-4 text-gray-300 font-bold text-sm z-10 relative">
-                    <Battery size={16} className="text-blue-400" />
-                    Общий уровень энергии
-                </div>
-                <div className="h-48 -ml-2">
-                    <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={readinessData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                            <defs>
-                                <linearGradient id="colorScore" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor="#60a5fa" stopOpacity={0.3} />
-                                    <stop offset="95%" stopColor="#60a5fa" stopOpacity={0} />
-                                </linearGradient>
-                            </defs>
-                            <CartesianGrid stroke={chartTheme.grid} vertical={false} strokeDasharray="3 3" />
-                            <XAxis dataKey="date" stroke={chartTheme.text} fontSize={10} tickLine={false} axisLine={false} dy={10} />
-                            <YAxis stroke={chartTheme.text} fontSize={10} tickLine={false} axisLine={false} domain={[0, 25]} />
-                            <Tooltip contentStyle={{ backgroundColor: '#171717', border: '1px solid #333', borderRadius: '8px', color: '#fff' }} />
-                            <Area type="monotone" dataKey="score" stroke="#60a5fa" fillOpacity={1} fill="url(#colorScore)" strokeWidth={3} />
-                        </AreaChart>
-                    </ResponsiveContainer>
-                </div>
-            </div>
-
             {/* Split & Volume Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Volume Bar Chart */}
+                {/* Weekly Volume with Comparison */}
                 <div className="bg-neutral-900 border border-white/5 rounded-3xl p-5 shadow-lg">
-                    <div className="flex items-center gap-2 mb-4 text-gray-300 font-bold text-sm">
-                        <Activity size={16} className="text-emerald-400" />
-                        Объем за неделю
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-2 text-gray-300 font-bold text-sm">
+                            <Activity size={16} className="text-emerald-400" />
+                            Объем за неделю
+                        </div>
+                        {/* Trend Badge */}
+                        <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-bold ${
+                            weekComparison.trend === 'up'
+                                ? 'bg-green-500/20 text-green-400'
+                                : weekComparison.trend === 'down'
+                                ? 'bg-red-500/20 text-red-400'
+                                : 'bg-gray-500/20 text-gray-400'
+                        }`}>
+                            {weekComparison.trend === 'up' && <TrendingUp size={12} />}
+                            {weekComparison.trend === 'down' && <TrendingDown size={12} />}
+                            {weekComparison.trend === 'same' && <Minus size={12} />}
+                            {weekComparison.changePercent > 0 && '+'}
+                            {weekComparison.changePercent}%
+                        </div>
                     </div>
-                    <div className="h-48 -ml-2">
+
+                    {/* Current vs Previous */}
+                    <div className="flex items-baseline gap-2 mb-4">
+                        <span className="text-2xl font-black text-white">
+                            {(weekComparison.currentWeekVolume / 1000).toFixed(1)}т
+                        </span>
+                        <span className="text-sm text-gray-500">
+                            vs {(weekComparison.previousWeekVolume / 1000).toFixed(1)}т пр. неделя
+                        </span>
+                    </div>
+
+                    <div className="h-40 -ml-2">
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={weeklyVolumeData.length > 0 ? weeklyVolumeData : [{ name: 'Нет данных', volume: 0 }]} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
                                 <CartesianGrid stroke={chartTheme.grid} vertical={false} strokeDasharray="3 3" />
@@ -580,15 +583,15 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
                                     fontSize={10}
                                     tickLine={false}
                                     axisLine={false}
-                                    tickFormatter={(val) => val.includes('-W') ? val.split('-W')[1] : val}
+                                    tickFormatter={(val) => val.includes('-W') ? `W${val.split('-W')[1]}` : val}
                                     dy={10}
                                 />
-                                <YAxis stroke={chartTheme.text} fontSize={10} tickLine={false} axisLine={false} tickFormatter={(val) => `${(val / 1000).toFixed(0)} т`} />
-                                <Bar dataKey="volume" fill="#10b981" radius={[4, 4, 0, 0]} barSize={30} />
+                                <YAxis stroke={chartTheme.text} fontSize={10} tickLine={false} axisLine={false} tickFormatter={(val) => `${(val / 1000).toFixed(0)}т`} />
+                                <Bar dataKey="volume" fill="#10b981" radius={[4, 4, 0, 0]} barSize={24} />
                                 <Tooltip
                                     cursor={{ fill: 'rgba(255,255,255,0.05)' }}
                                     contentStyle={{ backgroundColor: '#171717', border: '1px solid #333', borderRadius: '8px', color: '#fff' }}
-                                    formatter={(value: any) => [`${(value / 1000).toFixed(2)} тонн`, 'Объем']}
+                                    formatter={(value: any) => [`${(value / 1000).toFixed(2)}т`, 'Объем']}
                                 />
                             </BarChart>
                         </ResponsiveContainer>
@@ -644,17 +647,40 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
                 </div>
             </div>
 
-            {/* PR List */}
+            {/* Enhanced PR List with Dates */}
             {personalRecords.length > 0 && (
                 <div className="space-y-3">
-                    <h3 className="font-bold text-white text-lg flex items-center gap-2"><Trophy size={18} className="text-yellow-500" /> Личные Рекорды (e1RM)</h3>
+                    <h3 className="font-bold text-white text-lg flex items-center gap-2">
+                        <Trophy size={18} className="text-yellow-500" />
+                        Личные Рекорды
+                    </h3>
                     <div className="grid gap-2">
                         {personalRecords.map(pr => (
-                            <div key={pr.exerciseName} className="flex justify-between items-center bg-neutral-900 border border-white/5 p-4 rounded-2xl">
-                                <span className="font-bold text-gray-300 text-sm">{pr.exerciseName}</span>
-                                <div className="text-right">
-                                    <span className="font-black text-xl text-white">{pr.e1rm.toFixed(0)}</span>
-                                    <span className="text-xs text-gray-500 font-bold ml-1">КГ</span>
+                            <div
+                                key={pr.exerciseName}
+                                className="bg-neutral-900 border border-white/5 p-4 rounded-2xl"
+                            >
+                                <div className="flex justify-between items-start">
+                                    <div>
+                                        <span className="font-bold text-gray-300 text-sm">
+                                            {pr.exerciseName}
+                                        </span>
+                                        <div className="text-[10px] text-gray-500 mt-1">
+                                            {new Date(pr.date).toLocaleDateString('ru-RU', {
+                                                day: 'numeric',
+                                                month: 'short',
+                                                year: 'numeric'
+                                            })}
+                                        </div>
+                                    </div>
+                                    <div className="text-right">
+                                        <span className="font-black text-xl text-white">
+                                            {pr.e1rm.toFixed(0)}
+                                        </span>
+                                        <span className="text-xs text-gray-500 font-bold ml-1">
+                                            КГ
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
                         ))}
