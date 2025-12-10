@@ -16,13 +16,14 @@ interface WorkoutViewProps {
   session: WorkoutSession;
   profile: OnboardingProfile;
   readiness: ReadinessData | null;
+  logs: WorkoutLog[];
   initialState?: { completedExercises: CompletedExercise[], startTime: number };
   onFinish: (log: WorkoutLog) => void;
   onBack: () => void;
   onProgress?: (state: { completedExercises: CompletedExercise[], startTime: number }) => void;
 }
 
-const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, initialState, onFinish, onBack, onProgress }) => {
+const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, logs, initialState, onFinish, onBack, onProgress }) => {
   const [currentSession, setCurrentSession] = useState<WorkoutSession>(session);
   const [completedExercises, setCompletedExercises] = useState<CompletedExercise[]>([]);
   const startTimeRef = useRef<number>(initialState?.startTime || Date.now());
@@ -276,7 +277,7 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
     setFinalLog(log);
 
     try {
-      const coachResponse = await getCoachFeedback(profile, log);
+      const coachResponse = await getCoachFeedback(profile, log, logs);
       setCoachFeedback(coachResponse);
     } catch (e) {
       console.error("Failed to get coach feedback", e);

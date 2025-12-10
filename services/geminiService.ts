@@ -1,6 +1,7 @@
 
 import { Type } from "@google/genai";
 import { OnboardingProfile, TrainingProgram, WorkoutLog, ChatMessage, Exercise, WorkoutSession, ChatResponse, ActivityLevel, StrengthInsightsData, Gender, CompletedExercise, Location } from '../types';
+import { calculateStreaks, calculateLevel, calculateWeekComparison, calculateWorkoutVolume } from '../utils/progressUtils';
 
 // FitCube equipment description for AI prompts
 const FITCUBE_EQUIPMENT = `
@@ -319,51 +320,126 @@ function buildModificationPrompt(currentProgram: TrainingProgram, reason: string
 }
 
 
-function buildCoachFeedbackPrompt(profile: OnboardingProfile, log: WorkoutLog): string {
-    // Build exercise summary with weights for pain analysis
+// Helper: detect new personal records
+function detectNewPRs(currentLog: WorkoutLog, allLogs: WorkoutLog[]): { exercise: string, weight: number, previousBest: number }[] {
+    const prs: { exercise: string, weight: number, previousBest: number }[] = [];
+
+    for (const ex of currentLog.completedExercises) {
+        const maxWeightToday = Math.max(...ex.completedSets.map(s => s.weight || 0));
+        if (maxWeightToday <= 0) continue;
+
+        let previousBest = 0;
+        for (const prevLog of allLogs) {
+            if (prevLog.date === currentLog.date) continue;
+            const prevEx = prevLog.completedExercises?.find(e => e.name === ex.name);
+            if (prevEx) {
+                const prevMax = Math.max(...prevEx.completedSets.map(s => s.weight || 0));
+                if (prevMax > previousBest) previousBest = prevMax;
+            }
+        }
+
+        if (maxWeightToday > previousBest && previousBest > 0) {
+            prs.push({ exercise: ex.name, weight: maxWeightToday, previousBest });
+        }
+    }
+
+    return prs;
+}
+
+// Helper: compare two workouts by volume
+function compareWorkoutVolumes(prev: WorkoutLog, current: WorkoutLog): { diff: number, prevVolume: number, currentVolume: number } {
+    const prevVolume = prev.completedExercises?.reduce((sum, ex) =>
+        sum + ex.completedSets.reduce((s, set) => s + (set.weight || 0) * (set.reps || 0), 0), 0) || 0;
+    const currentVolume = current.completedExercises?.reduce((sum, ex) =>
+        sum + ex.completedSets.reduce((s, set) => s + (set.weight || 0) * (set.reps || 0), 0), 0) || 0;
+
+    const diff = prevVolume > 0 ? Math.round(((currentVolume - prevVolume) / prevVolume) * 100) : 0;
+    return { diff, prevVolume, currentVolume };
+}
+
+function buildCoachFeedbackPrompt(profile: OnboardingProfile, log: WorkoutLog, allLogs: WorkoutLog[]): string {
+    // Exercise summary with weights
     const exerciseSummary = log.completedExercises.map(ex => {
         const avgWeight = ex.completedSets.length > 0
             ? Math.round(ex.completedSets.reduce((sum, s) => sum + (s.weight || 0), 0) / ex.completedSets.length)
             : 0;
         const hadFailure = ex.completedSets.some(s => s.rir === 0);
-        return `${ex.name}: ${avgWeight}кг (${hadFailure ? 'отказ' : 'запас есть'})`;
-    }).join('\n    ');
+        return `- ${ex.name}: ${avgWeight}кг (${hadFailure ? 'отказ' : 'запас есть'})`;
+    }).join('\n');
+
+    // Calculate personalized insights
+    const workoutNumber = allLogs.length + 1;
+    const { currentStreak } = calculateStreaks(allLogs, undefined, profile.preferredDays);
+    const userLevel = calculateLevel(allLogs);
+    const weekComparison = calculateWeekComparison(allLogs);
+
+    // Find previous same workout
+    const previousSameWorkout = allLogs
+        .filter(l => l.sessionId === log.sessionId && l.date !== log.date)
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+
+    // Detect PRs
+    const newPRs = detectNewPRs(log, allLogs);
+
+    // Volume comparison with previous same workout
+    let volumeComparison = '';
+    if (previousSameWorkout) {
+        const { diff } = compareWorkoutVolumes(previousSameWorkout, log);
+        if (diff > 5) volumeComparison = `Объём +${diff}% по сравнению с прошлым "${log.sessionId}"`;
+        else if (diff < -5) volumeComparison = `Объём ${diff}% (меньше прошлого раза)`;
+        else volumeComparison = `Объём примерно такой же как в прошлый раз`;
+    }
+
+    // Build context sections
+    const prsSection = newPRs.length > 0 ? `
+🏆 НОВЫЕ РЕКОРДЫ:
+${newPRs.map(pr => `- ${pr.exercise}: ${pr.weight}кг (было ${pr.previousBest}кг, +${pr.weight - pr.previousBest}кг)`).join('\n')}
+` : '';
+
+    const comparisonSection = previousSameWorkout ? `
+СРАВНЕНИЕ С ПРОШЛОЙ "${log.sessionId}":
+- Прошлый раз: ${new Date(previousSameWorkout.date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })}
+- ${volumeComparison}
+` : '(Это первая тренировка такого типа)';
 
     return `
-    Ты "ИИ тренер" - умный помощник.
-    Пользователь закончил тренировку. Дай короткий, живой комментарий (2-4 предложения) на РУССКОМ языке.
-    Обращайся на "Ты".
+Ты "ИИ тренер" Sensei. Пользователь закончил тренировку. Дай персональный комментарий (3-5 предложений).
 
-    Контекст:
-    - Цель: ${profile.goals.primary}
-    - Вес пользователя: ${profile.weight}кг
-    - Тренировка: ${log.sessionId}
-    - Время тренировки: ${log.duration ? Math.round(log.duration / 60) + ' мин' : 'Неизвестно'}
-    - Выполнение: ${log.feedback.completion}
-    - Боль/Дискомфорт: ${log.feedback.pain.hasPain ? `ДА - ${log.feedback.pain.details || 'не указано где'}` : 'Нет'}
+═══════════════════════════════════════
+ПЕРСОНАЛЬНЫЙ КОНТЕКСТ:
+- Это тренировка #${workoutNumber}
+- Стрик: ${currentStreak} ${currentStreak === 1 ? 'день' : currentStreak < 5 ? 'дня' : 'дней'} подряд
+- Уровень: ${userLevel.level} (${userLevel.title})
+- Объём за неделю: ${Math.round(weekComparison.currentVolume / 1000)}т ${weekComparison.trend !== 0 ? `(${weekComparison.trend > 0 ? '+' : ''}${weekComparison.trend}% к прошлой неделе)` : ''}
+${prsSection}
+${comparisonSection}
+═══════════════════════════════════════
 
-    Выполненные упражнения:
-    ${exerciseSummary}
+ТЕКУЩАЯ ТРЕНИРОВКА:
+- Название: ${log.sessionId}
+- Время: ${log.duration ? Math.round(log.duration / 60) + ' мин' : 'Неизвестно'}
+- Выполнение: ${log.feedback.completion}
+- Боль: ${log.feedback.pain.hasPain ? `ДА - ${log.feedback.pain.details || 'не указано где'}` : 'Нет'}
 
-    Задание:
-    1. Сравни План и Факт. Если пользователь поднял больше, чем было в плане - похвали за прогресс.
-    2. Если тренировка заняла слишком мало времени (<20 мин) - спроси, не халтурил ли он.
-    3. ВАЖНО - Если была боль:
-       - Определи какое упражнение скорее всего вызвало боль (по локации боли и списку упражнений)
-       - Дай КОНКРЕТНЫЙ план действий: "На следующей тренировке снизим вес на [упражнение] с Xкг до Yкг"
-       - Если RIR=0 при боли - вес точно был слишком тяжелый
-       - НЕ говори просто "отдохни" - дай конкретную корректировку
+Упражнения:
+${exerciseSummary}
 
-    Стиль:
-    - Дружелюбный, мотивирующий, как реальный бро-тренер который искренне заботится.
-    - Используй эмодзи умеренно (1-2).
-    - При боли:
-      * Сначала эмпатия и поддержка ("Понимаю, это неприятно...")
-      * Затем объясни ПОЧЕМУ это могло произойти
-      * И конкретный план что ТЫ (тренер) сделаешь: "Я уже снизил вес на выпадах с 20кг до 15кг"
-      * Закончи позитивно
-    - НЕ пиши шаблонные фразы типа "береги себя" или "слушай своё тело" - будь конкретным.
-    `;
+═══════════════════════════════════════
+
+ТВОЁ ЗАДАНИЕ:
+1. Если есть PR (новый рекорд) — ОБЯЗАТЕЛЬНО поздравь! Это главное достижение.
+2. Если стрик > 3 дней — упомяни, это важно для мотивации.
+3. Сравни с прошлой такой же тренировкой (прогресс/регресс по объёму).
+4. Если была боль — дай КОНКРЕТНЫЙ план: снизим вес на X с Yкг до Zкг.
+5. Используй КОНКРЕТНЫЕ цифры из контекста — не общие фразы!
+
+СТИЛЬ:
+- 3-5 предложений максимум
+- Персональный: используй цифры (кг, %, дни)
+- 1-2 эмодзи
+- НЕ ПИШИ: "молодец", "отлично", "продолжай", "береги себя" — это пустые фразы
+- ПИШИ: факты и цифры, конкретику
+`;
 }
 
 function buildExerciseSwapPrompt(exerciseToSwap: Exercise, session: WorkoutSession, profile: OnboardingProfile): string {
@@ -468,8 +544,12 @@ const modifyPlanWithInstructions = async (currentProgram: TrainingProgram, reaso
     return JSON.parse(jsonText) as TrainingProgram;
 };
 
-export const getCoachFeedback = async (profile: OnboardingProfile, log: WorkoutLog): Promise<string> => {
-    const prompt = buildCoachFeedbackPrompt(profile, log);
+export const getCoachFeedback = async (
+    profile: OnboardingProfile,
+    log: WorkoutLog,
+    allLogs: WorkoutLog[] = []
+): Promise<string> => {
+    const prompt = buildCoachFeedbackPrompt(profile, log, allLogs);
 
     const response = await callGeminiProxy(`/v1beta/models/${GEMINI_MODEL}:generateContent`, {
         contents: prompt,

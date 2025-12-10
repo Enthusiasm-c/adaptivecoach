@@ -290,6 +290,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
                     session={workout}
                     profile={profile}
                     readiness={currentReadiness}
+                    logs={logs}
                     initialState={restoredState && restoredState.session.name === workout.name ? {
                         completedExercises: restoredState.completedExercises,
                         startTime: restoredState.startTime
