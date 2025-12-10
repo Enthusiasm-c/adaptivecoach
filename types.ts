@@ -28,6 +28,7 @@ export enum Location {
   CommercialGym = "Фитнес-клуб",
   HomeGym = "Домашний зал (штанга)",
   Bodyweight = "Дома (свой вес/резинки)",
+  FitCube = "FitCube",
 }
 
 export enum Intensity {
@@ -106,6 +107,7 @@ export interface OnboardingProfile {
   knownWeights?: KnownWeight[];
   isPro?: boolean; // New field for subscription status
   trialEndsAt?: string | null; // Trial expiration date
+  partnerSource?: 'fitcube' | null; // Partner source (e.g., FitCube collaboration)
 }
 
 export interface TelegramUser {

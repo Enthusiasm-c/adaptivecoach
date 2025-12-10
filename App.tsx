@@ -3,6 +3,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { OnboardingProfile, TrainingProgram, WorkoutLog, ChatMessage, TelegramUser } from './types';
 import Onboarding from './components/Onboarding';
 import Dashboard from './components/Dashboard';
+import FitCubeWelcome from './components/FitCubeWelcome';
 import { generateInitialPlan, adaptPlan, getChatbotResponse, currentApiKey, adjustProgramForPain } from './services/geminiService';
 import { apiService } from './services/apiService';
 import Chatbot from './components/Chatbot';
@@ -23,6 +24,17 @@ const App: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [errorDetails, setErrorDetails] = useState<string | null>(null);
   const [telegramUser, setTelegramUser] = useState<TelegramUser | null>(null);
+
+  // Partner/Collaboration tracking (e.g., FitCube)
+  const [partnerSource, setPartnerSource] = useState<'fitcube' | null>(() => {
+    try {
+      const saved = localStorage.getItem('partnerSource');
+      return saved === 'fitcube' ? 'fitcube' : null;
+    } catch {
+      return null;
+    }
+  });
+  const [showFitCubeWelcome, setShowFitCubeWelcome] = useState(false);
 
   // Session tracking for analytics
   const { trackPageView, trackFeature } = useSessionTracking();
@@ -185,6 +197,23 @@ const App: React.FC = () => {
           // Clean up URL without reloading
           const cleanUrl = window.location.pathname;
           window.history.replaceState({}, document.title, cleanUrl);
+      }
+
+      // Check for partner parameter: ?startapp=fitcube or tgWebAppStartParam=fitcube
+      const startapp = urlParams.get('startapp') || urlParams.get('tgWebAppStartParam');
+      if (startapp === 'fitcube') {
+          setPartnerSource('fitcube');
+          localStorage.setItem('partnerSource', 'fitcube');
+          // Show FitCube welcome only if no profile exists yet
+          if (!localStorage.getItem('onboardingProfile')) {
+              setShowFitCubeWelcome(true);
+          }
+          // Track partner entry event
+          apiService.analytics.track('partner_entry', {
+              partner: 'fitcube',
+              source: 'qr_code',
+              timestamp: new Date().toISOString()
+          }).catch(console.warn);
       }
   }, []);
 
@@ -486,7 +515,7 @@ const App: React.FC = () => {
                 onOpenChat={() => setIsChatbotOpen(true)}
                 onSendMessage={handleSendFromDashboard}
             />
-            <Chatbot 
+            <Chatbot
                 isOpen={isChatbotOpen}
                 onToggle={() => setIsChatbotOpen(!isChatbotOpen)}
                 messages={chatMessages}
@@ -494,8 +523,15 @@ const App: React.FC = () => {
                 isLoading={isChatbotLoading}
             />
             </>
+        ) : showFitCubeWelcome ? (
+            <FitCubeWelcome onComplete={() => setShowFitCubeWelcome(false)} />
         ) : (
-            <Onboarding onComplete={handleOnboardingComplete} isLoading={isLoading} error={error} />
+            <Onboarding
+                onComplete={handleOnboardingComplete}
+                isLoading={isLoading}
+                error={error}
+                partnerSource={partnerSource}
+            />
         )}
        </div>
     </div>

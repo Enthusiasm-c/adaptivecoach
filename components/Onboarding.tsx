@@ -11,9 +11,10 @@ interface OnboardingProps {
     onComplete: (profile: OnboardingProfile) => void;
     isLoading: boolean;
     error: string | null;
+    partnerSource?: 'fitcube' | null;
 }
 
-const Onboarding: React.FC<OnboardingProps> = ({ onComplete, isLoading, error }) => {
+const Onboarding: React.FC<OnboardingProps> = ({ onComplete, isLoading, error, partnerSource }) => {
     const [step, setStep] = useState(0);
     const [profile, setProfile] = useState<Partial<OnboardingProfile>>({
         gender: Gender.Male,
@@ -37,6 +38,17 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete, isLoading, error })
     const [analysisText, setAnalysisText] = useState("Анализ метаболизма...");
     const [showPrediction, setShowPrediction] = useState(false);
     const [showPaywall, setShowPaywall] = useState(false);
+
+    // Set FitCube presets when partnerSource is 'fitcube'
+    useEffect(() => {
+        if (partnerSource === 'fitcube') {
+            setProfile(prev => ({
+                ...prev,
+                location: Location.FitCube,
+                timePerWorkout: 45,
+            }));
+        }
+    }, [partnerSource]);
 
     const updateProfile = <K extends keyof OnboardingProfile>(key: K, value: OnboardingProfile[K]) => {
         setProfile(prev => ({ ...prev, [key]: value }));
@@ -93,7 +105,9 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete, isLoading, error })
             ...profile,
             preferredDays: (profile.preferredDays && profile.preferredDays.length > 0) ? profile.preferredDays : [1, 3, 5],
             // If trial was started, mark it
-            ...(withTrial && { trialAccepted: true })
+            ...(withTrial && { trialAccepted: true }),
+            // Include partner source if present
+            partnerSource: partnerSource || null,
         };
         onComplete(finalProfile as OnboardingProfile);
     };

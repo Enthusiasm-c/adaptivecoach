@@ -1,6 +1,22 @@
 
 import { Type } from "@google/genai";
-import { OnboardingProfile, TrainingProgram, WorkoutLog, ChatMessage, Exercise, WorkoutSession, ChatResponse, ActivityLevel, StrengthInsightsData, Gender, CompletedExercise } from '../types';
+import { OnboardingProfile, TrainingProgram, WorkoutLog, ChatMessage, Exercise, WorkoutSession, ChatResponse, ActivityLevel, StrengthInsightsData, Gender, CompletedExercise, Location } from '../types';
+
+// FitCube equipment description for AI prompts
+const FITCUBE_EQUIPMENT = `
+Оборудование FitCube (микро-фитнес студия):
+- Силовая рама с турником (встроенный)
+- Регулируемая скамья (наклон/плоская)
+- Олимпийский гриф 20 кг + гриф 15 кг
+- Диски олимпийские: 2.5 / 5 / 10 / 15 / 20 кг
+- Гантельный ряд 2.5–20 кг (максимум 20 кг!)
+- Гири: 8 / 12 / 16 / 24 / 32 кг
+- TRX / функциональные петли
+- Резиновые петли разной жёсткости
+- Медбол 6–10 кг
+- Сайкл (кардио-велосипед)
+- Коврики для йоги/растяжки
+`;
 
 // ============================================
 // PROXY CONFIGURATION - DO NOT CHANGE TO SDK!
@@ -198,8 +214,17 @@ function buildInitialPrompt(profile: OnboardingProfile): string {
     - Главная цель: ${profile.goals.primary}
     - Планирует тренироваться в дни: ${preferredDaysStr} (Всего ${profile.daysPerWeek} раз в неделю)
     - Время на тренировку: ${profile.timePerWorkout} минут
-    - Оборудование: ${profile.location}
+    - Оборудование: ${profile.location === Location.FitCube ? FITCUBE_EQUIPMENT : profile.location}
     - Травмы/Ограничения: ${profile.hasInjuries ? profile.injuries : 'Нет'}
+    ${profile.location === Location.FitCube ? `
+    СПЕЦИАЛЬНЫЕ ПРАВИЛА ДЛЯ FITCUBE:
+    - Используй ТОЛЬКО оборудование из списка FitCube выше!
+    - Максимальный вес гантелей 20 кг - не назначай больше!
+    - Максимальный вес гирь 32 кг
+    - Включай разнообразие: штанга, гантели, гири, TRX
+    - Сайкл можно использовать для разминки (5 мин) или кардио-заминки
+    - Турник использовать для подтягиваний, висов, подъёмов ног
+    ` : ''}
 
     ВАЖНО:
     1. Учти выбранные дни недели при составлении сплита.
