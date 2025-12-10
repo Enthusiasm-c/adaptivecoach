@@ -459,9 +459,9 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
                     bg="bg-indigo-500/10"
                 />
                 <StatCard
-                    label="Регулярность"
-                    value={`${currentStreak} Дн`}
-                    sub={`Рекорд: ${bestStreak}`}
+                    label="Серия"
+                    value={`${currentStreak}`}
+                    sub={`Рекорд: ${bestStreak} тренировок`}
                     icon={<Flame size={16} />}
                     color="text-orange-400"
                     bg="bg-orange-500/10"

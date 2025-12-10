@@ -44,7 +44,7 @@ const StreakMilestonePaywall: React.FC<StreakMilestonePaywallProps> = ({
     const getMilestoneMessage = () => {
         if (streakDays >= 100) {
             return {
-                title: '100 дней подряд!',
+                title: '100 тренировок подряд!',
                 subtitle: 'Ты - настоящая легенда!',
                 emoji: '🏆',
                 color: 'from-yellow-500/20 to-amber-500/20',
@@ -54,7 +54,7 @@ const StreakMilestonePaywall: React.FC<StreakMilestonePaywallProps> = ({
         }
         if (streakDays >= 30) {
             return {
-                title: '30 дней подряд!',
+                title: '30 тренировок подряд!',
                 subtitle: 'Невероятная дисциплина!',
                 emoji: '💪',
                 color: 'from-purple-500/20 to-violet-500/20',
@@ -63,7 +63,7 @@ const StreakMilestonePaywall: React.FC<StreakMilestonePaywallProps> = ({
             };
         }
         return {
-            title: '7 дней подряд!',
+            title: '7 тренировок подряд!',
             subtitle: 'Отличная стабильность!',
             emoji: '🔥',
             color: 'from-orange-500/20 to-red-500/20',
@@ -102,7 +102,7 @@ const StreakMilestonePaywall: React.FC<StreakMilestonePaywallProps> = ({
                     {/* Streak Counter */}
                     <div className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-neutral-900 rounded-full border border-white/10">
                         <Flame size={18} className="text-orange-500" fill="currentColor" />
-                        <span className="text-white font-black">{streakDays} дней</span>
+                        <span className="text-white font-black">{streakDays} тренировок</span>
                     </div>
                 </div>
 

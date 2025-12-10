@@ -189,12 +189,12 @@ const FriendProfileModal: React.FC<FriendProfileModalProps> = ({
 
                                     {/* Streak Comparison */}
                                     <div className="bg-neutral-900/50 border border-white/5 p-4 rounded-2xl">
-                                        <div className="text-gray-500 text-xs font-bold uppercase mb-3">Streak Days</div>
+                                        <div className="text-gray-500 text-xs font-bold uppercase mb-3">Серия тренировок</div>
                                         <div className="space-y-2">
                                             <div>
                                                 <div className="flex justify-between text-xs mb-1">
                                                     <span className="text-indigo-400 font-bold">Вы</span>
-                                                    <span className="text-white font-bold">{myStreak} дней</span>
+                                                    <span className="text-white font-bold">{myStreak}</span>
                                                 </div>
                                                 <div className="h-2 bg-neutral-800 rounded-full overflow-hidden">
                                                     <div
@@ -206,7 +206,7 @@ const FriendProfileModal: React.FC<FriendProfileModalProps> = ({
                                             <div>
                                                 <div className="flex justify-between text-xs mb-1">
                                                     <span className="text-purple-400 font-bold">{friend.name}</span>
-                                                    <span className="text-white font-bold">{friendStreak} дней</span>
+                                                    <span className="text-white font-bold">{friendStreak}</span>
                                                 </div>
                                                 <div className="h-2 bg-neutral-800 rounded-full overflow-hidden">
                                                     <div

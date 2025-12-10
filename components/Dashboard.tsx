@@ -477,7 +477,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
                         </div>
                         <span className="text-xl font-black text-white leading-none">{currentStreak}</span>
                         <span className="text-[10px] text-gray-500 font-bold uppercase">
-                            {streakShieldAvailable && workoutLimitStatus?.isPro ? 'Защищён' : 'Дней подряд'}
+                            {streakShieldAvailable && workoutLimitStatus?.isPro ? 'Защищён' : 'Тренировок'}
                         </span>
                     </div>
 
