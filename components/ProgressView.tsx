@@ -16,7 +16,7 @@ import { Dumbbell, Flame, TrendingUp, TrendingDown, Minus, Trophy, Battery, PieC
 import { hapticFeedback } from '../utils/hapticUtils';
 import StrengthAnalysisView from './StrengthAnalysisView';
 import BlurredContent from './BlurredContent';
-import ReadinessCard from './ReadinessCard';
+import CalibrationCard from './CalibrationCard';
 
 interface ProgressViewProps {
     logs: WorkoutLog[];
@@ -129,13 +129,6 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
     // Progress Insights
     const weekComparison = useMemo(() => calculateWeekComparison(displayLogs), [displayLogs]);
     const nextScheduledDay = useMemo(() => getNextScheduledDay(preferredDays), [preferredDays]);
-    const latestReadiness = useMemo(() => {
-        if (displayLogs.length === 0) return null;
-        const sorted = [...displayLogs].sort((a, b) =>
-            new Date(b.date).getTime() - new Date(a.date).getTime()
-        );
-        return sorted[0]?.feedback?.readiness || null;
-    }, [displayLogs]);
 
     // --- Calendar Logic ---
     const [currentDate, setCurrentDate] = React.useState(new Date());
@@ -461,8 +454,8 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
                 </div>
             </div>
 
-            {/* Readiness Card - NEW */}
-            <ReadinessCard readiness={latestReadiness} />
+            {/* Calibration Card - shows progress toward strength analysis */}
+            <CalibrationCard logs={displayLogs} onViewAnalysis={() => setActiveTab('analysis')} />
 
             {/* Enhanced Stats Grid */}
             <div className="grid grid-cols-2 gap-3">

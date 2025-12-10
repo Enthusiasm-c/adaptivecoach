@@ -638,50 +638,7 @@ export const getMuscleFocus = (session: WorkoutSession): string[] => {
     return Array.from(focus).slice(0, 3);
 };
 
-// --- READINESS & PROGRESS INSIGHTS ---
-
-export interface ReadinessRecommendation {
-    level: 'high' | 'medium' | 'low';
-    percentage: number;
-    message: string;
-    color: string;
-}
-
-export const getReadinessRecommendation = (readiness: ReadinessData | null): ReadinessRecommendation => {
-    if (!readiness) {
-        return {
-            level: 'medium',
-            percentage: 50,
-            message: 'Заполните данные о готовности',
-            color: 'gray'
-        };
-    }
-
-    const percentage = Math.round((readiness.score / 20) * 100);
-
-    if (percentage >= 75) {
-        return {
-            level: 'high',
-            percentage,
-            message: 'Отличный день для интенсивной тренировки!',
-            color: 'green'
-        };
-    } else if (percentage >= 50) {
-        return {
-            level: 'medium',
-            percentage,
-            message: 'Умеренная нагрузка будет оптимальной',
-            color: 'yellow'
-        };
-    } else {
-        return {
-            level: 'low',
-            percentage,
-            message: 'Рекомендуется легкая тренировка или отдых',
-            color: 'red'
-        };
-    }
-};
+// --- PROGRESS INSIGHTS ---
 
 export interface WeekComparison {
     currentWeekVolume: number;
