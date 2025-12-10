@@ -19,6 +19,11 @@ export const pluralizeRu = (n: number, one: string, few: string, many: string): 
     return many;
 };
 
+// Format kg with thousands separator (8500 → "8 500 кг")
+export const formatKg = (kg: number): string => {
+    return Math.round(kg).toLocaleString('ru-RU') + ' кг';
+};
+
 // Helper to get the ISO week number for a date
 const getWeekNumber = (d: Date): [number, number] => {
     d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
@@ -190,24 +195,44 @@ const calculateE1RM = (weight: number, reps: number): number => {
     return weight * (1 + reps / 30);
 };
 
+// Key lifts configuration with keywords and group keys
+const KEY_LIFTS_CONFIG = [
+    { keywords: ['squat', 'присед'], groupKey: 'squat' },
+    { keywords: ['bench', 'жим лежа'], groupKey: 'bench' },
+    { keywords: ['deadlift', 'становая'], groupKey: 'deadlift' },
+    { keywords: ['overhead', 'армейский', 'жим стоя'], groupKey: 'overhead' },
+    { keywords: ['lunge', 'выпад'], groupKey: 'lunges' },
+    { keywords: ['row', 'тяга к поясу', 'тяга штанги'], groupKey: 'row' },
+    { keywords: ['pull up', 'подтягиван', 'chin up'], groupKey: 'pullup' },
+];
+
+// Russian names for key exercises
+const EXERCISE_NAMES_RU: Record<string, string> = {
+    'squat': 'Приседания',
+    'bench': 'Жим лежа',
+    'deadlift': 'Становая тяга',
+    'overhead': 'Армейский жим',
+    'lunges': 'Выпады',
+    'row': 'Тяга к поясу',
+    'pullup': 'Подтягивания',
+};
+
+// Helper to find matching lift config
+const findMatchingLift = (exerciseName: string) => {
+    const lowerName = exerciseName.toLowerCase();
+    return KEY_LIFTS_CONFIG.find(lift =>
+        lift.keywords.some(kw => lowerName.includes(kw))
+    );
+};
+
 export const calculatePersonalRecords = (logs: WorkoutLog[]): PersonalRecord[] => {
-    // Updated keywords to include Russian terms
-    const KEY_LIFTS = [
-        'squat', 'присед',
-        'bench', 'жим',
-        'deadlift', 'тяга',
-        'overhead', 'армейский',
-        'row', 'тяга к поясу',
-        'pull up', 'подтягивания'
-    ];
     const records: { [key: string]: PersonalRecord } = {};
 
     logs.forEach(log => {
         log.completedExercises.forEach(ex => {
-            const exerciseNameLower = ex.name.toLowerCase();
-            const keyLift = KEY_LIFTS.find(lift => exerciseNameLower.includes(lift));
+            const matchedLift = findMatchingLift(ex.name);
 
-            if (keyLift) {
+            if (matchedLift) {
                 const bestSet = ex.completedSets.reduce((best, current) => {
                     if (!current || typeof current.weight !== 'number' || typeof current.reps !== 'number') return best;
                     return (current.weight > best.weight) ? current : best;
@@ -216,17 +241,9 @@ export const calculatePersonalRecords = (logs: WorkoutLog[]): PersonalRecord[] =
                 if (bestSet.weight > 0 && bestSet.reps > 0) {
                     const e1rm = calculateE1RM(bestSet.weight, bestSet.reps);
 
-                    // Use a normalized group key to avoid duplicates (e.g., "squat" vs "присед")
-                    // But display the actual name found in logs
-                    let groupKey = keyLift;
-                    if (keyLift === 'присед') groupKey = 'squat';
-                    if (keyLift === 'жим') groupKey = 'bench';
-                    if (keyLift === 'тяга' && !exerciseNameLower.includes('поясу') && !exerciseNameLower.includes('блок')) groupKey = 'deadlift';
-                    if (keyLift === 'армейский') groupKey = 'overhead';
-
-                    if (!records[groupKey] || e1rm > records[groupKey].e1rm) {
-                        records[groupKey] = {
-                            exerciseName: ex.name, // Use the actual name from the log
+                    if (!records[matchedLift.groupKey] || e1rm > records[matchedLift.groupKey].e1rm) {
+                        records[matchedLift.groupKey] = {
+                            exerciseName: ex.name,
                             e1rm,
                             date: log.date
                         };
@@ -554,6 +571,101 @@ export const getStrengthProgression = (logs: WorkoutLog[]): { data: any[], exerc
     return { data: result, exercises: topExercises };
 };
 
+// --- WEIGHT PROGRESSION TRACKING ---
+
+export interface WeightProgressionEntry {
+    exerciseName: string;
+    exerciseNameRu: string;
+    currentWeight: number;
+    previousWeight: number;
+    firstWeight: number;
+    changeFromPrevious: number;
+    changeFromFirst: number;
+    trend: 'up' | 'down' | 'stable';
+    dataPoints: { date: string; weight: number }[];
+}
+
+/**
+ * Calculates weight progression for key exercises
+ * Focus on consistency and dynamics, not just records
+ */
+export const calculateWeightProgression = (logs: WorkoutLog[]): WeightProgressionEntry[] => {
+    // Collect weights for each exercise
+    const exerciseData: Record<string, { name: string; dataPoints: { date: string; weight: number }[] }> = {};
+
+    // Sort logs by date (old to new)
+    const sortedLogs = [...logs].sort((a, b) =>
+        new Date(a.date).getTime() - new Date(b.date).getTime()
+    );
+
+    sortedLogs.forEach(log => {
+        if (!log.completedExercises) return;
+
+        log.completedExercises.forEach(ex => {
+            if (ex.isWarmup || !ex.completedSets?.length) return;
+
+            const matchedLift = findMatchingLift(ex.name);
+            if (!matchedLift) return;
+
+            // Get max working weight from set
+            const maxWeight = Math.max(
+                ...ex.completedSets
+                    .filter(s => s && s.weight > 0)
+                    .map(s => s.weight)
+            );
+
+            if (maxWeight > 0) {
+                if (!exerciseData[matchedLift.groupKey]) {
+                    exerciseData[matchedLift.groupKey] = {
+                        name: ex.name,
+                        dataPoints: []
+                    };
+                }
+
+                exerciseData[matchedLift.groupKey].dataPoints.push({
+                    date: log.date,
+                    weight: maxWeight
+                });
+            }
+        });
+    });
+
+    // Build result
+    const result: WeightProgressionEntry[] = [];
+
+    Object.entries(exerciseData).forEach(([groupKey, data]) => {
+        const points = data.dataPoints;
+        if (points.length < 2) return; // Need at least 2 points for trend
+
+        const currentWeight = points[points.length - 1].weight;
+        const previousWeight = points[points.length - 2].weight;
+        const firstWeight = points[0].weight;
+
+        const changeFromPrevious = currentWeight - previousWeight;
+        const changeFromFirst = currentWeight - firstWeight;
+
+        // Determine trend: stable if change < 2.5 kg
+        let trend: 'up' | 'down' | 'stable' = 'stable';
+        if (changeFromPrevious >= 2.5) trend = 'up';
+        else if (changeFromPrevious <= -2.5) trend = 'down';
+
+        result.push({
+            exerciseName: data.name,
+            exerciseNameRu: EXERCISE_NAMES_RU[groupKey] || data.name,
+            currentWeight,
+            previousWeight,
+            firstWeight,
+            changeFromPrevious,
+            changeFromFirst,
+            trend,
+            dataPoints: points
+        });
+    });
+
+    // Sort by absolute progress from start
+    return result.sort((a, b) => Math.abs(b.changeFromFirst) - Math.abs(a.changeFromFirst));
+};
+
 export const getVolumeDistribution = (logs: WorkoutLog[]) => {
     const distribution = { Push: 0, Pull: 0, Legs: 0, Core: 0 };
 
@@ -661,6 +773,10 @@ export const getMuscleFocus = (session: WorkoutSession): string[] => {
 export interface WeekComparison {
     currentWeekVolume: number;
     previousWeekVolume: number;
+    currentWeekDays: number;
+    previousWeekDays: number;
+    currentWeekAvgPerDay: number;
+    previousWeekAvgPerDay: number;
     changePercent: number;
     trend: 'up' | 'down' | 'same';
 }
@@ -680,24 +796,43 @@ export const calculateWeekComparison = (logs: WorkoutLog[]): WeekComparison => {
     let currentWeekVolume = 0;
     let previousWeekVolume = 0;
 
+    // Use Set to count unique workout days
+    const currentWeekDates = new Set<string>();
+    const previousWeekDates = new Set<string>();
+
     logs.forEach(log => {
         const logDate = new Date(log.date);
         const volume = calculateWorkoutVolume(log);
+        const dateStr = logDate.toISOString().split('T')[0];
 
         if (logDate >= currentWeekStart) {
             currentWeekVolume += volume;
+            currentWeekDates.add(dateStr);
         } else if (logDate >= previousWeekStart && logDate <= previousWeekEnd) {
             previousWeekVolume += volume;
+            previousWeekDates.add(dateStr);
         }
     });
 
-    const changePercent = previousWeekVolume > 0
-        ? Math.round(((currentWeekVolume - previousWeekVolume) / previousWeekVolume) * 100)
+    const currentWeekDays = currentWeekDates.size;
+    const previousWeekDays = previousWeekDates.size;
+
+    // Average volume per day (protect against division by 0)
+    const currentWeekAvgPerDay = currentWeekDays > 0 ? currentWeekVolume / currentWeekDays : 0;
+    const previousWeekAvgPerDay = previousWeekDays > 0 ? previousWeekVolume / previousWeekDays : 0;
+
+    // Compare by AVERAGE per day, not total volume
+    const changePercent = previousWeekAvgPerDay > 0
+        ? Math.round(((currentWeekAvgPerDay - previousWeekAvgPerDay) / previousWeekAvgPerDay) * 100)
         : 0;
 
     return {
         currentWeekVolume,
         previousWeekVolume,
+        currentWeekDays,
+        previousWeekDays,
+        currentWeekAvgPerDay,
+        previousWeekAvgPerDay,
         changePercent,
         trend: changePercent > 0 ? 'up' : changePercent < 0 ? 'down' : 'same'
     };

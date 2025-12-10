@@ -13,7 +13,7 @@ import HardPaywall from './HardPaywall';
 import TrialBanner from './TrialBanner';
 import FirstWorkoutPaywall from './FirstWorkoutPaywall';
 import StreakMilestonePaywall from './StreakMilestonePaywall';
-import { calculateStreaks, calculateWorkoutVolume, calculateWeeklyProgress, getMuscleFocus, calculateLevel, pluralizeRu } from '../utils/progressUtils';
+import { calculateStreaks, calculateWorkoutVolume, calculateWeeklyProgress, getMuscleFocus, calculateLevel, pluralizeRu, calculateTotalVolume, formatKg } from '../utils/progressUtils';
 import { getDashboardInsight } from '../services/geminiService';
 import { hapticFeedback } from '../utils/hapticUtils';
 import SkeletonLoader from './SkeletonLoader';
@@ -216,7 +216,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
     const nextWorkout = getNextWorkout();
 
     const { currentStreak } = calculateStreaks(logs, undefined, profile.preferredDays);
-    const lastWorkoutVolume = logs.length > 0 ? calculateWorkoutVolume(logs[logs.length - 1]) : 0;
+    const totalVolume = logs.length > 0 ? calculateTotalVolume(logs) : 0;
     const weeklyProgress = calculateWeeklyProgress(logs);
     const userLevel = calculateLevel(logs);
 
@@ -493,11 +493,11 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
                         <span className="text-[10px] text-gray-500 font-bold uppercase">Уровень</span>
                     </div>
 
-                    {/* Last Volume */}
+                    {/* Total Volume */}
                     <div className="bg-neutral-900/50 border border-white/5 rounded-2xl p-3 flex flex-col items-center justify-center text-center gap-1">
                         <Dumbbell size={20} className="text-emerald-500 mb-1" />
-                        <span className="text-xl font-black text-white leading-none">{(lastWorkoutVolume / 1000).toFixed(1)}т</span>
-                        <span className="text-[10px] text-gray-500 font-bold uppercase">Поднято</span>
+                        <span className="text-lg font-black text-white leading-none">{formatKg(totalVolume)}</span>
+                        <span className="text-[10px] text-gray-500 font-bold uppercase">Всего</span>
                     </div>
                 </div>
 
@@ -623,7 +623,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
                                     <div className="bg-neutral-900 border border-white/5 rounded-xl p-3 min-w-[100px]">
                                         <TrendingUp size={16} className="text-green-400 mb-2" />
                                         <p className="text-xs font-bold text-white">
-                                            {(calculateWorkoutVolume(todaysWorkout) / 1000).toFixed(1)}т
+                                            {formatKg(calculateWorkoutVolume(todaysWorkout))}
                                         </p>
                                         <p className="text-[10px] text-gray-500">Объём</p>
                                     </div>

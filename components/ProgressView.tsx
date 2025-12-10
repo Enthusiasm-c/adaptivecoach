@@ -10,7 +10,8 @@ import {
     calculateStreaks, calculateTotalVolume, calculateWeeklyVolume,
     calculatePersonalRecords, calculateReadinessHistory, calculateMovementPatterns, getHeatmapData,
     calculateLevel, getStrengthProgression, getVolumeDistribution,
-    calculateWeekComparison, getNextScheduledDay, pluralizeRu
+    calculateWeekComparison, getNextScheduledDay, pluralizeRu,
+    formatKg, calculateWeightProgression, WeightProgressionEntry
 } from '../utils/progressUtils';
 import { Dumbbell, Flame, TrendingUp, TrendingDown, Minus, Trophy, Battery, PieChart as PieIcon, Calendar, Eye, Crown, Star, Activity, HeartPulse, ChevronLeft, ChevronRight, Check, Target, BarChart2, X, Repeat, Timer } from 'lucide-react';
 import { hapticFeedback } from '../utils/hapticUtils';
@@ -127,6 +128,7 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
     // Progress Insights
     const weekComparison = useMemo(() => calculateWeekComparison(displayLogs), [displayLogs]);
     const nextScheduledDay = useMemo(() => getNextScheduledDay(preferredDays), [preferredDays]);
+    const weightProgression = useMemo(() => calculateWeightProgression(displayLogs), [displayLogs]);
 
     // --- Calendar Logic ---
     const [currentDate, setCurrentDate] = React.useState(new Date());
@@ -425,9 +427,8 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
                         <Dumbbell size={14} />
                         <span>Объем всего</span>
                     </div>
-                    <div className="text-2xl font-black text-white">
-                        {(totalVolume / 1000).toFixed(1)}
-                        <span className="text-sm text-gray-500 ml-1">т</span>
+                    <div className="text-xl font-black text-white">
+                        {formatKg(totalVolume)}
                     </div>
                 </div>
 
@@ -518,13 +519,17 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
                         </div>
                     </div>
 
-                    {/* Current vs Previous */}
-                    <div className="flex items-baseline gap-2 mb-4">
-                        <span className="text-2xl font-black text-white">
-                            {(weekComparison.currentWeekVolume / 1000).toFixed(1)}т
-                        </span>
-                        <span className="text-sm text-gray-500">
-                            vs {(weekComparison.previousWeekVolume / 1000).toFixed(1)}т пр. неделя
+                    {/* Current vs Previous - Average per day */}
+                    <div className="flex flex-col gap-1 mb-4">
+                        <div className="flex items-baseline gap-2">
+                            <span className="text-2xl font-black text-white">
+                                {formatKg(Math.round(weekComparison.currentWeekAvgPerDay))}
+                            </span>
+                            <span className="text-sm text-gray-500">/ день</span>
+                        </div>
+                        <span className="text-xs text-gray-500">
+                            vs {formatKg(Math.round(weekComparison.previousWeekAvgPerDay))}/день пр. неделя
+                            ({weekComparison.currentWeekDays} vs {weekComparison.previousWeekDays} {pluralizeRu(weekComparison.previousWeekDays, 'день', 'дня', 'дней')})
                         </span>
                     </div>
 
@@ -635,6 +640,68 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
                                         <span className="text-xs text-gray-500 font-bold ml-1">
                                             КГ
                                         </span>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* Weight Progression Section - Focus on consistency */}
+            {weightProgression.length > 0 && (
+                <div className="space-y-3">
+                    <h3 className="font-bold text-white text-lg flex items-center gap-2">
+                        <Activity size={18} className="text-blue-500" />
+                        Динамика весов
+                    </h3>
+                    <p className="text-xs text-gray-500 -mt-2">
+                        Постоянство важнее рекордов
+                    </p>
+                    <div className="grid gap-2">
+                        {weightProgression.map(entry => (
+                            <div
+                                key={entry.exerciseNameRu}
+                                className="bg-neutral-900 border border-white/5 p-4 rounded-2xl"
+                            >
+                                <div className="flex justify-between items-start">
+                                    <div>
+                                        <span className="font-bold text-gray-300 text-sm">
+                                            {entry.exerciseNameRu}
+                                        </span>
+                                        <div className="flex items-center gap-2 mt-1">
+                                            {entry.trend === 'up' && (
+                                                <span className="flex items-center gap-1 text-green-400 text-xs">
+                                                    <TrendingUp size={12} />
+                                                    +{entry.changeFromPrevious.toFixed(1)} кг
+                                                </span>
+                                            )}
+                                            {entry.trend === 'down' && (
+                                                <span className="flex items-center gap-1 text-red-400 text-xs">
+                                                    <TrendingDown size={12} />
+                                                    {entry.changeFromPrevious.toFixed(1)} кг
+                                                </span>
+                                            )}
+                                            {entry.trend === 'stable' && (
+                                                <span className="flex items-center gap-1 text-gray-400 text-xs">
+                                                    <Minus size={12} />
+                                                    Стабильно
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div className="text-right">
+                                        <span className="font-black text-xl text-white">
+                                            {entry.currentWeight}
+                                        </span>
+                                        <span className="text-xs text-gray-500 font-bold ml-1">
+                                            КГ
+                                        </span>
+                                        {entry.changeFromFirst !== 0 && (
+                                            <div className={`text-[10px] mt-1 ${entry.changeFromFirst > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                                {entry.changeFromFirst > 0 ? '+' : ''}{entry.changeFromFirst.toFixed(1)} кг с начала
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             </div>
