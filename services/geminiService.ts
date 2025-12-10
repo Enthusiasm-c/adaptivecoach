@@ -117,11 +117,11 @@ const exerciseSchema = {
         exerciseType: {
             type: Type.STRING,
             enum: ['strength', 'bodyweight', 'cardio', 'isometric'],
-            description: 'strength=weighted exercises (bench, squat), bodyweight=pushups/pullups, cardio=walking/running, isometric=plank/hold'
+            description: 'REQUIRED! strength=штанга/гантели/гири, bodyweight=отжимания/подтягивания/подъём ног в висе/пресс, cardio=бег/ходьба/велосипед/сайкл/дорожка, isometric=планка/удержание'
         },
         description: { type: Type.STRING, description: 'Short instructions on form/technique (1-2 sentences) in Russian' },
         sets: { type: Type.INTEGER },
-        reps: { type: Type.STRING, description: 'Range like "8-12" or number "5" or "60" for seconds' },
+        reps: { type: Type.STRING, description: 'КОНКРЕТНОЕ число повторений (например "10", "12", "8") или минут для кардио ("15"). НЕ ИСПОЛЬЗУЙ ДИАПАЗОНЫ вроде "8-12"!' },
         weight: { type: Type.NUMBER, description: 'Starting weight in kg. Set 0 for bodyweight/cardio/isometric exercises.' },
         rest: { type: Type.INTEGER, description: 'Rest in seconds' },
     },
@@ -248,6 +248,18 @@ function buildInitialPrompt(profile: OnboardingProfile): string {
     3. Объем:
         - Новички: 2-3 подхода, акцент на технику.
         - Если есть лишний вес (BMI > 25), предложи кардио-заминку (ходьба в гору) в конце сессии.
+
+    КРИТИЧЕСКИ ВАЖНО - exerciseType:
+    Обязательно указывай exerciseType для КАЖДОГО упражнения:
+    - 'strength' - ТОЛЬКО если используется отягощение (штанга, гантели, гири, тросовые тренажёры)
+    - 'bodyweight' - отжимания, подтягивания, подъём ног в висе, скручивания, гиперэкстензия без веса
+    - 'cardio' - бег, ходьба, велосипед, сайкл, дорожка, степпер, эллипс, скакалка, прыжки
+    - 'isometric' - планка, удержание, статика, вис
+
+    КРИТИЧЕСКИ ВАЖНО - reps:
+    - Указывай КОНКРЕТНЫЕ числа повторений: "10", "12", "8"
+    - НЕ ИСПОЛЬЗУЙ ДИАПАЗОНЫ вроде "8-12" или "10-15"!
+    - Для кардио указывай конкретное время в минутах: "10", "15", "5"
 
     Сгенерируй программу в формате JSON.
     `;

@@ -8,6 +8,7 @@ import ChatInputBar from './ChatInputBar';
 import { Dumbbell, Calendar as CalendarIcon, BarChart2, Settings, Play, ChevronRight, Info, Battery, Zap, Trophy, Users, Crown, Bot, MessageCircle, Flame, Activity, Clock, TrendingUp, Sparkles, MessageSquarePlus, HelpCircle, Coffee, Sun, Moon, Check, LayoutGrid, Shield, AlertTriangle } from 'lucide-react';
 import WorkoutPreviewModal from './WorkoutPreviewModal';
 import ReadinessModal from './ReadinessModal';
+import WorkoutIntroModal from './WorkoutIntroModal';
 import PremiumModal from './PremiumModal';
 import HardPaywall from './HardPaywall';
 import TrialBanner from './TrialBanner';
@@ -40,6 +41,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
     const [isInsightLoading, setIsInsightLoading] = useState(false);
     const [showPremiumModal, setShowPremiumModal] = useState(false);
     const [showReadinessModal, setShowReadinessModal] = useState(false);
+    const [showIntroModal, setShowIntroModal] = useState(false);
     const [pendingSessionName, setPendingSessionName] = useState<string | null>(null);
     const [currentReadiness, setCurrentReadiness] = useState<ReadinessData | null>(null);
     const [restoredState, setRestoredState] = useState<ActiveWorkoutState | null>(null);
@@ -355,10 +357,16 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
             // Continue anyway if check fails
         }
 
-        // Check readiness
+        // Show intro modal first
         setPendingSessionName(sessionName);
-        setShowReadinessModal(true);
+        setShowIntroModal(true);
         hapticFeedback.impactOccurred('heavy');
+    };
+
+    // Called when user clicks "Поехали!" on the intro modal
+    const handleIntroContinue = () => {
+        setShowIntroModal(false);
+        setShowReadinessModal(true);
     };
 
     // Called when user clicks "Start" on a future workout in the calendar or preview
@@ -832,6 +840,19 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
                     session={workoutToPreview}
                     onClose={() => setWorkoutToPreview(null)}
                     onStart={() => forceStartWorkout(workoutToPreview.name)}
+                />
+            )}
+
+            {showIntroModal && pendingSessionName && (
+                <WorkoutIntroModal
+                    session={program.sessions.find(s => s.name === pendingSessionName)!}
+                    profile={profile}
+                    logs={logs}
+                    onContinue={handleIntroContinue}
+                    onCancel={() => {
+                        setShowIntroModal(false);
+                        setPendingSessionName(null);
+                    }}
                 />
             )}
 

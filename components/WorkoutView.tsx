@@ -51,6 +51,14 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
   // RIR Info Modal
   const [showRirInfo, setShowRirInfo] = useState(false);
 
+  // Bug fix: track attempted finish to highlight incomplete fields
+  const [attemptedFinish, setAttemptedFinish] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // Bug fix: mid-workout pain reporting
+  const [showPainModal, setShowPainModal] = useState(false);
+  const [midWorkoutPain, setMidWorkoutPain] = useState<string>('');
+
   useEffect(() => {
     if (initialState) {
       setCurrentSession({ ...session }); // Keep original session structure
@@ -163,11 +171,26 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
     setShowRestTimer(true);
   }
 
+  // Keywords for auto-detecting exercise type when AI doesn't set it correctly
+  const CARDIO_KEYWORDS = ['кардио', 'бег', 'ходьба', 'велосипед', 'сайкл', 'эллипс', 'скакалк', 'прыжк', 'дорожк', 'степпер', 'гребля', 'велотренажёр'];
+  const BODYWEIGHT_KEYWORDS = ['планка', 'отжиман', 'подтягив', 'пресс', 'скручиван', 'в висе', 'подъём ног', 'подъем ног', 'берпи', 'выпрыгив', 'присед без', 'гиперэкстензия без'];
+  const ISOMETRIC_KEYWORDS = ['удержан', 'статик', 'вис ', 'стойка'];
+
   // Helper: check if exercise requires weight input
   const exerciseNeedsWeight = (ex: typeof completedExercises[0]): boolean => {
-    // Only 'strength' exercises need weight > 0
-    // bodyweight, cardio, isometric exercises don't need weight
-    return ex.exerciseType === 'strength' || ex.exerciseType === undefined;
+    // If explicitly marked as non-strength, no weight needed
+    if (['cardio', 'bodyweight', 'isometric'].includes(ex.exerciseType || '')) {
+      return false;
+    }
+
+    // Fallback: check exercise name for keywords (double protection if AI forgot to set type)
+    const nameLower = ex.name.toLowerCase();
+    if (CARDIO_KEYWORDS.some(k => nameLower.includes(k))) return false;
+    if (BODYWEIGHT_KEYWORDS.some(k => nameLower.includes(k))) return false;
+    if (ISOMETRIC_KEYWORDS.some(k => nameLower.includes(k))) return false;
+
+    // Default: strength exercise needs weight
+    return true;
   };
 
   // Helper: check if all sets are complete for an exercise
@@ -176,6 +199,15 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
     return ex.completedSets.every(s =>
       s.reps > 0 && (needsWeight ? s.weight > 0 : true)
     );
+  };
+
+  // Helper: check which fields are incomplete for a specific set (for red highlighting)
+  const getSetErrors = (ex: typeof completedExercises[0], set: typeof ex.completedSets[0]): { weight: boolean, reps: boolean } => {
+    const needsWeight = exerciseNeedsWeight(ex);
+    return {
+      weight: needsWeight && (!set.weight || set.weight <= 0),
+      reps: !set.reps || set.reps <= 0
+    };
   };
 
   // Navigation functions
@@ -213,6 +245,14 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
   const finishWorkout = () => {
     if (!canFinish) {
       hapticFeedback.notificationOccurred('warning');
+      setAttemptedFinish(true);
+      // Navigate to first incomplete exercise
+      const firstIncomplete = completedExercises.findIndex(ex => !isExerciseComplete(ex));
+      if (firstIncomplete !== -1) {
+        setCurrentExerciseIndex(firstIncomplete);
+      }
+      setToastMessage('Заполни все поля, отмеченные красным');
+      setTimeout(() => setToastMessage(null), 3000);
       return;
     }
     setIsFeedbackModalOpen(true);
@@ -298,17 +338,35 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
   return (
     <div className="w-full max-w-md mx-auto h-[100dvh] bg-neutral-950 text-white font-sans flex flex-col overflow-hidden">
 
+      {/* Toast Message */}
+      {toastMessage && (
+        <div className="fixed top-6 left-1/2 transform -translate-x-1/2 z-50 bg-red-500/20 backdrop-blur border border-red-500/30 text-red-300 px-6 py-3 rounded-full shadow-2xl font-bold text-sm animate-slide-up flex items-center gap-2">
+          <AlertTriangle size={16} />
+          {toastMessage}
+        </div>
+      )}
+
       {/* Header */}
       <header className="pt-[max(1.5rem,env(safe-area-inset-top))] pb-4 px-4 flex items-center justify-between bg-neutral-950 z-10">
         <button onClick={onBack} className="p-2 bg-neutral-900 border border-white/10 rounded-full text-gray-400 hover:text-white hover:border-white/30 transition">
           <ChevronLeft size={20} />
         </button>
-        <div className="flex flex-col items-end">
-          <span className="text-xs text-gray-500 font-bold uppercase tracking-wider">Упражнение {currentExerciseIndex + 1} из {completedExercises.length}</span>
-          <div className="flex gap-1 mt-1">
-            {completedExercises.map((_, idx) => (
-              <div key={idx} className={`h-1 w-4 rounded-full ${idx === currentExerciseIndex ? 'bg-indigo-500' : idx < currentExerciseIndex ? 'bg-indigo-900' : 'bg-neutral-800'}`}></div>
-            ))}
+        <div className="flex items-center gap-3">
+          {/* Pain Report Button */}
+          <button
+            onClick={() => setShowPainModal(true)}
+            className="p-2 bg-red-500/10 border border-red-500/20 rounded-full text-red-400 hover:bg-red-500/20 transition"
+            title="Сообщить о боли"
+          >
+            <AlertTriangle size={18} />
+          </button>
+          <div className="flex flex-col items-end">
+            <span className="text-xs text-gray-500 font-bold uppercase tracking-wider">Упражнение {currentExerciseIndex + 1} из {completedExercises.length}</span>
+            <div className="flex gap-1 mt-1">
+              {completedExercises.map((_, idx) => (
+                <div key={idx} className={`h-1 w-4 rounded-full ${idx === currentExerciseIndex ? 'bg-indigo-500' : idx < currentExerciseIndex ? 'bg-indigo-900' : 'bg-neutral-800'}`}></div>
+              ))}
+            </div>
           </div>
         </div>
       </header>
@@ -423,10 +481,16 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
                           type="number"
                           value={set.weight || ''}
                           onChange={(e) => handleValueChange(currentExerciseIndex, setIndex, 'weight', parseInt(e.target.value))}
-                          placeholder={currentExercise.weight?.toString() || "kg"}
-                          className="w-full bg-transparent text-center font-mono font-bold text-white outline-none border-b border-gray-700 focus:border-indigo-500 transition py-1"
+                          placeholder={currentExercise.weight?.toString() || "кг"}
+                          className={`w-full bg-transparent text-center font-mono font-bold text-white outline-none border-b transition py-1 ${
+                            attemptedFinish && getSetErrors(currentExercise, set).weight
+                              ? 'border-red-500 bg-red-500/10'
+                              : 'border-gray-700 focus:border-indigo-500'
+                          }`}
                         />
-                        <span className="absolute right-0 top-1/2 -translate-y-1/2 text-[10px] text-gray-600 pointer-events-none">KG</span>
+                        <span className={`absolute right-0 top-1/2 -translate-y-1/2 text-[10px] pointer-events-none ${
+                          attemptedFinish && getSetErrors(currentExercise, set).weight ? 'text-red-400' : 'text-gray-600'
+                        }`}>кг</span>
                       </div>
                     )}
 
@@ -436,9 +500,15 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
                         value={set.reps || ''}
                         onChange={(e) => handleValueChange(currentExerciseIndex, setIndex, 'reps', parseInt(e.target.value))}
                         placeholder={currentExercise.reps.split('-')[0]}
-                        className="w-full bg-transparent text-center font-mono font-bold text-white outline-none border-b border-gray-700 focus:border-indigo-500 transition py-1"
+                        className={`w-full bg-transparent text-center font-mono font-bold text-white outline-none border-b transition py-1 ${
+                          attemptedFinish && getSetErrors(currentExercise, set).reps
+                            ? 'border-red-500 bg-red-500/10'
+                            : 'border-gray-700 focus:border-indigo-500'
+                        }`}
                       />
-                      <span className="absolute right-0 top-1/2 -translate-y-1/2 text-[10px] text-gray-600 pointer-events-none">REP</span>
+                      <span className={`absolute right-0 top-1/2 -translate-y-1/2 text-[10px] pointer-events-none ${
+                        attemptedFinish && getSetErrors(currentExercise, set).reps ? 'text-red-400' : 'text-gray-600'
+                      }`}>повт</span>
                     </div>
 
                     {/* RIR - Reps In Reserve */}
@@ -599,6 +669,56 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
             <p className="text-gray-500 text-xs">
               💡 RIR помогает тренеру понять насколько тяжело тебе было и адаптировать программу — повысить или снизить вес на следующей тренировке.
             </p>
+          </div>
+        </div>
+      )}
+
+      {/* Mid-Workout Pain Modal */}
+      {showPainModal && (
+        <div className="fixed inset-0 bg-black/80 z-50 flex items-end" onClick={() => setShowPainModal(false)}>
+          <div className="bg-neutral-900 rounded-t-3xl p-6 w-full max-w-md mx-auto border-t border-white/10 animate-slide-up" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                <AlertTriangle size={20} className="text-red-400" />
+                Где болит?
+              </h3>
+              <button onClick={() => setShowPainModal(false)} className="text-gray-500 hover:text-white">
+                <ChevronDown size={20} />
+              </button>
+            </div>
+
+            <p className="text-sm text-gray-400 mb-4">
+              Опиши ощущения — мы адаптируем программу с учётом этого.
+            </p>
+
+            <textarea
+              value={midWorkoutPain}
+              onChange={e => setMidWorkoutPain(e.target.value)}
+              placeholder="Например: Тянет в пояснице, дискомфорт в левом плече..."
+              className="w-full bg-neutral-800 rounded-xl p-4 text-white mb-4 min-h-[100px] border border-white/5 focus:border-indigo-500 outline-none transition"
+            />
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowPainModal(false)}
+                className="flex-1 py-3 bg-neutral-800 text-gray-400 rounded-xl font-bold hover:bg-neutral-700 transition"
+              >
+                Отмена
+              </button>
+              <button
+                onClick={() => {
+                  if (midWorkoutPain.trim()) {
+                    hapticFeedback.notificationOccurred('success');
+                    setToastMessage('Запомнил! Учту это при завершении');
+                    setTimeout(() => setToastMessage(null), 3000);
+                  }
+                  setShowPainModal(false);
+                }}
+                className="flex-1 py-3 bg-red-500 text-white rounded-xl font-bold hover:bg-red-400 transition"
+              >
+                Сохранить
+              </button>
+            </div>
           </div>
         </div>
       )}
