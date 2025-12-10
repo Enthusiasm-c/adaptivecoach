@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Dumbbell, Brain, Sparkles, ChevronRight, Check } from 'lucide-react';
+import { Dumbbell, Brain, ChevronRight, Check } from 'lucide-react';
 
 interface FitCubeWelcomeProps {
     onComplete: () => void;
@@ -50,10 +50,14 @@ const FitCubeWelcome: React.FC<FitCubeWelcomeProps> = ({ onComplete }) => {
             <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
                 {current.logos && (
                     <div className="flex items-center gap-4 mb-8">
-                        <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center shadow-lg">
-                            <Sparkles size={32} className="text-white" />
-                        </div>
+                        {/* Sensei.AI Logo */}
+                        <img
+                            src="/sensei-logo.jpeg"
+                            alt="Sensei.AI"
+                            className="h-20 w-auto object-contain drop-shadow-lg"
+                        />
                         <span className="text-white/60 text-2xl font-light">×</span>
+                        {/* FitCube Icon */}
                         <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center shadow-lg">
                             <Dumbbell size={32} className="text-white" />
                         </div>
