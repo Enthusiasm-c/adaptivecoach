@@ -36,6 +36,7 @@ const CHEST_EXERCISES: ExerciseDefinition[] = [
     equipment: ['barbell'],
     difficulty: 'beginner',
     repRanges: { strength: '3-5', hypertrophy: '6-12', endurance: '12-15' },
+    notes: 'Лягте на скамью, стопы плотно на полу. Опускайте штангу до груди и выжимайте вверх, держа локти под углом 45 градусов к корпусу.',
   },
   {
     id: 'bench_press_dumbbell',
@@ -48,6 +49,7 @@ const CHEST_EXERCISES: ExerciseDefinition[] = [
     equipment: ['dumbbell'],
     difficulty: 'beginner',
     repRanges: { strength: '5-8', hypertrophy: '8-12', endurance: '12-15' },
+    notes: 'Гантели держите по бокам груди, локти под 45 градусов. Выжимайте гантели вверх, сводя их в верхней точке над центром груди.',
   },
   {
     id: 'incline_bench_barbell',
@@ -60,6 +62,7 @@ const CHEST_EXERCISES: ExerciseDefinition[] = [
     equipment: ['barbell'],
     difficulty: 'intermediate',
     repRanges: { strength: '4-6', hypertrophy: '8-12', endurance: '12-15' },
+    notes: 'Наклон скамьи 30-45 градусов. Опускайте штангу на верх груди, выжимайте строго вертикально вверх.',
   },
   {
     id: 'incline_bench_dumbbell',
@@ -72,6 +75,7 @@ const CHEST_EXERCISES: ExerciseDefinition[] = [
     equipment: ['dumbbell'],
     difficulty: 'beginner',
     repRanges: { strength: '6-8', hypertrophy: '8-12', endurance: '12-15' },
+    notes: 'Скамья под углом 30-45 градусов. Жмите гантели вверх, сводя их над верхом груди для максимального сокращения.',
   },
   {
     id: 'dumbbell_flyes',
@@ -84,6 +88,7 @@ const CHEST_EXERCISES: ExerciseDefinition[] = [
     equipment: ['dumbbell'],
     difficulty: 'beginner',
     repRanges: { strength: '8-10', hypertrophy: '10-15', endurance: '15-20' },
+    notes: 'Разводите гантели в стороны с небольшим сгибом в локтях. Опускайте до растяжения груди, сводите по широкой дуге.',
   },
   {
     id: 'cable_crossover',
@@ -96,6 +101,7 @@ const CHEST_EXERCISES: ExerciseDefinition[] = [
     equipment: ['cable'],
     difficulty: 'intermediate',
     repRanges: { strength: '8-10', hypertrophy: '12-15', endurance: '15-20' },
+    notes: 'Встаньте в центре кроссовера, слегка наклонитесь вперёд. Сводите руки перед собой по дуге, фокусируясь на сжатии грудных.',
   },
   {
     id: 'push_ups',
@@ -108,6 +114,7 @@ const CHEST_EXERCISES: ExerciseDefinition[] = [
     equipment: ['bodyweight'],
     difficulty: 'beginner',
     repRanges: { strength: '5-10', hypertrophy: '10-20', endurance: '20-30' },
+    notes: 'Руки чуть шире плеч, тело прямое от головы до пят. Опускайтесь до касания грудью пола, держите локти под 45 градусов.',
   },
   {
     id: 'chest_press_machine',
@@ -120,6 +127,7 @@ const CHEST_EXERCISES: ExerciseDefinition[] = [
     equipment: ['machine'],
     difficulty: 'beginner',
     repRanges: { strength: '6-8', hypertrophy: '10-12', endurance: '12-15' },
+    notes: 'Отрегулируйте высоту сиденья так, чтобы ручки были на уровне середины груди. Выжимайте плавно, не разгибая локти полностью.',
   },
 ];
 
@@ -139,6 +147,7 @@ const BACK_EXERCISES: ExerciseDefinition[] = [
     equipment: ['barbell'],
     difficulty: 'intermediate',
     repRanges: { strength: '4-6', hypertrophy: '8-12', endurance: '12-15' },
+    notes: 'Наклонитесь вперёд с прямой спиной, угол 45 градусов. Тяните штангу к низу живота, сводя лопатки в верхней точке.',
   },
   {
     id: 'dumbbell_row',
@@ -151,6 +160,7 @@ const BACK_EXERCISES: ExerciseDefinition[] = [
     equipment: ['dumbbell'],
     difficulty: 'beginner',
     repRanges: { strength: '6-8', hypertrophy: '8-12', endurance: '12-15' },
+    notes: 'Упритесь коленом и рукой в скамью, спина параллельна полу. Тяните гантель к поясу, не вращая корпус.',
   },
   {
     id: 'pull_ups',
@@ -163,6 +173,7 @@ const BACK_EXERCISES: ExerciseDefinition[] = [
     equipment: ['bodyweight'],
     difficulty: 'intermediate',
     repRanges: { strength: '3-6', hypertrophy: '6-12', endurance: '12-15' },
+    notes: 'Хват чуть шире плеч, подтягивайтесь до подбородка выше перекладины. Опускайтесь до полного распрямления рук.',
   },
   {
     id: 'lat_pulldown',
@@ -175,6 +186,7 @@ const BACK_EXERCISES: ExerciseDefinition[] = [
     equipment: ['cable', 'machine'],
     difficulty: 'beginner',
     repRanges: { strength: '6-8', hypertrophy: '8-12', endurance: '12-15' },
+    notes: 'Тяните рукоять к верху груди, отклоняясь слегка назад. Концентрируйтесь на работе широчайших, не тяните руками.',
   },
   {
     id: 'seated_cable_row',
@@ -187,6 +199,7 @@ const BACK_EXERCISES: ExerciseDefinition[] = [
     equipment: ['cable'],
     difficulty: 'beginner',
     repRanges: { strength: '6-8', hypertrophy: '10-12', endurance: '12-15' },
+    notes: 'Сидя с прямой спиной, тяните рукоять к животу. Максимально сводите лопатки в конечной точке движения.',
   },
   {
     id: 't_bar_row',
@@ -199,6 +212,7 @@ const BACK_EXERCISES: ExerciseDefinition[] = [
     equipment: ['barbell', 'machine'],
     difficulty: 'intermediate',
     repRanges: { strength: '5-8', hypertrophy: '8-12', endurance: '12-15' },
+    notes: 'Стойте в наклоне над грифом, ноги по бокам. Тяните гриф к груди, сохраняя спину прямой.',
   },
   {
     id: 'inverted_row',
@@ -211,6 +225,7 @@ const BACK_EXERCISES: ExerciseDefinition[] = [
     equipment: ['bodyweight'],
     difficulty: 'beginner',
     repRanges: { strength: '6-10', hypertrophy: '10-15', endurance: '15-20' },
+    notes: 'Тело под углом, хват на низкой перекладине. Подтягивайтесь грудью к перекладине, держа тело прямым.',
   },
   {
     id: 'straight_arm_pulldown',
@@ -223,6 +238,7 @@ const BACK_EXERCISES: ExerciseDefinition[] = [
     equipment: ['cable'],
     difficulty: 'intermediate',
     repRanges: { strength: '8-10', hypertrophy: '12-15', endurance: '15-20' },
+    notes: 'Стойте прямо, тяните рукоять вниз прямыми руками. Фокусируйтесь на растяжении и сокращении широчайших мышц.',
   },
 ];
 
@@ -242,6 +258,7 @@ const SHOULDER_EXERCISES: ExerciseDefinition[] = [
     equipment: ['barbell'],
     difficulty: 'intermediate',
     repRanges: { strength: '3-6', hypertrophy: '6-10', endurance: '10-15' },
+    notes: 'Жмите штангу от плеч строго вверх, ноги на ширине плеч. Не отклоняйтесь назад, держите корпус напряжённым.',
   },
   {
     id: 'overhead_press_dumbbell',
@@ -254,6 +271,7 @@ const SHOULDER_EXERCISES: ExerciseDefinition[] = [
     equipment: ['dumbbell'],
     difficulty: 'beginner',
     repRanges: { strength: '6-8', hypertrophy: '8-12', endurance: '12-15' },
+    notes: 'Сидя с опорой спины, жмите гантели вверх до касания в верхней точке. Опускайте до уровня ушей.',
   },
   {
     id: 'lateral_raise',
@@ -266,6 +284,7 @@ const SHOULDER_EXERCISES: ExerciseDefinition[] = [
     equipment: ['dumbbell', 'cable'],
     difficulty: 'beginner',
     repRanges: { strength: '10-12', hypertrophy: '12-15', endurance: '15-20' },
+    notes: 'Поднимайте гантели в стороны до уровня плеч, локти слегка согнуты. Не раскачивайтесь, работайте только плечами.',
   },
   {
     id: 'front_raise',
@@ -278,6 +297,7 @@ const SHOULDER_EXERCISES: ExerciseDefinition[] = [
     equipment: ['dumbbell'],
     difficulty: 'beginner',
     repRanges: { strength: '10-12', hypertrophy: '12-15', endurance: '15-20' },
+    notes: 'Поднимайте гантели перед собой до уровня глаз попеременно или вместе. Контролируйте движение, не бросайте вес вниз.',
   },
   {
     id: 'arnold_press',
@@ -290,6 +310,7 @@ const SHOULDER_EXERCISES: ExerciseDefinition[] = [
     equipment: ['dumbbell'],
     difficulty: 'intermediate',
     repRanges: { strength: '6-8', hypertrophy: '8-12', endurance: '12-15' },
+    notes: 'Начинайте с гантелями перед грудью ладонями к себе, разворачивайте и жмите вверх. Обратное движение с разворотом.',
   },
   {
     id: 'machine_shoulder_press',
@@ -302,6 +323,7 @@ const SHOULDER_EXERCISES: ExerciseDefinition[] = [
     equipment: ['machine'],
     difficulty: 'beginner',
     repRanges: { strength: '6-8', hypertrophy: '10-12', endurance: '12-15' },
+    notes: 'Отрегулируйте высоту сиденья так, чтобы ручки были на уровне плеч. Жмите плавно вверх, не разгибая локти полностью.',
   },
   {
     id: 'cable_lateral_raise',
@@ -314,6 +336,7 @@ const SHOULDER_EXERCISES: ExerciseDefinition[] = [
     equipment: ['cable'],
     difficulty: 'intermediate',
     repRanges: { strength: '10-12', hypertrophy: '12-15', endurance: '15-20' },
+    notes: 'Стойте боком к блоку, тяните одной рукой в сторону до уровня плеча. Постоянное напряжение благодаря кабелю.',
   },
   {
     id: 'pike_push_ups',
@@ -326,6 +349,7 @@ const SHOULDER_EXERCISES: ExerciseDefinition[] = [
     equipment: ['bodyweight'],
     difficulty: 'beginner',
     repRanges: { strength: '5-8', hypertrophy: '8-12', endurance: '12-15' },
+    notes: 'Примите позу угла (таз вверх), руки и ноги на полу. Отжимайтесь, опуская голову к рукам, акцент на плечи.',
   },
 ];
 
@@ -345,6 +369,7 @@ const REAR_DELT_EXERCISES: ExerciseDefinition[] = [
     equipment: ['cable'],
     difficulty: 'beginner',
     repRanges: { strength: '10-12', hypertrophy: '12-15', endurance: '15-20' },
+    notes: 'Тяните канат к лицу, разводя руки в стороны. Фокус на задних дельтах и сведении лопаток.',
   },
   {
     id: 'reverse_flyes',
@@ -357,6 +382,7 @@ const REAR_DELT_EXERCISES: ExerciseDefinition[] = [
     equipment: ['dumbbell'],
     difficulty: 'beginner',
     repRanges: { strength: '10-12', hypertrophy: '12-15', endurance: '15-20' },
+    notes: 'Наклонитесь вперёд, разводите гантели в стороны и назад. Локти слегка согнуты, акцент на задних дельтах.',
   },
   {
     id: 'reverse_pec_deck',
@@ -369,6 +395,7 @@ const REAR_DELT_EXERCISES: ExerciseDefinition[] = [
     equipment: ['machine'],
     difficulty: 'beginner',
     repRanges: { strength: '10-12', hypertrophy: '12-15', endurance: '15-20' },
+    notes: 'Сядьте лицом к тренажёру, разводите рукояти назад. Сводите лопатки, прожимайте задние дельты.',
   },
   {
     id: 'band_pull_apart',
@@ -381,6 +408,7 @@ const REAR_DELT_EXERCISES: ExerciseDefinition[] = [
     equipment: ['resistance_band'],
     difficulty: 'beginner',
     repRanges: { strength: '12-15', hypertrophy: '15-20', endurance: '20-30' },
+    notes: 'Держите резинку перед собой, разводите руки в стороны. Простое, но эффективное упражнение для задних дельт.',
   },
   {
     id: 'prone_y_raise',
@@ -393,6 +421,7 @@ const REAR_DELT_EXERCISES: ExerciseDefinition[] = [
     equipment: ['dumbbell', 'bodyweight'],
     difficulty: 'beginner',
     repRanges: { strength: '10-12', hypertrophy: '12-15', endurance: '15-20' },
+    notes: 'Лёжа на животе на наклонной скамье, поднимайте руки вверх в форме Y. Лёгкий вес, фокус на технике.',
   },
 ];
 
@@ -412,6 +441,7 @@ const BICEPS_EXERCISES: ExerciseDefinition[] = [
     equipment: ['barbell', 'ez_bar'],
     difficulty: 'beginner',
     repRanges: { strength: '6-8', hypertrophy: '8-12', endurance: '12-15' },
+    notes: 'Локти прижаты к корпусу, сгибайте руки со штангой до полного сокращения бицепса. Опускайте подконтрольно.',
   },
   {
     id: 'dumbbell_curl',
@@ -424,6 +454,7 @@ const BICEPS_EXERCISES: ExerciseDefinition[] = [
     equipment: ['dumbbell'],
     difficulty: 'beginner',
     repRanges: { strength: '6-8', hypertrophy: '8-12', endurance: '12-15' },
+    notes: 'Сгибайте руки с гантелями попеременно или вместе, локти неподвижны. Можно с супинацией (разворотом кисти).',
   },
   {
     id: 'hammer_curl',
@@ -436,6 +467,7 @@ const BICEPS_EXERCISES: ExerciseDefinition[] = [
     equipment: ['dumbbell'],
     difficulty: 'beginner',
     repRanges: { strength: '8-10', hypertrophy: '10-12', endurance: '12-15' },
+    notes: 'Держите гантели нейтральным хватом (ладони друг к другу), сгибайте руки. Нагружает плечевую мышцу и бицепс.',
   },
   {
     id: 'incline_curl',
@@ -448,6 +480,7 @@ const BICEPS_EXERCISES: ExerciseDefinition[] = [
     equipment: ['dumbbell'],
     difficulty: 'intermediate',
     repRanges: { strength: '8-10', hypertrophy: '10-12', endurance: '12-15' },
+    notes: 'Лёжа на наклонной скамье, руки опущены вниз. Сгибайте руки, чувствуя растяжение бицепса в нижней точке.',
   },
   {
     id: 'preacher_curl',
@@ -460,6 +493,7 @@ const BICEPS_EXERCISES: ExerciseDefinition[] = [
     equipment: ['barbell', 'dumbbell', 'ez_bar', 'machine'],
     difficulty: 'beginner',
     repRanges: { strength: '8-10', hypertrophy: '10-12', endurance: '12-15' },
+    notes: 'Локти на подушке скамьи Скотта, сгибайте руки полностью. Изолирует бицепс, исключает читинг.',
   },
   {
     id: 'cable_curl',
@@ -472,6 +506,7 @@ const BICEPS_EXERCISES: ExerciseDefinition[] = [
     equipment: ['cable'],
     difficulty: 'beginner',
     repRanges: { strength: '8-10', hypertrophy: '10-15', endurance: '15-20' },
+    notes: 'Сгибайте руки на нижнем блоке, постоянное напряжение мышц. Держите локти неподвижными.',
   },
   {
     id: 'concentration_curl',
@@ -484,6 +519,7 @@ const BICEPS_EXERCISES: ExerciseDefinition[] = [
     equipment: ['dumbbell'],
     difficulty: 'beginner',
     repRanges: { strength: '8-10', hypertrophy: '10-15', endurance: '15-20' },
+    notes: 'Сидя, локоть упирается в бедро, сгибайте руку концентрированно. Максимальная изоляция бицепса.',
   },
 ];
 
@@ -503,6 +539,7 @@ const TRICEPS_EXERCISES: ExerciseDefinition[] = [
     equipment: ['cable'],
     difficulty: 'beginner',
     repRanges: { strength: '8-10', hypertrophy: '10-15', endurance: '15-20' },
+    notes: 'Разгибайте руки вниз на блоке, локти прижаты к корпусу. Полностью распрямляйте руки в нижней точке.',
   },
   {
     id: 'overhead_tricep_extension',
@@ -515,6 +552,7 @@ const TRICEPS_EXERCISES: ExerciseDefinition[] = [
     equipment: ['dumbbell', 'cable'],
     difficulty: 'beginner',
     repRanges: { strength: '8-10', hypertrophy: '10-15', endurance: '15-20' },
+    notes: 'Гантель или рукоять над головой, разгибайте руки вверх. Локти держите неподвижно, работает только трицепс.',
   },
   {
     id: 'skull_crusher',
@@ -527,6 +565,7 @@ const TRICEPS_EXERCISES: ExerciseDefinition[] = [
     equipment: ['barbell', 'ez_bar', 'dumbbell'],
     difficulty: 'intermediate',
     repRanges: { strength: '6-8', hypertrophy: '8-12', endurance: '12-15' },
+    notes: 'Лёжа, опускайте штангу ко лбу, сгибая только в локтях. Разгибайте руки вверх, локти неподвижны.',
   },
   {
     id: 'close_grip_bench',
@@ -539,6 +578,7 @@ const TRICEPS_EXERCISES: ExerciseDefinition[] = [
     equipment: ['barbell'],
     difficulty: 'intermediate',
     repRanges: { strength: '5-8', hypertrophy: '8-12', endurance: '12-15' },
+    notes: 'Жим штанги узким хватом (уже плеч), локти ближе к корпусу. Опускайте на низ груди, акцент на трицепс.',
   },
   {
     id: 'dips',
@@ -551,6 +591,7 @@ const TRICEPS_EXERCISES: ExerciseDefinition[] = [
     equipment: ['bodyweight'],
     difficulty: 'intermediate',
     repRanges: { strength: '5-8', hypertrophy: '8-12', endurance: '12-15' },
+    notes: 'Отжимайтесь на брусьях, корпус слегка вперёд. Опускайтесь до угла 90° в локтях, поднимайтесь силой трицепсов.',
   },
   {
     id: 'tricep_kickback',
@@ -563,6 +604,7 @@ const TRICEPS_EXERCISES: ExerciseDefinition[] = [
     equipment: ['dumbbell', 'cable'],
     difficulty: 'beginner',
     repRanges: { strength: '10-12', hypertrophy: '12-15', endurance: '15-20' },
+    notes: 'В наклоне, разгибайте руку с гантелью назад до полного распрямления. Локоть и плечо неподвижны.',
   },
   {
     id: 'diamond_push_ups',
@@ -575,6 +617,7 @@ const TRICEPS_EXERCISES: ExerciseDefinition[] = [
     equipment: ['bodyweight'],
     difficulty: 'intermediate',
     repRanges: { strength: '5-10', hypertrophy: '10-15', endurance: '15-20' },
+    notes: 'Руки близко (ладони касаются), отжимайтесь с акцентом на трицепс. Локти вдоль корпуса.',
   },
 ];
 
@@ -594,6 +637,7 @@ const QUAD_EXERCISES: ExerciseDefinition[] = [
     equipment: ['barbell'],
     difficulty: 'intermediate',
     repRanges: { strength: '3-5', hypertrophy: '6-12', endurance: '12-15' },
+    notes: 'Штанга на плечах, приседайте до параллели или ниже. Колени над носками, спина прямая, таз назад.',
   },
   {
     id: 'front_squat',
@@ -606,6 +650,7 @@ const QUAD_EXERCISES: ExerciseDefinition[] = [
     equipment: ['barbell'],
     difficulty: 'advanced',
     repRanges: { strength: '3-6', hypertrophy: '6-10', endurance: '10-12' },
+    notes: 'Штанга на передних дельтах, приседайте с вертикальным корпусом. Локти вверх, колени вперёд.',
   },
   {
     id: 'goblet_squat',
@@ -618,6 +663,7 @@ const QUAD_EXERCISES: ExerciseDefinition[] = [
     equipment: ['dumbbell', 'kettlebell'],
     difficulty: 'beginner',
     repRanges: { strength: '6-8', hypertrophy: '10-15', endurance: '15-20' },
+    notes: 'Держите гантель перед грудью двумя руками. Приседайте глубоко, локти между коленей, спина прямая.',
   },
   {
     id: 'leg_press',
@@ -630,6 +676,7 @@ const QUAD_EXERCISES: ExerciseDefinition[] = [
     equipment: ['machine'],
     difficulty: 'beginner',
     repRanges: { strength: '6-8', hypertrophy: '10-15', endurance: '15-20' },
+    notes: 'Ноги на платформе на ширине плеч, выжимайте вес ногами. Не отрывайте поясницу, не разгибайте колени полностью.',
   },
   {
     id: 'leg_extension',
@@ -642,6 +689,7 @@ const QUAD_EXERCISES: ExerciseDefinition[] = [
     equipment: ['machine'],
     difficulty: 'beginner',
     repRanges: { strength: '8-10', hypertrophy: '12-15', endurance: '15-20' },
+    notes: 'Сидя в тренажёре, разгибайте ноги до параллели с полом. Опускайте подконтрольно, не бросайте вес.',
   },
   {
     id: 'bulgarian_split_squat',
@@ -654,6 +702,7 @@ const QUAD_EXERCISES: ExerciseDefinition[] = [
     equipment: ['dumbbell', 'bodyweight'],
     difficulty: 'intermediate',
     repRanges: { strength: '6-8', hypertrophy: '8-12', endurance: '12-15' },
+    notes: 'Задняя нога на возвышении, приседайте на передней ноге. Держите корпус вертикально, колено над носком.',
   },
   {
     id: 'walking_lunge',
@@ -666,6 +715,7 @@ const QUAD_EXERCISES: ExerciseDefinition[] = [
     equipment: ['dumbbell', 'bodyweight'],
     difficulty: 'beginner',
     repRanges: { strength: '8-10', hypertrophy: '10-12', endurance: '12-20' },
+    notes: 'Шагайте вперёд, приседая на переднюю ногу до угла 90°. Колено задней ноги почти касается пола.',
   },
   {
     id: 'bodyweight_squat',
@@ -678,6 +728,7 @@ const QUAD_EXERCISES: ExerciseDefinition[] = [
     equipment: ['bodyweight'],
     difficulty: 'beginner',
     repRanges: { strength: '15-20', hypertrophy: '20-30', endurance: '30-50' },
+    notes: 'Приседайте без веса, руки перед собой для баланса. Опускайтесь до параллели, вставайте через пятки.',
   },
 ];
 
@@ -697,6 +748,7 @@ const HAMSTRING_EXERCISES: ExerciseDefinition[] = [
     equipment: ['barbell', 'dumbbell'],
     difficulty: 'intermediate',
     repRanges: { strength: '5-8', hypertrophy: '8-12', endurance: '12-15' },
+    notes: 'Штанга у бёдер, опускайте её вдоль ног с небольшим сгибом коленей. Спина прямая, таз назад, чувствуйте растяжение бицепсов бедра.',
   },
   {
     id: 'stiff_leg_deadlift',
@@ -709,6 +761,7 @@ const HAMSTRING_EXERCISES: ExerciseDefinition[] = [
     equipment: ['barbell', 'dumbbell'],
     difficulty: 'intermediate',
     repRanges: { strength: '5-8', hypertrophy: '8-12', endurance: '12-15' },
+    notes: 'Как румынская тяга, но с прямыми ногами. Опускайте штангу до середины голени, спина прямая.',
   },
   {
     id: 'lying_leg_curl',
@@ -721,6 +774,7 @@ const HAMSTRING_EXERCISES: ExerciseDefinition[] = [
     equipment: ['machine'],
     difficulty: 'beginner',
     repRanges: { strength: '6-8', hypertrophy: '10-15', endurance: '15-20' },
+    notes: 'Лёжа на животе, сгибайте ноги к ягодицам. Полная амплитуда, опускайте вес подконтрольно.',
   },
   {
     id: 'seated_leg_curl',
@@ -733,6 +787,7 @@ const HAMSTRING_EXERCISES: ExerciseDefinition[] = [
     equipment: ['machine'],
     difficulty: 'beginner',
     repRanges: { strength: '8-10', hypertrophy: '10-15', endurance: '15-20' },
+    notes: 'Сидя в тренажёре, сгибайте ноги под себя. Фиксируйте корпус, работайте только ногами.',
   },
   {
     id: 'good_morning',
@@ -745,6 +800,7 @@ const HAMSTRING_EXERCISES: ExerciseDefinition[] = [
     equipment: ['barbell'],
     difficulty: 'advanced',
     repRanges: { strength: '5-8', hypertrophy: '8-12', endurance: '12-15' },
+    notes: 'Штанга на плечах, наклоняйтесь вперёд с прямой спиной. Таз назад, колени чуть согнуты, до параллели.',
   },
   {
     id: 'nordic_curl',
@@ -757,6 +813,7 @@ const HAMSTRING_EXERCISES: ExerciseDefinition[] = [
     equipment: ['bodyweight'],
     difficulty: 'advanced',
     repRanges: { strength: '3-5', hypertrophy: '5-8', endurance: '8-12' },
+    notes: 'Колени зафиксированы, опускайте корпус вперёд контролируя негативную фазу. Очень сложное упражнение.',
   },
   {
     id: 'single_leg_rdl',
@@ -769,6 +826,7 @@ const HAMSTRING_EXERCISES: ExerciseDefinition[] = [
     equipment: ['dumbbell', 'kettlebell', 'bodyweight'],
     difficulty: 'intermediate',
     repRanges: { strength: '6-8', hypertrophy: '8-12', endurance: '12-15' },
+    notes: 'На одной ноге, опускайте корпус вперёд, вторая нога назад для баланса. Гантель в противоположной руке.',
   },
 ];
 
@@ -788,6 +846,7 @@ const GLUTE_EXERCISES: ExerciseDefinition[] = [
     equipment: ['barbell'],
     difficulty: 'intermediate',
     repRanges: { strength: '6-8', hypertrophy: '8-12', endurance: '12-15' },
+    notes: 'Спина на скамье, штанга на бёдрах, выталкивайте таз вверх. Сжимайте ягодицы в верхней точке.',
   },
   {
     id: 'glute_bridge',
@@ -800,6 +859,7 @@ const GLUTE_EXERCISES: ExerciseDefinition[] = [
     equipment: ['bodyweight', 'dumbbell'],
     difficulty: 'beginner',
     repRanges: { strength: '10-12', hypertrophy: '12-20', endurance: '20-30' },
+    notes: 'Лёжа на полу, стопы у ягодиц, поднимайте таз вверх. Сжимайте ягодицы в верхней точке, задержитесь.',
   },
   {
     id: 'cable_pull_through',
@@ -812,6 +872,7 @@ const GLUTE_EXERCISES: ExerciseDefinition[] = [
     equipment: ['cable'],
     difficulty: 'intermediate',
     repRanges: { strength: '8-10', hypertrophy: '12-15', endurance: '15-20' },
+    notes: 'Спиной к блоку, канат между ног, выпрямляйтесь движением таза вперёд. Акцент на ягодицах.',
   },
   {
     id: 'cable_kickback',
@@ -824,6 +885,7 @@ const GLUTE_EXERCISES: ExerciseDefinition[] = [
     equipment: ['cable'],
     difficulty: 'beginner',
     repRanges: { strength: '10-12', hypertrophy: '12-15', endurance: '15-20' },
+    notes: 'Стоя у блока, отводите ногу назад против сопротивления. Сжимайте ягодицу в верхней точке.',
   },
   {
     id: 'sumo_deadlift',
@@ -836,6 +898,7 @@ const GLUTE_EXERCISES: ExerciseDefinition[] = [
     equipment: ['barbell'],
     difficulty: 'advanced',
     repRanges: { strength: '3-5', hypertrophy: '5-8', endurance: '8-12' },
+    notes: 'Широкая стойка, носки врозь, тяните штангу вертикально вверх. Спина прямая, акцент на ягодицах и внутренней поверхности бёдер.',
   },
   {
     id: 'step_ups',
@@ -848,6 +911,7 @@ const GLUTE_EXERCISES: ExerciseDefinition[] = [
     equipment: ['dumbbell', 'bodyweight'],
     difficulty: 'beginner',
     repRanges: { strength: '8-10', hypertrophy: '10-15', endurance: '15-20' },
+    notes: 'Зашагивайте на платформу, поднимаясь силой передней ноги. Опускайтесь подконтрольно, не бросайтесь вниз.',
   },
 ];
 
@@ -867,6 +931,7 @@ const CALF_EXERCISES: ExerciseDefinition[] = [
     equipment: ['machine', 'barbell', 'dumbbell'],
     difficulty: 'beginner',
     repRanges: { strength: '8-10', hypertrophy: '12-15', endurance: '15-25' },
+    notes: 'Стоя, поднимайтесь на носки максимально высоко. Опускайтесь до растяжения икр, полная амплитуда.',
   },
   {
     id: 'seated_calf_raise',
@@ -879,6 +944,7 @@ const CALF_EXERCISES: ExerciseDefinition[] = [
     equipment: ['machine'],
     difficulty: 'beginner',
     repRanges: { strength: '10-12', hypertrophy: '15-20', endurance: '20-30' },
+    notes: 'Сидя, вес на коленях, поднимайтесь на носки. Работает камбаловидная мышца, полная амплитуда.',
   },
   {
     id: 'leg_press_calf_raise',
@@ -891,6 +957,7 @@ const CALF_EXERCISES: ExerciseDefinition[] = [
     equipment: ['machine'],
     difficulty: 'beginner',
     repRanges: { strength: '10-12', hypertrophy: '15-20', endurance: '20-25' },
+    notes: 'В жиме ногами, работайте только носками. Полное распрямление и растяжение икр.',
   },
   {
     id: 'single_leg_calf_raise',
@@ -903,6 +970,7 @@ const CALF_EXERCISES: ExerciseDefinition[] = [
     equipment: ['bodyweight', 'dumbbell'],
     difficulty: 'beginner',
     repRanges: { strength: '10-12', hypertrophy: '15-20', endurance: '20-30' },
+    notes: 'На одной ноге, поднимайтесь на носок. Можно держаться для баланса, полная амплитуда.',
   },
 ];
 
@@ -922,6 +990,7 @@ const CORE_EXERCISES: ExerciseDefinition[] = [
     equipment: ['bodyweight'],
     difficulty: 'beginner',
     repRanges: { strength: '30-60s', hypertrophy: '45-90s', endurance: '60-120s' },
+    notes: 'Упор на предплечья и носки, тело прямое как доска. Напрягайте пресс и ягодицы, не прогибайтесь.',
   },
   {
     id: 'hanging_leg_raise',
@@ -934,6 +1003,7 @@ const CORE_EXERCISES: ExerciseDefinition[] = [
     equipment: ['bodyweight'],
     difficulty: 'intermediate',
     repRanges: { strength: '6-10', hypertrophy: '10-15', endurance: '15-20' },
+    notes: 'Вис на перекладине, поднимайте прямые ноги до параллели или выше. Не раскачивайтесь, работайте прессом.',
   },
   {
     id: 'cable_crunch',
@@ -946,6 +1016,7 @@ const CORE_EXERCISES: ExerciseDefinition[] = [
     equipment: ['cable'],
     difficulty: 'intermediate',
     repRanges: { strength: '10-12', hypertrophy: '12-20', endurance: '20-30' },
+    notes: 'На коленях у блока, скручивайтесь вперёд. Тяните локтями к коленям, округляя спину.',
   },
   {
     id: 'ab_wheel_rollout',
@@ -958,6 +1029,7 @@ const CORE_EXERCISES: ExerciseDefinition[] = [
     equipment: ['bodyweight'],
     difficulty: 'intermediate',
     repRanges: { strength: '6-10', hypertrophy: '10-15', endurance: '15-20' },
+    notes: 'На коленях с роликом, раскатывайтесь вперёд. Спина прямая, возвращайтесь силой пресса.',
   },
   {
     id: 'russian_twist',
@@ -970,6 +1042,7 @@ const CORE_EXERCISES: ExerciseDefinition[] = [
     equipment: ['bodyweight', 'dumbbell', 'kettlebell'],
     difficulty: 'beginner',
     repRanges: { strength: '10-15', hypertrophy: '15-20', endurance: '20-30' },
+    notes: 'Сидя с поднятыми ногами, вращайте корпус из стороны в сторону. Можно с весом, акцент на косых мышцах.',
   },
   {
     id: 'dead_bug',
@@ -982,6 +1055,7 @@ const CORE_EXERCISES: ExerciseDefinition[] = [
     equipment: ['bodyweight'],
     difficulty: 'beginner',
     repRanges: { strength: '8-10', hypertrophy: '12-15', endurance: '15-20' },
+    notes: 'Лёжа на спине, попеременно опускайте противоположные руку и ногу. Поясница прижата к полу, работает глубокий пресс.',
   },
   {
     id: 'crunches',
@@ -994,6 +1068,7 @@ const CORE_EXERCISES: ExerciseDefinition[] = [
     equipment: ['bodyweight'],
     difficulty: 'beginner',
     repRanges: { strength: '15-20', hypertrophy: '20-30', endurance: '30-50' },
+    notes: 'Лёжа, ноги согнуты, скручивайтесь отрывая лопатки от пола. Не тяните за голову, работайте прессом.',
   },
 ];
 

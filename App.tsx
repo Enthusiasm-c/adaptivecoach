@@ -202,16 +202,16 @@ const App: React.FC = () => {
 
       // Migrate exercise names and descriptions if needed
       if (parsedProgram) {
-        const { migrateExerciseNamesAndDescriptions, needsMigration } = await import('./utils/exerciseMigration');
-
-        if (needsMigration(parsedProgram)) {
-          console.log('[App] Running exercise migration...');
-          const migratedProgram = migrateExerciseNamesAndDescriptions(parsedProgram);
-          setTrainingProgram(migratedProgram);
-          localStorage.setItem('trainingProgram', JSON.stringify(migratedProgram));
-        } else {
-          setTrainingProgram(parsedProgram);
-        }
+        import('./utils/exerciseMigration').then(({ migrateExerciseNamesAndDescriptions, needsMigration }) => {
+          if (needsMigration(parsedProgram)) {
+            console.log('[App] Running exercise migration...');
+            const migratedProgram = migrateExerciseNamesAndDescriptions(parsedProgram);
+            setTrainingProgram(migratedProgram);
+            localStorage.setItem('trainingProgram', JSON.stringify(migratedProgram));
+          } else {
+            setTrainingProgram(parsedProgram);
+          }
+        });
       }
 
       if (parsedLogs.length > 0) setWorkoutLogs(parsedLogs);
