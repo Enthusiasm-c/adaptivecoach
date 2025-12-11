@@ -22,7 +22,11 @@ const FitCubeWelcome: React.FC<FitCubeWelcomeProps> = ({ onComplete }) => {
             <div className="relative z-10 p-6 pb-8">
                 <button
                     onClick={onComplete}
-                    className="w-full py-5 bg-indigo-600 text-white rounded-2xl font-bold text-xl shadow-lg shadow-indigo-500/30 active:scale-[0.98] transition-transform flex items-center justify-center gap-2 group"
+                    className="w-full py-5 text-white rounded-full font-bold text-xl active:scale-[0.98] transition-transform flex items-center justify-center gap-2 group"
+                    style={{
+                        background: 'linear-gradient(90deg, #7F00FF 0%, #9F00FF 100%)',
+                        boxShadow: '0px 0px 20px rgba(127, 0, 255, 0.6)'
+                    }}
                 >
                     Начать тренировку
                     <ArrowRight className="group-hover:translate-x-1 transition-transform" size={22} />
