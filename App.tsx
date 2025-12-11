@@ -24,6 +24,7 @@ import {
   getEventNotificationMessage,
   getMesocycleSummary,
 } from './services/mesocycleService';
+import { runAutoMigration } from './services/migrationService';
 
 declare global {
   interface Window {
@@ -193,9 +194,27 @@ const App: React.FC = () => {
       const storedProgram = localStorage.getItem('trainingProgram');
       const storedLogs = localStorage.getItem('workoutLogs');
 
-      if (storedProfile) setOnboardingProfile(JSON.parse(storedProfile));
-      if (storedProgram) setTrainingProgram(JSON.parse(storedProgram));
-      if (storedLogs) setWorkoutLogs(JSON.parse(storedLogs));
+      const parsedProfile = storedProfile ? JSON.parse(storedProfile) : null;
+      const parsedProgram = storedProgram ? JSON.parse(storedProgram) : null;
+      const parsedLogs = storedLogs ? JSON.parse(storedLogs) : [];
+
+      if (parsedProfile) setOnboardingProfile(parsedProfile);
+      if (parsedProgram) setTrainingProgram(parsedProgram);
+      if (parsedLogs.length > 0) setWorkoutLogs(parsedLogs);
+
+      // Run automatic migration for existing users (silent, no UI)
+      if (parsedProfile && parsedProgram) {
+        runAutoMigration().then(result => {
+          if (result.migrated && result.program && result.mesocycleState) {
+            console.log('[App] Migration completed successfully');
+            setTrainingProgram(result.program);
+            setMesocycleState(result.mesocycleState);
+          } else if (result.error) {
+            console.warn('[App] Migration failed:', result.error);
+            // Keep using old program if migration fails
+          }
+        });
+      }
     } catch (e) {
       console.error("Failed to access or parse from localStorage", e);
       try {
