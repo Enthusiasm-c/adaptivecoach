@@ -367,6 +367,7 @@ export function convertToLegacyFormat(
           : goalConfig.restTimeIsolation;
 
         return {
+          exerciseId: exerciseDef.id,
           name: exerciseDef.name,
           exerciseType: isStrength ? 'strength' : 'bodyweight',
           sets: slot.sets,

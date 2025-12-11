@@ -121,6 +121,7 @@ export interface TelegramUser {
 export type ExerciseType = 'strength' | 'bodyweight' | 'cardio' | 'isometric';
 
 export interface Exercise {
+  exerciseId?: string; // ID for linking to ExerciseDefinition in exerciseDatabase
   name: string;
   exerciseType?: ExerciseType; // strength=needs weight, bodyweight/cardio/isometric=no weight needed
   sets: number;

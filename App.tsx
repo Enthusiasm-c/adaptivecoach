@@ -199,7 +199,21 @@ const App: React.FC = () => {
       const parsedLogs = storedLogs ? JSON.parse(storedLogs) : [];
 
       if (parsedProfile) setOnboardingProfile(parsedProfile);
-      if (parsedProgram) setTrainingProgram(parsedProgram);
+
+      // Migrate exercise names and descriptions if needed
+      if (parsedProgram) {
+        const { migrateExerciseNamesAndDescriptions, needsMigration } = await import('./utils/exerciseMigration');
+
+        if (needsMigration(parsedProgram)) {
+          console.log('[App] Running exercise migration...');
+          const migratedProgram = migrateExerciseNamesAndDescriptions(parsedProgram);
+          setTrainingProgram(migratedProgram);
+          localStorage.setItem('trainingProgram', JSON.stringify(migratedProgram));
+        } else {
+          setTrainingProgram(parsedProgram);
+        }
+      }
+
       if (parsedLogs.length > 0) setWorkoutLogs(parsedLogs);
 
       // Run automatic migration for existing users (silent, no UI)
