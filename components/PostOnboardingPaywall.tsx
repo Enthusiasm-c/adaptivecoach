@@ -1,64 +1,30 @@
-import React, { useState, useEffect } from 'react';
-import { Crown, Clock, Sparkles, Check, Dumbbell, MessageCircle, BarChart2, Shield, ChevronRight } from 'lucide-react';
+import React, { useEffect } from 'react';
+import { Crown, Sparkles, Check, Dumbbell, MessageCircle, BarChart2, Shield, ChevronRight } from 'lucide-react';
 import { hapticFeedback } from '../utils/hapticUtils';
 import apiService from '../services/apiService';
 
 interface PostOnboardingPaywallProps {
-    onStartTrial: () => void;
-    onContinueFree: () => void;
+    onContinue: () => void;
     userName?: string;
 }
 
 const PostOnboardingPaywall: React.FC<PostOnboardingPaywallProps> = ({
-    onStartTrial,
-    onContinueFree,
+    onContinue,
     userName
 }) => {
-    const [isStartingTrial, setIsStartingTrial] = useState(false);
-
     // Track impression on mount
     useEffect(() => {
-        apiService.analytics.track('paywall_impression', {
+        apiService.analytics.track('trial_info_shown', {
             source: 'post_onboarding'
         }).catch(() => {});
     }, []);
 
-    const handleStartTrial = async () => {
-        apiService.analytics.track('paywall_cta_click', {
-            source: 'post_onboarding',
-            action: 'start_trial'
-        }).catch(() => {});
-        hapticFeedback.impactOccurred('medium');
-        setIsStartingTrial(true);
-
-        try {
-            const result = await apiService.monetization.startTrial();
-            if (result.success) {
-                apiService.analytics.track('trial_started', {
-                    source: 'post_onboarding'
-                }).catch(() => {});
-                hapticFeedback.notificationOccurred('success');
-                onStartTrial();
-            } else {
-                hapticFeedback.notificationOccurred('error');
-                // Still proceed but without trial
-                onContinueFree();
-            }
-        } catch (error) {
-            console.error('Start trial error:', error);
-            hapticFeedback.notificationOccurred('error');
-            onContinueFree();
-        } finally {
-            setIsStartingTrial(false);
-        }
-    };
-
-    const handleContinueFree = () => {
-        apiService.analytics.track('paywall_dismissed', {
+    const handleContinue = () => {
+        apiService.analytics.track('trial_acknowledged', {
             source: 'post_onboarding'
         }).catch(() => {});
-        hapticFeedback.impactOccurred('light');
-        onContinueFree();
+        hapticFeedback.impactOccurred('medium');
+        onContinue();
     };
 
     const proFeatures = [
@@ -84,15 +50,15 @@ const PostOnboardingPaywall: React.FC<PostOnboardingPaywallProps> = ({
                     </p>
                 </div>
 
-                {/* Trial Card - Primary CTA */}
+                {/* Trial Info Card */}
                 <div className="bg-gradient-to-br from-indigo-900/50 to-purple-900/50 rounded-3xl p-6 border border-indigo-500/30 mb-4">
                     <div className="flex items-center gap-3 mb-4">
                         <div className="w-12 h-12 bg-indigo-500/20 rounded-xl flex items-center justify-center">
                             <Crown size={24} className="text-yellow-400" fill="currentColor" />
                         </div>
                         <div>
-                            <p className="font-bold text-white">14 дней Pro бесплатно</p>
-                            <p className="text-sm text-indigo-300">Попробуй все возможности</p>
+                            <p className="font-bold text-white">Пробный период Pro активирован!</p>
+                            <p className="text-sm text-indigo-300">14 дней ИЛИ 5 тренировок</p>
                         </div>
                     </div>
 
@@ -106,34 +72,20 @@ const PostOnboardingPaywall: React.FC<PostOnboardingPaywallProps> = ({
                         ))}
                     </div>
 
+                    <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-xl p-3 mb-4">
+                        <p className="text-xs text-indigo-200">
+                            Триал закончится когда наступит первое из двух условий. Используйте все возможности!
+                        </p>
+                    </div>
+
                     <button
-                        onClick={handleStartTrial}
-                        disabled={isStartingTrial}
-                        className="w-full py-4 bg-gradient-to-r from-indigo-600 to-violet-600 rounded-2xl font-bold text-white shadow-lg shadow-indigo-500/30 active:scale-[0.98] transition-transform flex items-center justify-center gap-2 disabled:opacity-50"
+                        onClick={handleContinue}
+                        className="w-full py-4 bg-gradient-to-r from-indigo-600 to-violet-600 rounded-2xl font-bold text-white shadow-lg shadow-indigo-500/30 active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
                     >
-                        {isStartingTrial ? (
-                            <span className="animate-pulse">Активация...</span>
-                        ) : (
-                            <>
-                                <Sparkles size={18} />
-                                Начать бесплатный триал
-                            </>
-                        )}
+                        <Sparkles size={18} />
+                        Начать тренировки
                     </button>
-
-                    <p className="text-center text-[10px] text-indigo-300/60 mt-2">
-                        Без оплаты. Отмена в любое время.
-                    </p>
                 </div>
-
-                {/* Continue Free - Secondary */}
-                <button
-                    onClick={handleContinueFree}
-                    className="w-full py-3 text-gray-500 text-sm font-medium flex items-center justify-center gap-1 hover:text-gray-400 transition-colors"
-                >
-                    Продолжить бесплатно (3 тренировки)
-                    <ChevronRight size={14} />
-                </button>
             </div>
         </div>
     );
