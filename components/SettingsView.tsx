@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
-import { OnboardingProfile, TelegramUser, Goal } from '../types';
-import { Trash2, Save, User, LogOut, Target, Calendar, Clock, Award, Loader2, MessageCircle } from 'lucide-react';
+import { OnboardingProfile, TelegramUser, Goal, Location } from '../types';
+import { Trash2, Save, User, LogOut, Target, Calendar, Clock, Award, Loader2, MessageCircle, MapPin, AlertTriangle } from 'lucide-react';
 import { apiService, Badge } from '../services/apiService';
 
 interface SettingsViewProps {
@@ -27,10 +27,12 @@ const tierBgColors: Record<string, string> = {
 
 const SettingsView: React.FC<SettingsViewProps> = ({ profile, telegramUser, onUpdateProfile, onResetAccount }) => {
     const [weight, setWeight] = useState(profile.weight);
-    const [age, setAge] = useState(profile.age);
     const [daysPerWeek, setDaysPerWeek] = useState(profile.daysPerWeek);
     const [timePerWorkout, setTimePerWorkout] = useState(profile.timePerWorkout);
     const [primaryGoal, setPrimaryGoal] = useState(profile.goals.primary);
+    const [selectedLocation, setSelectedLocation] = useState<Location>(profile.location);
+    const [pendingLocation, setPendingLocation] = useState<Location | null>(null);
+    const [isChangingLocation, setIsChangingLocation] = useState(false);
 
     const [isConfirmingReset, setIsConfirmingReset] = useState(false);
 
@@ -59,14 +61,23 @@ const SettingsView: React.FC<SettingsViewProps> = ({ profile, telegramUser, onUp
     }, [telegramUser]);
 
     const handleSave = () => {
+        const locationChanged = selectedLocation !== profile.location;
+
         onUpdateProfile({
             ...profile,
             weight,
-            age,
             daysPerWeek,
             timePerWorkout,
+            location: selectedLocation,
             goals: { ...profile.goals, primary: primaryGoal }
         });
+
+        if (locationChanged) {
+            setIsChangingLocation(true);
+            // The parent component (App.tsx) will handle program adaptation
+            // and reset this state via profile update
+            setTimeout(() => setIsChangingLocation(false), 3000);
+        }
     };
 
     return (
@@ -100,25 +111,14 @@ const SettingsView: React.FC<SettingsViewProps> = ({ profile, telegramUser, onUp
                     {/* Edit Section */}
                     <section className="space-y-6">
                         <h2 className="text-lg font-bold text-gray-300 px-2">Параметры тела</h2>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="bg-neutral-900 rounded-2xl p-4 border border-white/5">
-                                <label className="block text-xs text-gray-500 font-bold uppercase mb-2">Вес (кг)</label>
-                                <input 
-                                    type="number" 
-                                    value={weight} 
-                                    onChange={(e) => setWeight(parseFloat(e.target.value))} 
-                                    className="w-full bg-neutral-800 border border-white/10 rounded-xl p-3 text-xl font-bold focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none text-center"
-                                />
-                            </div>
-                            <div className="bg-neutral-900 rounded-2xl p-4 border border-white/5">
-                                <label className="block text-xs text-gray-500 font-bold uppercase mb-2">Возраст</label>
-                                <input 
-                                    type="number" 
-                                    value={age} 
-                                    onChange={(e) => setAge(parseInt(e.target.value))} 
-                                    className="w-full bg-neutral-800 border border-white/10 rounded-xl p-3 text-xl font-bold focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none text-center"
-                                />
-                            </div>
+                        <div className="bg-neutral-900 rounded-2xl p-4 border border-white/5">
+                            <label className="block text-xs text-gray-500 font-bold uppercase mb-2">Вес (кг)</label>
+                            <input
+                                type="number"
+                                value={weight}
+                                onChange={(e) => setWeight(parseFloat(e.target.value))}
+                                className="w-full bg-neutral-800 border border-white/10 rounded-xl p-3 text-xl font-bold focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none text-center"
+                            />
                         </div>
 
                         <h2 className="text-lg font-bold text-gray-300 px-2 pt-4">Режим тренировок</h2>
@@ -192,11 +192,53 @@ const SettingsView: React.FC<SettingsViewProps> = ({ profile, telegramUser, onUp
                             </div>
                         </div>
 
+                        {/* Location */}
+                        <div className="bg-neutral-900 rounded-2xl p-4 border border-white/5">
+                            <div className="flex items-center gap-2 mb-3">
+                                <MapPin size={16} className="text-indigo-400"/>
+                                <label className="text-sm font-bold text-gray-300">Место тренировок</label>
+                            </div>
+                            <div className="space-y-2">
+                                {Object.values(Location).map(loc => (
+                                    <button
+                                        key={loc}
+                                        onClick={() => {
+                                            if (loc !== selectedLocation) {
+                                                setPendingLocation(loc);
+                                            }
+                                        }}
+                                        className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-all ${
+                                            selectedLocation === loc
+                                            ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/50'
+                                            : 'bg-neutral-800 text-gray-500 hover:bg-neutral-700'
+                                        }`}
+                                    >
+                                        {loc}
+                                    </button>
+                                ))}
+                            </div>
+                            {selectedLocation !== profile.location && (
+                                <p className="mt-3 text-xs text-amber-400 flex items-center gap-1">
+                                    <AlertTriangle size={12} />
+                                    Программа будет адаптирована под новое место
+                                </p>
+                            )}
+                        </div>
+
                         <button
                             onClick={handleSave}
-                            className="w-full bg-white text-black font-bold py-4 rounded-2xl flex items-center justify-center gap-2 hover:bg-gray-200 transition shadow-lg shadow-white/10"
+                            disabled={isChangingLocation}
+                            className="w-full bg-white text-black font-bold py-4 rounded-2xl flex items-center justify-center gap-2 hover:bg-gray-200 transition shadow-lg shadow-white/10 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            <Save size={18} /> Сохранить изменения
+                            {isChangingLocation ? (
+                                <>
+                                    <Loader2 size={18} className="animate-spin" /> Адаптируем программу...
+                                </>
+                            ) : (
+                                <>
+                                    <Save size={18} /> Сохранить изменения
+                                </>
+                            )}
                         </button>
                     </section>
 
@@ -311,6 +353,50 @@ const SettingsView: React.FC<SettingsViewProps> = ({ profile, telegramUser, onUp
                     Сотрудничество: @domashenkod
                 </button>
             </div>
+
+            {/* Location Change Confirmation Modal */}
+            {pendingLocation && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
+                    <div className="bg-neutral-900 border border-white/10 rounded-3xl p-6 max-w-sm w-full animate-slide-up">
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className="w-12 h-12 bg-amber-500/20 rounded-full flex items-center justify-center">
+                                <MapPin size={24} className="text-amber-400" />
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-bold text-white">Сменить место?</h3>
+                                <p className="text-gray-400 text-sm">Программа будет адаптирована</p>
+                            </div>
+                        </div>
+
+                        <div className="bg-neutral-800/50 rounded-xl p-4 mb-4">
+                            <p className="text-gray-400 text-sm mb-2">Новое место:</p>
+                            <p className="text-white font-bold">{pendingLocation}</p>
+                        </div>
+
+                        <p className="text-gray-400 text-sm mb-6">
+                            Упражнения будут заменены на подходящие для нового места тренировок. Твои веса и прогресс сохранятся где это возможно.
+                        </p>
+
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => setPendingLocation(null)}
+                                className="flex-1 py-3 bg-neutral-800 text-white rounded-xl font-bold hover:bg-neutral-700 transition"
+                            >
+                                Отмена
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setSelectedLocation(pendingLocation);
+                                    setPendingLocation(null);
+                                }}
+                                className="flex-1 py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-500 transition"
+                            >
+                                Подтвердить
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

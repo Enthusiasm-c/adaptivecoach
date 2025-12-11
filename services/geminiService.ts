@@ -967,3 +967,154 @@ export const getStrengthInsights = async (
 
     return extractText(response);
 };
+
+// ============================================
+// LOCATION ADAPTATION
+// ============================================
+
+// Equipment available at each location
+const LOCATION_EQUIPMENT_MAP: { [key in Location]: string[] } = {
+    [Location.CommercialGym]: ['штанга', 'гантели', 'тренажёры', 'кабели', 'гири', 'EZ-гриф', 'собственный вес'],
+    [Location.HomeGym]: ['штанга', 'гантели', 'гири', 'собственный вес'],
+    [Location.Bodyweight]: ['собственный вес', 'резиновые петли'],
+    [Location.FitCube]: ['гантели до 20кг', 'гири', 'резиновые петли', 'TRX', 'турник', 'медбол', 'собственный вес'],
+};
+
+/**
+ * Adapt existing training program for a new location
+ * Replaces incompatible exercises with suitable alternatives
+ */
+export const adaptProgramForLocation = async (
+    program: TrainingProgram,
+    newLocation: Location,
+    profile: OnboardingProfile
+): Promise<TrainingProgram> => {
+    const availableEquipment = LOCATION_EQUIPMENT_MAP[newLocation];
+
+    // Build prompt for AI to adapt exercises
+    const exerciseList = program.sessions.flatMap(session =>
+        session.exercises.map(ex => ({
+            sessionName: session.name,
+            exercise: ex
+        }))
+    );
+
+    const equipmentDescription = newLocation === Location.FitCube ? FITCUBE_EQUIPMENT : '';
+
+    const prompt = `
+Ты — опытный фитнес-тренер. Пользователь меняет место тренировок.
+
+НОВОЕ МЕСТО: ${newLocation}
+ДОСТУПНОЕ ОБОРУДОВАНИЕ: ${availableEquipment.join(', ')}
+${equipmentDescription}
+
+ТЕКУЩИЕ УПРАЖНЕНИЯ В ПРОГРАММЕ:
+${JSON.stringify(exerciseList.map(e => ({
+    session: e.sessionName,
+    name: e.exercise.name,
+    sets: e.exercise.sets,
+    reps: e.exercise.reps,
+    weight: e.exercise.weight
+})), null, 2)}
+
+ЗАДАЧА:
+Проверь каждое упражнение. Если оно НЕ подходит для нового места (нужно недоступное оборудование), замени его на подходящую альтернативу.
+
+ПРАВИЛА ЗАМЕНЫ:
+1. Сохраняй целевую мышечную группу
+2. Сохраняй примерный уровень сложности
+3. Если возможно, сохраняй веса (или адаптируй под новое оборудование)
+4. Для ФИТКУБ: гантели максимум 20 кг!
+5. Для домашних тренировок без оборудования: используй вариации с собственным весом
+
+ВАЖНО: Верни ПОЛНЫЙ список упражнений в JSON формате, включая те которые не менялись.
+`;
+
+    const response = await callGeminiProxy(`/v1beta/models/${GEMINI_MODEL}:generateContent`, {
+        contents: prompt,
+        generationConfig: {
+            responseMimeType: 'application/json',
+            responseSchema: {
+                type: Type.OBJECT,
+                properties: {
+                    adaptedExercises: {
+                        type: Type.ARRAY,
+                        items: {
+                            type: Type.OBJECT,
+                            properties: {
+                                sessionName: { type: Type.STRING },
+                                originalName: { type: Type.STRING },
+                                newName: { type: Type.STRING },
+                                newDescription: { type: Type.STRING },
+                                sets: { type: Type.INTEGER },
+                                reps: { type: Type.STRING },
+                                weight: { type: Type.NUMBER },
+                                rest: { type: Type.INTEGER },
+                                exerciseType: { type: Type.STRING },
+                                wasChanged: { type: Type.BOOLEAN }
+                            },
+                            required: ['sessionName', 'originalName', 'newName', 'sets', 'reps', 'weight', 'wasChanged']
+                        }
+                    }
+                },
+                required: ['adaptedExercises']
+            }
+        }
+    });
+
+    const text = extractText(response);
+    let adaptedData: { adaptedExercises: Array<{
+        sessionName: string;
+        originalName: string;
+        newName: string;
+        newDescription?: string;
+        sets: number;
+        reps: string;
+        weight: number;
+        rest?: number;
+        exerciseType?: string;
+        wasChanged: boolean;
+    }> };
+
+    try {
+        adaptedData = JSON.parse(text);
+    } catch (e) {
+        console.error('Failed to parse adaptation response:', e);
+        // Return original program if parsing fails
+        return program;
+    }
+
+    // Apply adaptations to program
+    const adaptedSessions = program.sessions.map(session => {
+        const adaptedExercises = session.exercises.map(exercise => {
+            const adaptation = adaptedData.adaptedExercises.find(
+                a => a.sessionName === session.name && a.originalName === exercise.name
+            );
+
+            if (adaptation && adaptation.wasChanged) {
+                return {
+                    ...exercise,
+                    name: adaptation.newName,
+                    description: adaptation.newDescription || exercise.description,
+                    sets: adaptation.sets,
+                    reps: adaptation.reps,
+                    weight: adaptation.weight,
+                    rest: adaptation.rest || exercise.rest,
+                    exerciseType: (adaptation.exerciseType as Exercise['exerciseType']) || exercise.exerciseType
+                };
+            }
+
+            return exercise;
+        });
+
+        return {
+            ...session,
+            exercises: adaptedExercises
+        };
+    });
+
+    return {
+        ...program,
+        sessions: adaptedSessions
+    };
+};

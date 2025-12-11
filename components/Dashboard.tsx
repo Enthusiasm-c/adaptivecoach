@@ -187,9 +187,12 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
         const hasLogToday = logs.some(l => new Date(l.date).toDateString() === dateStr);
         if (hasLogToday) return false; // Already done, so "no workout pending"
 
-        // 2. Check Schedule Preference
+        // 2. NEW: If user has never trained, allow first workout ANY day
+        // This prevents showing "Rest Day" to brand new users
+        if (logs.length === 0) return true;
+
+        // 3. Check Schedule Preference
         const dayOfWeek = today.getDay(); // 0=Sun, 1=Mon...
-        // Fix: Ensure we strictly follow preferred days
         return (profile.preferredDays || []).includes(dayOfWeek);
     };
 
@@ -547,13 +550,15 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
                                     <div>
                                         <div className="flex items-center gap-2 mb-2">
                                             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/10 text-white text-[10px] font-bold uppercase tracking-wider">
-                                                <CalendarIcon size={10} /> Сегодня
+                                                <CalendarIcon size={10} /> {logs.length === 0 ? 'Старт' : 'Сегодня'}
                                             </span>
                                             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/5 text-gray-400 text-[10px] font-bold uppercase tracking-wider">
                                                 <Clock size={10} /> ~{profile.timePerWorkout} мин
                                             </span>
                                         </div>
-                                        <h2 className="text-3xl font-black text-white leading-tight mb-2">{nextWorkout.name}</h2>
+                                        <h2 className="text-3xl font-black text-white leading-tight mb-2">
+                                            {logs.length === 0 ? 'Твоя первая тренировка!' : nextWorkout.name}
+                                        </h2>
                                     </div>
                                 </div>
 

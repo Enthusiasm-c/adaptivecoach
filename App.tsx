@@ -4,7 +4,7 @@ import { OnboardingProfile, TrainingProgram, WorkoutLog, ChatMessage, TelegramUs
 import Onboarding from './components/Onboarding';
 import Dashboard from './components/Dashboard';
 import FitCubeWelcome from './components/FitCubeWelcome';
-import { generateInitialPlan, adaptPlan, getChatbotResponse, currentApiKey, adjustProgramForPain } from './services/geminiService';
+import { generateInitialPlan, adaptPlan, getChatbotResponse, currentApiKey, adjustProgramForPain, adaptProgramForLocation } from './services/geminiService';
 import { apiService } from './services/apiService';
 import Chatbot from './components/Chatbot';
 import { AlertTriangle, RefreshCw, Copy, Settings, Globe, Brain, Dumbbell, Activity, CalendarCheck } from 'lucide-react';
@@ -496,10 +496,31 @@ const App: React.FC = () => {
     handleChatbotSend(message);
   };
 
-  const handleUpdateProfile = (newProfile: OnboardingProfile) => {
+  const handleUpdateProfile = async (newProfile: OnboardingProfile) => {
+      const locationChanged = onboardingProfile && newProfile.location !== onboardingProfile.location;
+
       setOnboardingProfile(newProfile);
       localStorage.setItem('onboardingProfile', JSON.stringify(newProfile));
-      setToastMessage("Профиль обновлен");
+
+      // If location changed, adapt the program
+      if (locationChanged && trainingProgram) {
+          setToastMessage("Адаптируем программу...");
+          try {
+              const adaptedProgram = await adaptProgramForLocation(
+                  trainingProgram,
+                  newProfile.location,
+                  newProfile
+              );
+              setTrainingProgram(adaptedProgram);
+              localStorage.setItem('trainingProgram', JSON.stringify(adaptedProgram));
+              setToastMessage("Программа адаптирована под новое место!");
+          } catch (error) {
+              console.error('Failed to adapt program for new location:', error);
+              setToastMessage("Профиль обновлен (адаптация программы не удалась)");
+          }
+      } else {
+          setToastMessage("Профиль обновлен");
+      }
   };
 
   const resetOnboarding = () => {
