@@ -583,14 +583,13 @@ export const generateInitialPlanV2 = async (profile: OnboardingProfile): Promise
         program = await fillMissingMusclesWithAI(program, profile, missingMuscles);
     }
 
-    // 5. Use AI to personalize weights based on user's known weights
-    if (profile.knownWeights && profile.knownWeights.length > 0) {
-        console.log('[ProgramGen V2] Personalizing weights with AI...');
-        try {
-            program = await personalizeWeightsWithAI(program, profile);
-        } catch (error) {
-            console.error('[ProgramGen V2] Weight personalization failed, using defaults:', error);
-        }
+    // 5. Use AI to personalize weights (ALWAYS - even for beginners without knownWeights)
+    // AI prompt already has instructions for beginners: "начни с лёгких весов (20-30кг жим, 40-50кг присед)"
+    console.log('[ProgramGen V2] Personalizing weights with AI...');
+    try {
+        program = await personalizeWeightsWithAI(program, profile);
+    } catch (error) {
+        console.error('[ProgramGen V2] Weight personalization failed, using defaults:', error);
     }
 
     console.log('[ProgramGen V2] Final program generated successfully');
