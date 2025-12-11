@@ -2,6 +2,8 @@ import React, { useMemo } from 'react';
 import { WorkoutLog, ExperienceLevel } from '../types';
 import { getVolumeSummary, MuscleVolumeData } from '../services/volumeTracker';
 import { TrendingUp, TrendingDown, Minus, Info, ChevronDown, ChevronUp, Target } from 'lucide-react';
+import { WORKOUT_THRESHOLDS } from '../constants/thresholds';
+import EmptyStateCard from './EmptyStateCard';
 
 interface VolumeTrackingCardProps {
   logs: WorkoutLog[];
@@ -94,17 +96,16 @@ const VolumeTrackingCard: React.FC<VolumeTrackingCardProps> = ({
     .filter(m => m.status === 'under')
     .slice(0, 3);
 
-  if (summary.status === 'no_data') {
+  if (summary.status === 'no_data' || logs.length < WORKOUT_THRESHOLDS.VOLUME_TRACKING) {
     return (
-      <div className="bg-neutral-900 border border-white/5 rounded-3xl p-5 shadow-lg">
-        <div className="flex items-center gap-2 mb-3 text-gray-300 font-bold text-sm">
-          <Target size={16} className="text-indigo-400" />
-          Объём по мышцам
-        </div>
-        <p className="text-gray-500 text-sm">
-          Завершите несколько тренировок, чтобы увидеть статистику объёма.
-        </p>
-      </div>
+      <EmptyStateCard
+        icon={<Target size={48} className="text-gray-600" />}
+        title="Объём по мышцам"
+        currentCount={logs.length}
+        requiredCount={WORKOUT_THRESHOLDS.VOLUME_TRACKING}
+        description="Узнаете, каким мышечным группам нужно больше внимания"
+        showProgress={true}
+      />
     );
   }
 

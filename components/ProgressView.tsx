@@ -13,11 +13,13 @@ import {
     calculateWeekComparison, getNextScheduledDay, pluralizeRu,
     formatKg, calculateWeightProgression, WeightProgressionEntry
 } from '../utils/progressUtils';
-import { Dumbbell, Flame, TrendingUp, TrendingDown, Minus, Trophy, Battery, PieChart as PieIcon, Calendar, Eye, Crown, Star, Activity, HeartPulse, ChevronLeft, ChevronRight, Check, Target, BarChart2, X, Repeat, Timer, AlertTriangle } from 'lucide-react';
+import { Dumbbell, Flame, TrendingUp, TrendingDown, Minus, Trophy, Battery, PieChart as PieIcon, Calendar, Crown, Star, Activity, HeartPulse, ChevronLeft, ChevronRight, Check, Target, BarChart2, X, Repeat, Timer, AlertTriangle } from 'lucide-react';
 import { hapticFeedback } from '../utils/hapticUtils';
 import BlurredContent from './BlurredContent';
 import CalibrationCard from './CalibrationCard';
 import VolumeTrackingCard from './VolumeTrackingCard';
+import EmptyStateCard from './EmptyStateCard';
+import { WORKOUT_THRESHOLDS } from '../constants/thresholds';
 
 interface ProgressViewProps {
     logs: WorkoutLog[];
@@ -28,90 +30,11 @@ interface ProgressViewProps {
     onOpenPremium?: () => void;
 }
 
-// --- Mock Data Generator ---
-const generateMockLogs = (): WorkoutLog[] => {
-    const logs: WorkoutLog[] = [];
-    const today = new Date();
-
-    // Create 12 workouts over the last 4 weeks (3 per week)
-    for (let i = 11; i >= 0; i--) {
-        const date = new Date(today);
-        date.setDate(date.getDate() - (i * 2.5)); // Every 2-3 days
-
-        // Fluctuate volume and readiness for realistic charts
-        const isStrongDay = i % 3 !== 0;
-        const volumeMultiplier = isStrongDay ? 1.1 : 0.9;
-        const strengthProgression = (12 - i) * 1.5; // Gradual increase
-
-        const readinessScore = isStrongDay ? 18 : 10; // Mix of Green and Red days
-
-        logs.push({
-            sessionId: `Тренировка ${12 - i}`,
-            date: date.toISOString(),
-            feedback: {
-                completion: WorkoutCompletion.Yes,
-                pain: { hasPain: false },
-                readiness: {
-                    sleep: isStrongDay ? 4 : 2,
-                    food: 4,
-                    stress: isStrongDay ? 4 : 2,
-                    soreness: isStrongDay ? 5 : 3,
-                    score: readinessScore,
-                    status: readinessScore > 15 ? 'Green' : 'Red'
-                }
-            },
-            completedExercises: [
-                {
-                    name: "Приседания со штангой",
-                    sets: 3,
-                    reps: "5",
-                    rest: 120,
-                    completedSets: [
-                        { reps: 5, weight: 100 + strengthProgression },
-                        { reps: 5, weight: 100 + strengthProgression },
-                        { reps: 5, weight: 100 + strengthProgression }
-                    ]
-                },
-                {
-                    name: "Жим лежа",
-                    sets: 3,
-                    reps: "8-10",
-                    rest: 90,
-                    completedSets: [
-                        { reps: 10, weight: 60 + (strengthProgression * 0.6) },
-                        { reps: 9, weight: 60 + (strengthProgression * 0.6) },
-                        { reps: 8, weight: 60 + (strengthProgression * 0.6) }
-                    ]
-                },
-                {
-                    name: "Становая тяга",
-                    sets: 1,
-                    reps: "5",
-                    rest: 180,
-                    completedSets: [
-                        { reps: 5, weight: 120 + (strengthProgression * 1.2) }
-                    ]
-                },
-                // Add variety for radar chart
-                ...(i % 2 === 0 ? [{
-                    name: "Подтягивания",
-                    sets: 3,
-                    reps: "10",
-                    rest: 60,
-                    completedSets: [{ reps: 10, weight: 0 }, { reps: 10, weight: 0 }, { reps: 8, weight: 0 }]
-                }] : [])
-            ]
-        });
-    }
-    return logs;
-};
+// Mock data generator removed - using real workout logs only
 
 const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProgram, preferredDays = [], profile, onOpenPremium }) => {
-    const isDemoMode = logs.length === 0;
-
-    const displayLogs = useMemo(() => {
-        return isDemoMode ? generateMockLogs() : logs;
-    }, [logs, isDemoMode]);
+    // Use real workout logs directly
+    const displayLogs = logs;
 
     const { currentStreak, bestStreak } = useMemo(() => calculateStreaks(displayLogs), [displayLogs]);
     const totalVolume = useMemo(() => calculateTotalVolume(displayLogs), [displayLogs]);
@@ -417,20 +340,7 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
             {/* Calendar Section */}
             {renderCalendar()}
 
-            {/* Demo Mode Banner */}
-            {isDemoMode && (
-                <div className="bg-indigo-500/10 border border-indigo-500/50 rounded-2xl p-4 flex items-start gap-3 animate-slide-up">
-                    <div className="p-2 bg-indigo-500 text-white rounded-lg mt-0.5">
-                        <Eye size={20} />
-                    </div>
-                    <div>
-                        <h3 className="font-bold text-white">Демонстрационный режим</h3>
-                        <p className="text-xs text-gray-400 mt-1 leading-relaxed">
-                            Показываем пример статистики. Начните тренироваться, чтобы увидеть свой реальный прогресс!
-                        </p>
-                    </div>
-                </div>
-            )}
+            {/* Demo Mode Banner removed - showing empty states instead */}
 
             {/* Calibration Card - shows progress toward strength analysis */}
             <CalibrationCard logs={displayLogs} />
@@ -553,7 +463,7 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
             </div>
 
             {/* Strength Progression Chart - Premium */}
-            {strengthData.data.length > 0 && strengthData.exercises.length > 0 && (
+            {logs.length >= WORKOUT_THRESHOLDS.STRENGTH_CHART && strengthData.data.length > 0 && strengthData.exercises.length > 0 ? (
                 <BlurredContent
                     title="Динамика Силы"
                     description="Отслеживай прогресс в ключевых упражнениях"
@@ -589,11 +499,21 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
                         </div>
                     </div>
                 </BlurredContent>
-            )}
+            ) : logs.length < WORKOUT_THRESHOLDS.STRENGTH_CHART ? (
+                <EmptyStateCard
+                    icon={<TrendingUp size={48} className="text-gray-600" />}
+                    title="Динамика силы"
+                    currentCount={logs.length}
+                    requiredCount={WORKOUT_THRESHOLDS.STRENGTH_CHART}
+                    description="Отслеживайте прогресс в ключевых упражнениях (e1RM)"
+                    showProgress={true}
+                />
+            ) : null}
 
             {/* Split & Volume Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Weekly Volume with Comparison */}
+                {logs.length >= WORKOUT_THRESHOLDS.WEEKLY_VOLUME && weeklyVolumeData.length > 0 ? (
                 <div className="bg-neutral-900 border border-white/5 rounded-3xl p-5 shadow-lg">
                     <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center gap-2 text-gray-300 font-bold text-sm">
@@ -632,7 +552,7 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
 
                     <div className="h-40 -ml-2">
                         <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={weeklyVolumeData.length > 0 ? weeklyVolumeData : [{ name: 'Нет данных', volume: 0 }]} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
+                            <BarChart data={weeklyVolumeData} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
                                 <CartesianGrid stroke={chartTheme.grid} vertical={false} strokeDasharray="3 3" />
                                 <XAxis
                                     dataKey="name"
@@ -654,8 +574,18 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
                         </ResponsiveContainer>
                     </div>
                 </div>
+                ) : (
+                <EmptyStateCard
+                    icon={<BarChart2 size={48} className="text-gray-600" />}
+                    title="Объём за неделю"
+                    currentCount={logs.length}
+                    requiredCount={WORKOUT_THRESHOLDS.WEEKLY_VOLUME}
+                    description="Отслеживайте изменение нагрузки по неделям"
+                />
+                )}
 
                 {/* Split Distribution Pie */}
+                {logs.length >= WORKOUT_THRESHOLDS.VOLUME_DISTRIBUTION && volumeDistData.length > 0 ? (
                 <div className="bg-neutral-900 border border-white/5 rounded-3xl p-5 shadow-lg">
                     <div className="flex items-center gap-2 mb-2 text-gray-300 font-bold text-sm">
                         <PieIcon size={16} className="text-pink-400" />
@@ -681,6 +611,16 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
                         </ResponsiveContainer>
                     </div>
                 </div>
+                ) : (
+                <EmptyStateCard
+                    icon={<PieIcon size={48} className="text-gray-600" />}
+                    title="Акцент нагрузки"
+                    currentCount={logs.length}
+                    requiredCount={WORKOUT_THRESHOLDS.VOLUME_DISTRIBUTION}
+                    description="Визуализация баланса между группами мышц"
+                    showProgress={true}
+                />
+                )}
             </div>
 
             {/* Consistency Heatmap */}
@@ -705,7 +645,7 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
             </div>
 
             {/* Enhanced PR List with Dates */}
-            {personalRecords.length > 0 && (
+            {logs.length >= WORKOUT_THRESHOLDS.PERSONAL_RECORDS && personalRecords.length > 0 ? (
                 <div className="space-y-3">
                     <h3 className="font-bold text-white text-lg flex items-center gap-2">
                         <Trophy size={18} className="text-yellow-500" />
@@ -743,10 +683,19 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
                         ))}
                     </div>
                 </div>
-            )}
+            ) : logs.length < WORKOUT_THRESHOLDS.PERSONAL_RECORDS ? (
+                <EmptyStateCard
+                    icon={<Trophy size={48} className="text-gray-600" />}
+                    title="Личные рекорды"
+                    currentCount={logs.length}
+                    requiredCount={WORKOUT_THRESHOLDS.PERSONAL_RECORDS}
+                    description="Мы посчитаем ваш e1RM для каждого упражнения"
+                    showProgress={true}
+                />
+            ) : null}
 
             {/* Weight Progression Section - Focus on consistency */}
-            {weightProgression.length > 0 && (
+            {logs.length >= WORKOUT_THRESHOLDS.WEIGHT_PROGRESSION && weightProgression.length > 0 ? (
                 <div className="space-y-3">
                     <h3 className="font-bold text-white text-lg flex items-center gap-2">
                         <Activity size={18} className="text-blue-500" />
@@ -805,7 +754,16 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
                         ))}
                     </div>
                 </div>
-            )}
+            ) : logs.length < WORKOUT_THRESHOLDS.WEIGHT_PROGRESSION ? (
+                <EmptyStateCard
+                    icon={<TrendingUp size={48} className="text-gray-600" />}
+                    title="Динамика весов"
+                    currentCount={logs.length}
+                    requiredCount={WORKOUT_THRESHOLDS.WEIGHT_PROGRESSION}
+                    description="Отслеживайте рост рабочих весов в ключевых упражнениях"
+                    showProgress={true}
+                />
+            ) : null}
 
             {/* Workout Preview Modal (for planned days) */}
             {workoutToPreview && (
