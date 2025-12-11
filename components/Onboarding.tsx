@@ -617,8 +617,15 @@ const LastWorkoutStep = ({ profile, updateProfile }: any) => (
 );
 
 const KnownWeightsStep = ({ profile, updateProfile, setProfile }: any) => {
-    // Default exercises to ask about
-    const exercises = ["Жим лежа", "Приседания", "Становая тяга"];
+    // Default exercises with hints
+    const exercises = [
+        { name: "Жим лежа", hint: "Максимальный вес штанги на грудь" },
+        { name: "Приседания", hint: "Максимальный вес штанги на плечах" },
+        { name: "Становая тяга", hint: "Максимальный вес штанги от пола" }
+    ];
+
+    // Quick selection weights
+    const quickWeights = [20, 30, 40, 50, 60, 80, 100];
 
     const handleWeightChange = (exercise: string, weight: number) => {
         const currentWeights = profile.knownWeights || [];
@@ -638,31 +645,53 @@ const KnownWeightsStep = ({ profile, updateProfile, setProfile }: any) => {
             <div className="space-y-2">
                 <h2 className="text-3xl font-black tracking-tight">Рабочие веса</h2>
                 <p className="text-gray-400 text-sm">
-                    Укажите свои рабочие веса, если помните. Можно оставить пустыми — мы подберём на первой тренировке.
+                    Введите максимальный вес, с которым вы можете выполнить 5 повторений в следующих упражнениях.
+                </p>
+                <p className="text-gray-500 text-xs">
+                    Если вы новичок или не уверены, оставьте поле пустым — система подберёт подходящую нагрузку автоматически.
                 </p>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-5">
                 {exercises.map(ex => (
-                    <div key={ex}>
-                        <label className="block mb-2 text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">{ex}</label>
+                    <div key={ex.name}>
+                        <label className="block mb-1 text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">
+                            {ex.name}
+                        </label>
+                        <p className="text-[10px] text-gray-600 mb-2 ml-1">{ex.hint}</p>
+
+                        {/* Quick Selection Buttons */}
+                        <div className="flex gap-2 mb-2 overflow-x-auto pb-1">
+                            {quickWeights.map(weight => (
+                                <button
+                                    key={weight}
+                                    type="button"
+                                    onClick={() => handleWeightChange(ex.name, weight)}
+                                    className={`px-3 py-1.5 text-xs rounded-lg border flex-shrink-0 transition-all ${
+                                        getWeight(ex.name) === weight
+                                            ? 'bg-indigo-600 border-indigo-600 text-white font-bold'
+                                            : 'bg-neutral-900 border-neutral-700 text-gray-400 hover:border-neutral-600'
+                                    }`}
+                                >
+                                    {weight}
+                                </button>
+                            ))}
+                        </div>
+
+                        {/* Manual Input */}
                         <div className="relative">
                             <input
                                 type="number"
-                                value={getWeight(ex)}
-                                onChange={e => handleWeightChange(ex, parseInt(e.target.value) || 0)}
+                                value={getWeight(ex.name)}
+                                onChange={e => handleWeightChange(ex.name, parseInt(e.target.value) || 0)}
                                 className="w-full p-4 pr-12 bg-neutral-900 rounded-2xl border border-neutral-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none text-xl font-bold"
-                                placeholder="—"
+                                placeholder="Или введите свой вес"
                             />
                             <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold">кг</span>
                         </div>
                     </div>
                 ))}
             </div>
-
-            <p className="text-center text-xs text-gray-600">
-                Не волнуйтесь, если не помните — AI подберёт оптимальные веса
-            </p>
         </div>
     );
 };
