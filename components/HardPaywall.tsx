@@ -167,7 +167,7 @@ const HardPaywall: React.FC<HardPaywallProps> = ({
                             {[
                                 'Безлимитные тренировки',
                                 'AI-тренер в чате',
-                                'Защита стрика',
+                                'Сохранение серии',
                                 'Детальная аналитика'
                             ].map((benefit, idx) => (
                                 <div key={idx} className="flex items-center gap-1.5">

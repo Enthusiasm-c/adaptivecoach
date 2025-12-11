@@ -136,7 +136,7 @@ const PremiumModal: React.FC<PremiumModalProps> = ({
         { name: "Безлимитные тренировки", free: "3 шт", pro: true },
         { name: "AI-тренер в чате", free: false, pro: true },
         { name: "Детальный анализ силы", free: false, pro: true },
-        { name: "Защита стрика", free: false, pro: true },
+        { name: "Сохранение серии (1 пропуск)", free: false, pro: true },
         { name: "Команды и лидерборды", free: false, pro: true },
     ];
 
@@ -161,7 +161,9 @@ const PremiumModal: React.FC<PremiumModalProps> = ({
 
                     <div className="relative z-10 flex flex-col items-center">
                         <Crown size={40} className="text-yellow-400 drop-shadow-[0_0_15px_rgba(250,204,21,0.5)] mb-1" fill="currentColor" />
-                        <h2 className="text-xl font-black text-white tracking-tight uppercase">Sensei Pro</h2>
+                        <h2 className="text-2xl font-black text-white tracking-tight italic">
+                            SENSEI<span className="text-indigo-500">.PRO</span>
+                        </h2>
                         {isInTrial && (
                             <div className="mt-1 px-2 py-0.5 bg-green-500/20 border border-green-500/30 rounded-full flex items-center gap-1">
                                 <Clock size={10} className="text-green-400" />

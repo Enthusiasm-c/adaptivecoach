@@ -65,7 +65,7 @@ const PostOnboardingPaywall: React.FC<PostOnboardingPaywallProps> = ({
         { icon: Dumbbell, text: 'Безлимитные тренировки' },
         { icon: MessageCircle, text: 'AI-тренер в чате' },
         { icon: BarChart2, text: 'Детальная аналитика силы' },
-        { icon: Shield, text: 'Защита стрика' },
+        { icon: Shield, text: 'Сохранение серии (1 пропуск)' },
     ];
 
     return (

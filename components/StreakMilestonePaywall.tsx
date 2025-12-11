@@ -113,9 +113,9 @@ const StreakMilestonePaywall: React.FC<StreakMilestonePaywallProps> = ({
                             <Shield size={24} className="text-indigo-400" />
                         </div>
                         <div className="flex-1">
-                            <p className="text-white font-bold text-sm">Защита стрика</p>
+                            <p className="text-white font-bold text-sm">Сохранение серии</p>
                             <p className="text-gray-400 text-xs">
-                                Pro пользователи сохраняют стрик в 3 раза дольше
+                                Можно пропустить 1 тренировку без потери серии
                             </p>
                         </div>
                     </div>

@@ -79,7 +79,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
 
                 // Show notification if shield was auto-used
                 if (limitStatus.shieldAutoUsed) {
-                    setShieldNotification('Защита стрика активирована! Твой стрик сохранён.');
+                    setShieldNotification('Сохранение серии активировано! Ваша серия тренировок сохранена.');
                     hapticFeedback.notificationOccurred('success');
                     // Auto-dismiss after 5 seconds
                     setTimeout(() => setShieldNotification(null), 5000);
@@ -826,7 +826,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
             }`}>
                 <NavButton
                     icon={<Dumbbell size={24} />}
-                    label="Today"
+                    label="Сегодня"
                     isActive={activeView === 'today'}
                     onClick={() => handleViewChange('today')}
                 />
@@ -838,13 +838,13 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
                 />
                 <NavButton
                     icon={<BarChart2 size={24} />}
-                    label="Progress"
+                    label="Прогресс"
                     isActive={activeView === 'progress'}
                     onClick={() => handleViewChange('progress')}
                 />
                 <NavButton
                     icon={<Settings size={24} />}
-                    label="Settings"
+                    label="Настройки"
                     isActive={activeView === 'settings'}
                     onClick={() => handleViewChange('settings')}
                 />
