@@ -1,5 +1,5 @@
 import React from 'react';
-import { Dumbbell, ChevronRight } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 
 interface FitCubeWelcomeProps {
     onComplete: () => void;
@@ -10,50 +10,53 @@ const FitCubeWelcome: React.FC<FitCubeWelcomeProps> = ({ onComplete }) => {
         <div
             className="min-h-screen flex flex-col relative"
             style={{
-                backgroundImage: `url('/fitcube-bg.jpg')`,
+                backgroundImage: `url('/fitcube-bg.jpeg')`,
                 backgroundSize: 'cover',
                 backgroundPosition: 'center'
             }}
         >
-            {/* Тёмный overlay для читаемости текста */}
-            <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/80" />
+            {/* Градиент overlay снизу для текста */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent" />
 
-            <div className="flex-1 flex flex-col items-center justify-center p-6 text-center relative z-10">
-                {/* Логотипы */}
-                <div className="flex items-center gap-4 mb-8">
+            {/* Верхняя часть — КОЛЛАБОРАЦИЯ */}
+            <div className="pt-12 pb-6 text-center relative z-10">
+                <p className="text-white/70 text-xs font-bold tracking-[0.3em] uppercase mb-4">
+                    Коллаборация
+                </p>
+                <div className="flex items-center justify-center gap-6">
                     {/* Sensei.AI Logo */}
                     <img
                         src="/sensei-logo.jpeg"
                         alt="Sensei.AI"
-                        className="h-20 w-auto object-contain drop-shadow-lg rounded-2xl"
+                        className="h-8 w-auto object-contain"
                     />
-                    <span className="text-white/60 text-2xl font-light">×</span>
-                    {/* FitCube Icon */}
-                    <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center shadow-lg">
-                        <Dumbbell size={32} className="text-white" />
+                    {/* ФИТКУБ Logo — если есть, заменить на img */}
+                    <div className="flex items-center gap-2 text-white font-black text-lg tracking-wide">
+                        <span className="text-violet-400">⚡</span>
+                        <span>ФИТКУБ</span>
                     </div>
                 </div>
-
-                <h1 className="text-3xl font-black text-white mb-2 drop-shadow-lg">
-                    Добро пожаловать в ФИТКУБ!
-                </h1>
-
-                <p className="text-white/90 text-lg mb-4 drop-shadow">
-                    Коллаборация Sensei AI и ФИТКУБ
-                </p>
-
-                <p className="text-white/80 max-w-sm leading-relaxed drop-shadow">
-                    Мы подберём персональную 45-минутную тренировку специально под оборудование этого куба и твои цели.
-                </p>
             </div>
 
-            <div className="p-6 pb-8 relative z-10">
+            {/* Spacer — занимает место под фото */}
+            <div className="flex-1" />
+
+            {/* Нижняя часть — текст и кнопка */}
+            <div className="relative z-10 p-6 pb-8">
+                <h1 className="text-4xl font-black text-white mb-2 leading-tight tracking-tight">
+                    ИНВЕНТАРЬ<br />СИНХРОНИЗИРОВАН
+                </h1>
+
+                <p className="text-white/60 text-lg mb-8 italic">
+                    Персональная программа под этот зал готова
+                </p>
+
                 <button
                     onClick={onComplete}
-                    className="w-full py-4 bg-white text-gray-900 font-bold rounded-2xl text-lg shadow-lg active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
+                    className="w-full py-5 bg-white text-black rounded-2xl font-bold text-xl shadow-[0_0_40px_rgba(255,255,255,0.1)] active:scale-[0.98] transition-transform flex items-center justify-center gap-2 group"
                 >
-                    Начать
-                    <ChevronRight size={20} />
+                    Начать тренировку
+                    <ArrowRight className="group-hover:translate-x-1 transition-transform" size={22} />
                 </button>
             </div>
         </div>
