@@ -4,7 +4,6 @@ import { OnboardingProfile, Gender, ExperienceLevel, Goal, Location, Intensity, 
 import { calculateProjectedOutcome } from '../utils/progressUtils';
 import { hapticFeedback } from '../utils/hapticUtils';
 import SkeletonLoader from './SkeletonLoader';
-import PostOnboardingPaywall from './PostOnboardingPaywall';
 import { ChevronLeft, ArrowRight, Check, Dumbbell, User, Heart, MapPin, Target, CalendarDays, Zap, ShieldAlert, Thermometer, Activity, Ruler, Weight, Laptop, Footprints, Flame, Trophy } from 'lucide-react';
 
 interface OnboardingProps {
@@ -37,7 +36,6 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete, isLoading, error, p
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [analysisText, setAnalysisText] = useState("Анализ метаболизма...");
     const [showPrediction, setShowPrediction] = useState(false);
-    const [showPaywall, setShowPaywall] = useState(false);
 
     // Set FitCube presets when partnerSource is 'fitcube'
     useEffect(() => {
@@ -95,8 +93,8 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete, isLoading, error, p
     };
 
     const handleSubmit = () => {
-        // Show paywall before completing
-        setShowPaywall(true);
+        // Сразу завершаем онбординг без paywall
+        completeOnboarding();
     };
 
     const completeOnboarding = (withTrial: boolean = false) => {
@@ -117,7 +115,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete, isLoading, error, p
 
         switch (step) {
             case 0: return <WelcomeStep onNext={nextStep} />;
-            case 1: return <GenderStep profile={profile} updateProfile={updateProfile} />;
+            case 1: return <GenderStep profile={profile} updateProfile={updateProfile} setProfile={setProfile} />;
             case 2: return <BiometricsStep profile={profile} updateProfile={updateProfile} />;
             case 3: return <GoalStep profile={profile} updateProfile={updateProfile} setProfile={setProfile} />;
             case 4: return <ActivityStep profile={profile} updateProfile={updateProfile} />;
@@ -181,8 +179,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete, isLoading, error, p
                                     onClick={() => { nextStep(); hapticFeedback.impactOccurred('light'); }}
                                     disabled={
                                         isLoading ||
-                                        (step === 6 && (!profile.preferredDays || profile.preferredDays.length === 0)) ||
-                                        (step === 8 && Array.isArray(profile.knownWeights) && !profile.knownWeights.some((w: KnownWeight) => w.weight > 0))
+                                        (step === 6 && (!profile.preferredDays || profile.preferredDays.length === 0))
                                     }
                                     className="flex-1 py-4 bg-white text-black rounded-2xl hover:bg-gray-200 transition disabled:opacity-50 disabled:bg-neutral-800 disabled:text-gray-500 font-bold text-lg flex items-center justify-center gap-2 shadow-lg shadow-white/10 active:scale-[0.98]"
                                 >
@@ -207,14 +204,6 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete, isLoading, error, p
                 )}
             </div>
 
-            {/* Post-Onboarding Paywall */}
-            {showPaywall && (
-                <PostOnboardingPaywall
-                    onStartTrial={() => completeOnboarding(true)}
-                    onContinueFree={() => completeOnboarding(false)}
-                    userName={window.Telegram?.WebApp?.initDataUnsafe?.user?.first_name}
-                />
-            )}
         </div>
     );
 };
@@ -262,33 +251,52 @@ const WelcomeStep = ({ onNext }: { onNext: () => void }) => (
     </div>
 );
 
-const GenderStep = ({ profile, updateProfile }: any) => (
-    <div className="space-y-8 animate-slide-up">
-        <div className="space-y-2">
-            <h2 className="text-3xl font-black tracking-tight">Кто вы?</h2>
-            <p className="text-gray-500">Это нужно для расчета метаболизма.</p>
-        </div>
+const GenderStep = ({ profile, updateProfile, setProfile }: any) => {
+    const handleGenderSelect = (g: Gender) => {
+        // Обновляем пол и устанавливаем вес по умолчанию в зависимости от пола
+        const defaultWeight = g === Gender.Female ? 60 : 80;
+        const defaultTargetWeight = profile.goals?.primary === Goal.LoseFat
+            ? defaultWeight - 5
+            : profile.goals?.primary === Goal.BuildMuscle
+                ? defaultWeight + 5
+                : defaultWeight;
 
-        <div className="space-y-4">
-            {Object.values(Gender).map(g => (
-                <button
-                    key={g}
-                    onClick={() => updateProfile('gender', g)}
-                    className={`w-full p-6 rounded-3xl border flex items-center justify-between transition-all font-bold text-xl ${profile.gender === g
-                        ? 'bg-white text-black border-white shadow-lg shadow-white/10'
-                        : 'bg-neutral-900 text-gray-500 border-neutral-800'
-                        }`}
-                >
-                    <span className="flex items-center gap-4">
-                        {g === Gender.Male ? <User size={24} /> : <Heart size={24} />}
-                        {g}
-                    </span>
-                    {profile.gender === g && <Check size={24} />}
-                </button>
-            ))}
+        setProfile((prev: any) => ({
+            ...prev,
+            gender: g,
+            weight: defaultWeight,
+            targetWeight: defaultTargetWeight
+        }));
+    };
+
+    return (
+        <div className="space-y-8 animate-slide-up">
+            <div className="space-y-2">
+                <h2 className="text-3xl font-black tracking-tight">Кто вы?</h2>
+                <p className="text-gray-500">Это нужно для расчета метаболизма.</p>
+            </div>
+
+            <div className="space-y-4">
+                {Object.values(Gender).map(g => (
+                    <button
+                        key={g}
+                        onClick={() => handleGenderSelect(g)}
+                        className={`w-full p-6 rounded-3xl border flex items-center justify-between transition-all font-bold text-xl ${profile.gender === g
+                            ? 'bg-white text-black border-white shadow-lg shadow-white/10'
+                            : 'bg-neutral-900 text-gray-500 border-neutral-800'
+                            }`}
+                    >
+                        <span className="flex items-center gap-4">
+                            {g === Gender.Male ? <User size={24} /> : <Heart size={24} />}
+                            {g}
+                        </span>
+                        {profile.gender === g && <Check size={24} />}
+                    </button>
+                ))}
+            </div>
         </div>
-    </div>
-);
+    );
+};
 
 const BiometricsStep = ({ profile, updateProfile }: any) => (
     <div className="space-y-8 animate-slide-up">
@@ -530,16 +538,18 @@ const LogisticsStep = ({ profile, updateProfile, setProfile }: any) => {
             <div>
                 <label className="block mb-3 text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Оборудование</label>
                 <div className="space-y-2">
-                    {Object.values(Location).map(loc => (
-                        <SelectionCard
-                            key={loc}
-                            selected={profile.location === loc}
-                            onClick={() => updateProfile('location', loc)}
-                            className="py-4"
-                        >
-                            <span className="text-sm font-bold">{loc}</span>
-                        </SelectionCard>
-                    ))}
+                    {Object.values(Location)
+                        .filter(loc => loc !== Location.HomeGym)
+                        .map(loc => (
+                            <SelectionCard
+                                key={loc}
+                                selected={profile.location === loc}
+                                onClick={() => updateProfile('location', loc)}
+                                className="py-4"
+                            >
+                                <span className="text-sm font-bold">{loc}</span>
+                            </SelectionCard>
+                        ))}
                 </div>
             </div>
         </div>
@@ -608,15 +618,15 @@ const LastWorkoutStep = ({ profile, updateProfile }: any) => (
 );
 
 const KnownWeightsStep = ({ profile, updateProfile, setProfile }: any) => {
-    const [knowsWeights, setKnowsWeights] = useState<boolean | null>(profile.knownWeights && profile.knownWeights.length > 0 ? true : null);
-
     // Default exercises to ask about
     const exercises = ["Жим лежа", "Приседания", "Становая тяга"];
 
     const handleWeightChange = (exercise: string, weight: number) => {
         const currentWeights = profile.knownWeights || [];
         const otherWeights = currentWeights.filter((w: any) => w.exercise !== exercise);
-        const newWeights = [...otherWeights, { exercise, weight }];
+        const newWeights = weight > 0
+            ? [...otherWeights, { exercise, weight }]
+            : otherWeights;
         setProfile((prev: any) => ({ ...prev, knownWeights: newWeights }));
     };
 
@@ -628,65 +638,32 @@ const KnownWeightsStep = ({ profile, updateProfile, setProfile }: any) => {
         <div className="space-y-6 animate-slide-up">
             <div className="space-y-2">
                 <h2 className="text-3xl font-black tracking-tight">Рабочие веса</h2>
-                <p className="text-gray-500">Помните свои веса в базовых упражнениях?</p>
+                <p className="text-gray-400 text-sm">
+                    Укажите свои рабочие веса, если помните. Можно оставить пустыми — мы подберём на первой тренировке.
+                </p>
             </div>
 
-            {knowsWeights === null ? (
-                <div className="grid grid-cols-2 gap-4">
-                    <button
-                        onClick={() => setKnowsWeights(false)}
-                        className="p-6 rounded-3xl border-2 border-neutral-800 bg-neutral-900 hover:border-gray-600 transition"
-                    >
-                        <span className="block text-2xl font-black mb-1 text-gray-400">Нет</span>
-                        <span className="text-xs text-gray-500 font-bold uppercase">Не помню</span>
-                    </button>
-                    <button
-                        onClick={() => {
-                            setKnowsWeights(true);
-                            // Set empty array as marker that user chose "Yes" - will be validated before next step
-                            setProfile((prev: any) => ({ ...prev, knownWeights: prev.knownWeights?.length > 0 ? prev.knownWeights : [] }));
-                        }}
-                        className="p-6 rounded-3xl border-2 border-indigo-500 bg-indigo-500/10 hover:bg-indigo-500/20 transition"
-                    >
-                        <span className="block text-2xl font-black mb-1 text-indigo-400">Да</span>
-                        <span className="text-xs text-gray-500 font-bold uppercase">Помню</span>
-                    </button>
-                </div>
-            ) : knowsWeights ? (
-                <div className="space-y-4 animate-fade-in">
-                    {exercises.map(ex => (
-                        <div key={ex}>
-                            <label className="block mb-2 text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">{ex} (кг)</label>
+            <div className="space-y-4">
+                {exercises.map(ex => (
+                    <div key={ex}>
+                        <label className="block mb-2 text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">{ex}</label>
+                        <div className="relative">
                             <input
                                 type="number"
                                 value={getWeight(ex)}
-                                onChange={e => handleWeightChange(ex, parseInt(e.target.value))}
-                                className="w-full p-4 bg-neutral-900 rounded-2xl border border-neutral-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none text-xl font-bold"
-                                placeholder="0"
+                                onChange={e => handleWeightChange(ex, parseInt(e.target.value) || 0)}
+                                className="w-full p-4 pr-12 bg-neutral-900 rounded-2xl border border-neutral-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none text-xl font-bold"
+                                placeholder="—"
                             />
+                            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold">кг</span>
                         </div>
-                    ))}
-                    <button
-                        onClick={() => {
-                            setKnowsWeights(null);
-                            setProfile((prev: any) => ({ ...prev, knownWeights: [] }));
-                        }}
-                        className="text-gray-500 text-xs font-bold hover:text-white mt-2 block text-center"
-                    >
-                        Сбросить выбор
-                    </button>
-                </div>
-            ) : (
-                <div className="bg-neutral-900 border border-white/5 rounded-3xl p-6 text-center animate-fade-in">
-                    <p className="text-gray-400 mb-4">Ничего страшного! Мы подберем веса на первой тренировке.</p>
-                    <button
-                        onClick={() => setKnowsWeights(true)}
-                        className="text-indigo-400 font-bold text-sm hover:underline"
-                    >
-                        Вспомнил, хочу ввести
-                    </button>
-                </div>
-            )}
+                    </div>
+                ))}
+            </div>
+
+            <p className="text-center text-xs text-gray-600">
+                Не волнуйтесь, если не помните — AI подберёт оптимальные веса
+            </p>
         </div>
     );
 };

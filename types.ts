@@ -28,7 +28,7 @@ export enum Location {
   CommercialGym = "Фитнес-клуб",
   HomeGym = "Домашний зал (штанга)",
   Bodyweight = "Дома (свой вес/резинки)",
-  FitCube = "FitCube",
+  FitCube = "ФИТКУБ",
 }
 
 export enum Intensity {
@@ -146,6 +146,10 @@ export interface ScheduleItem {
 export interface TrainingProgram {
   sessions: WorkoutSession[];
   schedule?: ScheduleItem[];
+  // Mesocycle tracking (Phase 3)
+  mesocycleId?: string;
+  mesocycleStartDate?: string;
+  currentMesocycleWeek?: number;
 }
 
 export interface CompletedSet {
@@ -172,6 +176,10 @@ export interface WorkoutFeedback {
     details?: string;
   };
   readiness?: ReadinessData; // Store how they felt before starting
+  // Autoregulation fields (RP-style feedback)
+  pumpQuality?: 1 | 2 | 3 | 4 | 5; // 1=no pump, 5=excellent pump
+  soreness24h?: 1 | 2 | 3 | 4 | 5; // 1=no soreness, 5=severe DOMS
+  performanceTrend?: 'improving' | 'stable' | 'declining'; // Weight progression
 }
 
 export interface WorkoutLog {

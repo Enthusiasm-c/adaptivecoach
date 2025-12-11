@@ -5,6 +5,7 @@ import ProgressView from './ProgressView';
 import SettingsView from './SettingsView';
 import SquadView from './SquadView';
 import ChatInputBar from './ChatInputBar';
+import MesocycleIndicator from './MesocycleIndicator';
 import { Dumbbell, Calendar as CalendarIcon, BarChart2, Settings, Play, ChevronRight, Info, Battery, Zap, Trophy, Users, Crown, Bot, MessageCircle, Flame, Activity, Clock, TrendingUp, Sparkles, MessageSquarePlus, HelpCircle, Coffee, Sun, Moon, Check, LayoutGrid, Shield, AlertTriangle } from 'lucide-react';
 import WorkoutPreviewModal from './WorkoutPreviewModal';
 import ReadinessModal from './ReadinessModal';
@@ -19,12 +20,14 @@ import { getDashboardInsight } from '../services/geminiService';
 import { hapticFeedback } from '../utils/hapticUtils';
 import SkeletonLoader from './SkeletonLoader';
 import apiService from '../services/apiService';
+import { MesocycleState } from '../services/mesocycleService';
 
 interface DashboardProps {
     profile: OnboardingProfile;
     logs: WorkoutLog[];
     program: TrainingProgram | null;
     telegramUser: TelegramUser | null;
+    mesocycleState: MesocycleState | null;
     onUpdateProgram: (program: TrainingProgram) => void;
     onUpdateProfile: (profile: OnboardingProfile) => void;
     onWorkoutComplete: (log: WorkoutLog) => void;
@@ -33,7 +36,7 @@ interface DashboardProps {
     onSendMessage: (message: string) => void;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramUser, onUpdateProgram, onUpdateProfile, onWorkoutComplete, onResetAccount, onOpenChat, onSendMessage }) => {
+const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramUser, mesocycleState, onUpdateProgram, onUpdateProfile, onWorkoutComplete, onResetAccount, onOpenChat, onSendMessage }) => {
     const [activeView, setActiveView] = useState<'today' | 'squad' | 'progress' | 'settings'>('today');
     const [activeWorkout, setActiveWorkout] = useState<string | null>(null);
     const [workoutToPreview, setWorkoutToPreview] = useState<WorkoutSession | null>(null);
@@ -509,6 +512,13 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
                         <span className="text-[10px] text-gray-500 font-bold uppercase">Всего</span>
                     </div>
                 </div>
+
+                {/* Mesocycle Indicator */}
+                {mesocycleState && (
+                    <div className="col-span-2">
+                        <MesocycleIndicator mesocycleState={mesocycleState} />
+                    </div>
+                )}
 
                 {/* Trial Banner for users in trial */}
                 {workoutLimitStatus?.isInTrial && workoutLimitStatus.trialDaysLeft > 0 && (

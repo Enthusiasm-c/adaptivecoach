@@ -17,6 +17,7 @@ import { Dumbbell, Flame, TrendingUp, TrendingDown, Minus, Trophy, Battery, PieC
 import { hapticFeedback } from '../utils/hapticUtils';
 import BlurredContent from './BlurredContent';
 import CalibrationCard from './CalibrationCard';
+import VolumeTrackingCard from './VolumeTrackingCard';
 
 interface ProgressViewProps {
     logs: WorkoutLog[];
@@ -433,6 +434,14 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
 
             {/* Calibration Card - shows progress toward strength analysis */}
             <CalibrationCard logs={displayLogs} />
+
+            {/* Volume Tracking by Muscle Group */}
+            <VolumeTrackingCard
+                logs={displayLogs}
+                experienceLevel={profile?.experience}
+                isPro={profile?.isPro}
+                onOpenPremium={onOpenPremium}
+            />
 
             {/* Pain Diary Section */}
             {painLogs.length > 0 && (

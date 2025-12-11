@@ -1,11 +1,15 @@
 
 import { Type } from "@google/genai";
-import { OnboardingProfile, TrainingProgram, WorkoutLog, ChatMessage, Exercise, WorkoutSession, ChatResponse, ActivityLevel, StrengthInsightsData, Gender, CompletedExercise, Location } from '../types';
+import { OnboardingProfile, TrainingProgram, WorkoutLog, ChatMessage, Exercise, WorkoutSession, ChatResponse, StrengthInsightsData, Gender, CompletedExercise, Location } from '../types';
 import { calculateStreaks, calculateLevel, calculateWeekComparison, calculateWorkoutVolume } from '../utils/progressUtils';
 
-// FitCube equipment description for AI prompts
+// Import new scientific training system
+import { generateProgram, convertToLegacyFormat } from './programGenerator';
+import { validateProgram, getValidationSummary, getMissingMuscles } from './programValidator';
+
+// ФИТКУБ equipment description for AI prompts
 const FITCUBE_EQUIPMENT = `
-Оборудование FitCube (микро-фитнес студия):
+Оборудование ФИТКУБ (микро-фитнес студия):
 - Силовая рама с турником (встроенный)
 - Регулируемая скамья (наклон/плоская)
 - Олимпийский гриф 20 кг + гриф 15 кг
@@ -218,8 +222,8 @@ function buildInitialPrompt(profile: OnboardingProfile): string {
     - Оборудование: ${profile.location === Location.FitCube ? FITCUBE_EQUIPMENT : profile.location}
     - Травмы/Ограничения: ${profile.hasInjuries ? profile.injuries : 'Нет'}
     ${profile.location === Location.FitCube ? `
-    СПЕЦИАЛЬНЫЕ ПРАВИЛА ДЛЯ FITCUBE:
-    - Используй ТОЛЬКО оборудование из списка FitCube выше!
+    СПЕЦИАЛЬНЫЕ ПРАВИЛА ДЛЯ ФИТКУБ:
+    - Используй ТОЛЬКО оборудование из списка ФИТКУБ выше!
     - Максимальный вес гантелей 20 кг - не назначай больше!
     - Максимальный вес гирь 32 кг
     - Включай разнообразие: штанга, гантели, гири, TRX
@@ -410,7 +414,7 @@ ${newPRs.map(pr => `- ${pr.exercise}: ${pr.weight}кг (было ${pr.previousBe
 - Это тренировка #${workoutNumber}
 - Стрик: ${currentStreak} ${currentStreak === 1 ? 'день' : currentStreak < 5 ? 'дня' : 'дней'} подряд
 - Уровень: ${userLevel.level} (${userLevel.title})
-- Объём за неделю: ${Math.round(weekComparison.currentVolume / 1000)}т ${weekComparison.trend !== 0 ? `(${weekComparison.trend > 0 ? '+' : ''}${weekComparison.trend}% к прошлой неделе)` : ''}
+- Объём за неделю: ${Math.round(weekComparison.currentWeekVolume / 1000)}т ${weekComparison.changePercent !== 0 ? `(${weekComparison.changePercent > 0 ? '+' : ''}${weekComparison.changePercent}% к прошлой неделе)` : ''}
 ${prsSection}
 ${comparisonSection}
 ═══════════════════════════════════════
@@ -498,6 +502,171 @@ export const getExerciseAlternatives = async (exercise: Exercise, session: Worko
 
 
 export const generateInitialPlan = async (profile: OnboardingProfile): Promise<TrainingProgram> => {
+    // Use new scientific training system (V2)
+    return generateInitialPlanV2(profile);
+};
+
+/**
+ * Build prompt for AI to personalize weights in template-based program
+ */
+function buildWeightPersonalizationPrompt(
+    profile: OnboardingProfile,
+    program: TrainingProgram
+): string {
+    const knownWeightsStr = profile.knownWeights && profile.knownWeights.length > 0
+        ? profile.knownWeights.map(w => `${w.exercise}: ${w.weight}кг`).join(', ')
+        : 'Нет данных';
+
+    return `
+    Ты опытный тренер. Персонализируй веса в программе на основе профиля пользователя.
+
+    ПРОФИЛЬ:
+    - Пол: ${profile.gender}
+    - Возраст: ${profile.age}
+    - Вес тела: ${profile.weight} кг
+    - Опыт: ${profile.experience}
+    - Цель: ${profile.goals.primary}
+    - Известные рабочие веса: ${knownWeightsStr}
+    - Последняя тренировка: ${profile.lastWorkout || 'Неизвестно'}
+
+    ПРОГРАММА (уже подобраны упражнения по мышечным группам):
+    ${JSON.stringify(program, null, 2)}
+
+    ЗАДАЧА:
+    1. Установи стартовые веса (поле "weight") для КАЖДОГО упражнения с exerciseType="strength"
+    2. Используй известные рабочие веса как ориентир:
+       - Если есть жим лёжа 80кг → жим гантелей ~30-32кг, жим на наклонной ~60-65кг
+       - Если есть присед 100кг → жим ногами ~120кг, выпады ~40кг
+       - Если есть тяга штанги 80кг → тяга гантели ~30кг, подтягивания с весом ~5-10кг
+    3. Для новичков без данных: начни с лёгких весов (20-30кг жим, 40-50кг присед)
+    4. Если последняя тренировка > 3 месяцев назад: снизь веса на 20-30%
+    5. Для bodyweight/cardio/isometric упражнений оставь weight: 0
+
+    КРИТИЧЕСКИ ВАЖНО:
+    - Верни ПОЛНУЮ программу в том же JSON формате
+    - Не меняй названия упражнений и структуру
+    - Только добавь/скорректируй поле "weight" в числовом формате (кг)
+    - Для кардио (бег, ходьба) weight = 0
+
+    Язык: Русский.
+    `;
+}
+
+/**
+ * NEW: Generate training program using scientific templates + AI personalization
+ * Uses template-based slots for guaranteed muscle coverage, AI only fills weights
+ */
+export const generateInitialPlanV2 = async (profile: OnboardingProfile): Promise<TrainingProgram> => {
+    console.log('[ProgramGen V2] Starting scientific program generation...');
+
+    // 1. Generate program from templates
+    const generationResult = generateProgram(profile);
+    console.log('[ProgramGen V2] Template-based generation complete:', {
+        success: generationResult.success,
+        warnings: generationResult.warnings,
+        validation: generationResult.validation,
+    });
+
+    // 2. Convert to legacy format
+    let program = convertToLegacyFormat(generationResult, profile);
+    console.log('[ProgramGen V2] Converted to legacy format, sessions:', program.sessions.length);
+
+    // 3. Validate the program
+    const validationResult = validateProgram(program, profile);
+    console.log('[ProgramGen V2] Validation:', getValidationSummary(validationResult));
+
+    // 4. If critical muscles are missing, try to add them via AI fallback
+    const missingMuscles = getMissingMuscles(program);
+    if (missingMuscles.length > 0) {
+        console.log('[ProgramGen V2] Missing muscles detected:', missingMuscles);
+        // Use AI to fill gaps (fallback)
+        program = await fillMissingMusclesWithAI(program, profile, missingMuscles);
+    }
+
+    // 5. Use AI to personalize weights based on user's known weights
+    if (profile.knownWeights && profile.knownWeights.length > 0) {
+        console.log('[ProgramGen V2] Personalizing weights with AI...');
+        try {
+            program = await personalizeWeightsWithAI(program, profile);
+        } catch (error) {
+            console.error('[ProgramGen V2] Weight personalization failed, using defaults:', error);
+        }
+    }
+
+    console.log('[ProgramGen V2] Final program generated successfully');
+    return program;
+};
+
+/**
+ * Use AI to personalize weights in the program
+ */
+async function personalizeWeightsWithAI(
+    program: TrainingProgram,
+    profile: OnboardingProfile
+): Promise<TrainingProgram> {
+    const prompt = buildWeightPersonalizationPrompt(profile, program);
+
+    const response = await callGeminiProxy(`/v1beta/models/${GEMINI_MODEL}:generateContent`, {
+        contents: prompt,
+        generationConfig: {
+            responseMimeType: 'application/json',
+            responseSchema: trainingProgramSchema,
+        },
+    });
+
+    const jsonText = extractText(response);
+    return JSON.parse(jsonText) as TrainingProgram;
+}
+
+/**
+ * Fallback: Use AI to add exercises for missing muscle groups
+ */
+async function fillMissingMusclesWithAI(
+    program: TrainingProgram,
+    profile: OnboardingProfile,
+    missingMuscles: string[]
+): Promise<TrainingProgram> {
+    const prompt = `
+    Ты опытный тренер. В программе не хватает упражнений на некоторые мышечные группы.
+
+    ТЕКУЩАЯ ПРОГРАММА:
+    ${JSON.stringify(program, null, 2)}
+
+    НЕДОСТАЮЩИЕ МЫШЕЧНЫЕ ГРУППЫ:
+    ${missingMuscles.join(', ')}
+
+    ПРОФИЛЬ:
+    - Оборудование: ${profile.location}
+    - Опыт: ${profile.experience}
+    - Дней в неделю: ${program.sessions.length}
+
+    ЗАДАЧА:
+    1. Добавь 1-2 упражнения на каждую недостающую группу мышц
+    2. Распредели равномерно по сессиям
+    3. Для бицепса: сгибания со штангой/гантелями
+    4. Для трицепса: разгибания на блоке/французский жим
+    5. Для задних дельт: махи в наклоне/тяга к лицу
+    6. Учитывай оборудование: ${profile.location}
+
+    Верни ПОЛНУЮ обновлённую программу в JSON формате.
+    `;
+
+    const response = await callGeminiProxy(`/v1beta/models/${GEMINI_MODEL}:generateContent`, {
+        contents: prompt,
+        generationConfig: {
+            responseMimeType: 'application/json',
+            responseSchema: trainingProgramSchema,
+        },
+    });
+
+    const jsonText = extractText(response);
+    return JSON.parse(jsonText) as TrainingProgram;
+}
+
+/**
+ * LEGACY: Original AI-only program generation (kept as fallback)
+ */
+export const generateInitialPlanLegacy = async (profile: OnboardingProfile): Promise<TrainingProgram> => {
     const prompt = buildInitialPrompt(profile);
 
     const response = await callGeminiProxy(`/v1beta/models/${GEMINI_MODEL}:generateContent`, {

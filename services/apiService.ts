@@ -49,6 +49,8 @@ export interface AuthUser {
   trialStartedAt: string | null;
   trialEndsAt: string | null;
   freeWorkoutsUsed: number;
+  // Partner source
+  partnerSource?: 'fitcube' | null;
 }
 
 export interface AuthResponse {
@@ -348,6 +350,8 @@ export const apiService = {
         | 'session_end'
         | 'session_heartbeat'
         | 'page_view'
+        | 'page_duration'
+        | 'session_exit'
         // Feature usage events
         | 'feature_used'
         | 'workout_started'
@@ -356,7 +360,9 @@ export const apiService = {
         | 'chat_message_sent'
         // Onboarding events
         | 'onboarding_step'
-        | 'onboarding_completed',
+        | 'onboarding_completed'
+        // Partner events
+        | 'partner_entry',
       eventData?: Record<string, unknown>
     ): Promise<{ success: boolean }> => {
       return apiRequest('/api/analytics/track', {

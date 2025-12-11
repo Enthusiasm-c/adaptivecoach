@@ -9,6 +9,21 @@ import { apiService } from './services/apiService';
 import Chatbot from './components/Chatbot';
 import { AlertTriangle, RefreshCw, Copy, Settings, Globe, Brain, Dumbbell, Activity, CalendarCheck } from 'lucide-react';
 import { useSessionTracking } from './utils/useSessionTracking';
+import {
+  MesocycleState,
+  createInitialMesocycleState,
+  loadMesocycleState,
+  saveMesocycleState,
+  clearMesocycleState,
+  checkWeekProgression,
+  advanceMesocycleWeek,
+  createNewMesocycle,
+  recordWorkoutInMesocycle,
+  getProgramForCurrentPhase,
+  checkMesocycleEvents,
+  getEventNotificationMessage,
+  getMesocycleSummary,
+} from './services/mesocycleService';
 
 declare global {
   interface Window {
@@ -25,6 +40,11 @@ const App: React.FC = () => {
   const [errorDetails, setErrorDetails] = useState<string | null>(null);
   const [telegramUser, setTelegramUser] = useState<TelegramUser | null>(null);
 
+  // Mesocycle state (Phase 3)
+  const [mesocycleState, setMesocycleState] = useState<MesocycleState | null>(() => {
+    return loadMesocycleState();
+  });
+
   // Partner/Collaboration tracking (e.g., FitCube)
   const [partnerSource, setPartnerSource] = useState<'fitcube' | null>(() => {
     try {
@@ -34,7 +54,17 @@ const App: React.FC = () => {
       return null;
     }
   });
-  const [showFitCubeWelcome, setShowFitCubeWelcome] = useState(false);
+  // Инициализируем синхронно из localStorage чтобы избежать мелькания
+  const [showFitCubeWelcome, setShowFitCubeWelcome] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('partnerSource');
+      const hasProfile = localStorage.getItem('onboardingProfile');
+      // Показываем FitCube welcome если партнер = fitcube И нет профиля
+      return saved === 'fitcube' && !hasProfile;
+    } catch {
+      return false;
+    }
+  });
 
   // Session tracking for analytics
   const { trackPageView, trackFeature } = useSessionTracking();
@@ -186,6 +216,49 @@ const App: React.FC = () => {
       }
   }, [toastMessage]);
 
+  // Mesocycle phase progression check (runs on app load and periodically)
+  useEffect(() => {
+    if (!mesocycleState || !onboardingProfile) return;
+
+    const checkProgression = () => {
+      const oldState = mesocycleState;
+      const progression = checkWeekProgression(oldState);
+
+      if (progression.isMesocycleComplete) {
+        // Create new mesocycle with rotated exercises
+        const newState = createNewMesocycle(oldState.mesocycle, onboardingProfile);
+        setMesocycleState(newState);
+        saveMesocycleState(newState);
+
+        // Check for events and show notifications
+        const events = checkMesocycleEvents(oldState, newState);
+        events.forEach(event => {
+          const message = getEventNotificationMessage(event);
+          if (message) setToastMessage(message);
+        });
+      } else if (progression.shouldAdvance) {
+        // Advance to next week/phase
+        const newState = advanceMesocycleWeek(oldState);
+        setMesocycleState(newState);
+        saveMesocycleState(newState);
+
+        // Check for events and show notifications
+        const events = checkMesocycleEvents(oldState, newState);
+        events.forEach(event => {
+          const message = getEventNotificationMessage(event);
+          if (message) setToastMessage(message);
+        });
+      }
+    };
+
+    // Check on mount
+    checkProgression();
+
+    // Check periodically (every hour)
+    const interval = setInterval(checkProgression, 60 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [mesocycleState, onboardingProfile]);
+
   // Track notification opens
   useEffect(() => {
       const urlParams = new URLSearchParams(window.location.search);
@@ -246,6 +319,12 @@ const App: React.FC = () => {
       const program = await generateInitialPlan(profile);
       setOnboardingProfile(profile);
       setTrainingProgram(program);
+
+      // Create initial mesocycle state
+      const initialMesocycle = createInitialMesocycleState(profile);
+      setMesocycleState(initialMesocycle);
+      saveMesocycleState(initialMesocycle);
+
       try {
         localStorage.setItem('onboardingProfile', JSON.stringify(profile));
         localStorage.setItem('trainingProgram', JSON.stringify(program));
@@ -293,6 +372,13 @@ const App: React.FC = () => {
       localStorage.setItem('workoutLogs', JSON.stringify(updatedLogs));
     } catch (e) {
         console.warn("Could not save workout logs to localStorage", e);
+    }
+
+    // Update mesocycle state with workout
+    if (mesocycleState) {
+      const newMesoState = recordWorkoutInMesocycle(mesocycleState, log);
+      setMesocycleState(newMesoState);
+      saveMesocycleState(newMesoState);
     }
 
     // Sync workout to server (for social features)
@@ -359,7 +445,7 @@ const App: React.FC = () => {
         setIsLoading(false);
       }
     }
-  }, [workoutLogs, trainingProgram]);
+  }, [workoutLogs, trainingProgram, mesocycleState]);
   
   const handleChatbotSend = async (message: string) => {
     if (!trainingProgram) return;
@@ -407,9 +493,11 @@ const App: React.FC = () => {
     setTrainingProgram(null);
     setWorkoutLogs([]);
     setChatMessages([]);
+    setMesocycleState(null);
     setError(null);
-    // Clear chat messages from localStorage explicitly
+    // Clear chat messages and mesocycle from localStorage explicitly
     localStorage.removeItem('chatMessages');
+    clearMesocycleState();
   };
 
   if (error && !trainingProgram) {
@@ -529,6 +617,7 @@ const App: React.FC = () => {
                 program={trainingProgram}
                 logs={workoutLogs}
                 telegramUser={telegramUser}
+                mesocycleState={mesocycleState}
                 onWorkoutComplete={handleWorkoutComplete}
                 onUpdateProfile={handleUpdateProfile}
                 onResetAccount={resetOnboarding}

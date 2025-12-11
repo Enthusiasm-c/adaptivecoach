@@ -1,11 +1,28 @@
 
 import React, { useState } from 'react';
 import { WorkoutFeedback, WorkoutCompletion } from '../types';
+import { Flame, TrendingUp, TrendingDown, Minus, Zap, Battery } from 'lucide-react';
 
 // Pain location options
 const PAIN_LOCATIONS = [
   'Поясница', 'Колени', 'Плечи', 'Шея',
   'Локти', 'Запястья', 'Спина (верх)', 'Другое'
+];
+
+// Pump quality labels
+const PUMP_LABELS: { [key: number]: string } = {
+  1: 'Не было',
+  2: 'Слабый',
+  3: 'Средний',
+  4: 'Хороший',
+  5: 'Отличный',
+};
+
+// Performance trend options
+const PERFORMANCE_OPTIONS = [
+  { value: 'improving' as const, label: 'Растут', icon: TrendingUp, color: 'text-green-400 bg-green-500/20 border-green-500/30' },
+  { value: 'stable' as const, label: 'Стабильно', icon: Minus, color: 'text-yellow-400 bg-yellow-500/20 border-yellow-500/30' },
+  { value: 'declining' as const, label: 'Падают', icon: TrendingDown, color: 'text-red-400 bg-red-500/20 border-red-500/30' },
 ];
 
 interface FeedbackModalProps {
@@ -19,6 +36,10 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({ onSubmit, onClose }) => {
   const [painLocation, setPainLocation] = useState<string>('');
   const [painDetails, setPainDetails] = useState('');
 
+  // Autoregulation fields
+  const [pumpQuality, setPumpQuality] = useState<1 | 2 | 3 | 4 | 5 | undefined>(undefined);
+  const [performanceTrend, setPerformanceTrend] = useState<'improving' | 'stable' | 'declining' | undefined>(undefined);
+
   const handleSubmit = () => {
     onSubmit({
       completion,
@@ -27,15 +48,18 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({ onSubmit, onClose }) => {
         location: hasPain ? painLocation : undefined,
         details: hasPain ? painDetails : undefined,
       },
+      pumpQuality,
+      performanceTrend,
     });
   };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
-      <div className="bg-gray-800 rounded-2xl shadow-lg p-6 w-full max-w-md space-y-6 text-white animate-fade-in-up">
+      <div className="bg-gray-800 rounded-2xl shadow-lg p-6 w-full max-w-md space-y-5 text-white animate-fade-in-up max-h-[90vh] overflow-y-auto">
         <h2 className="text-2xl font-bold text-center">Отличная работа!</h2>
-        <p className="text-center text-gray-400">Пара вопросов, чтобы скорректировать план.</p>
-        
+        <p className="text-center text-gray-400">Пара вопросов для корректировки плана.</p>
+
+        {/* Completion */}
         <div className="space-y-2">
             <label className="font-medium">Все подходы выполнены?</label>
             <div className="grid grid-cols-3 gap-2">
@@ -45,6 +69,61 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({ onSubmit, onClose }) => {
             </div>
         </div>
 
+        {/* Pump Quality (Autoregulation) */}
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <Zap size={16} className="text-orange-400" />
+            <label className="font-medium">Как пампинг в мышцах?</label>
+          </div>
+          <div className="flex gap-1.5">
+            {([1, 2, 3, 4, 5] as const).map(level => (
+              <button
+                key={level}
+                onClick={() => setPumpQuality(level)}
+                className={`flex-1 py-2.5 rounded-lg text-xs font-medium transition ${
+                  pumpQuality === level
+                    ? 'bg-orange-500 text-white'
+                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                }`}
+              >
+                {level}
+              </button>
+            ))}
+          </div>
+          {pumpQuality && (
+            <p className="text-xs text-gray-400 text-center animate-fade-in">
+              {PUMP_LABELS[pumpQuality]}
+            </p>
+          )}
+        </div>
+
+        {/* Performance Trend (Autoregulation) */}
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <Battery size={16} className="text-blue-400" />
+            <label className="font-medium">Как с рабочими весами?</label>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            {PERFORMANCE_OPTIONS.map(option => {
+              const Icon = option.icon;
+              const isSelected = performanceTrend === option.value;
+              return (
+                <button
+                  key={option.value}
+                  onClick={() => setPerformanceTrend(option.value)}
+                  className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border transition ${
+                    isSelected ? option.color : 'bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600'
+                  }`}
+                >
+                  <Icon size={18} />
+                  <span className="text-xs font-medium">{option.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Pain */}
         <div className="space-y-2">
             <label className="font-medium">Была боль или дискомфорт?</label>
              <div className="flex gap-4">
@@ -83,7 +162,7 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({ onSubmit, onClose }) => {
             )}
         </div>
 
-        <div className="flex gap-4 pt-4">
+        <div className="flex gap-4 pt-2">
           <button onClick={onClose} className="w-full px-4 py-3 bg-gray-600 rounded-lg hover:bg-gray-500 transition font-bold">Отмена</button>
           <button onClick={handleSubmit} className="w-full px-4 py-3 bg-green-600 rounded-lg hover:bg-green-500 transition font-bold">Сохранить</button>
         </div>
