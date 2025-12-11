@@ -14,7 +14,8 @@ interface OnboardingProps {
 }
 
 const Onboarding: React.FC<OnboardingProps> = ({ onComplete, isLoading, error, partnerSource }) => {
-    const [step, setStep] = useState(0);
+    // Если пришли от ФИТКУБ — пропускаем WelcomeStep (step 0)
+    const [step, setStep] = useState(partnerSource === 'fitcube' ? 1 : 0);
     const [profile, setProfile] = useState<Partial<OnboardingProfile>>({
         gender: Gender.Male,
         age: 30,
