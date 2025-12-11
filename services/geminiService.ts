@@ -975,7 +975,6 @@ export const getStrengthInsights = async (
 // Equipment available at each location
 const LOCATION_EQUIPMENT_MAP: { [key in Location]: string[] } = {
     [Location.CommercialGym]: ['штанга', 'гантели', 'тренажёры', 'кабели', 'гири', 'EZ-гриф', 'собственный вес'],
-    [Location.HomeGym]: ['штанга', 'гантели', 'гири', 'собственный вес'],
     [Location.Bodyweight]: ['собственный вес', 'резиновые петли'],
     [Location.FitCube]: ['гантели до 20кг', 'гири', 'резиновые петли', 'TRX', 'турник', 'медбол', 'собственный вес'],
 };

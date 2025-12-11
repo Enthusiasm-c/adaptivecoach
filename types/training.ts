@@ -409,7 +409,6 @@ export const GOAL_CONFIGS: { [key in Goal]: GoalConfig } = {
 
 export const LOCATION_EQUIPMENT: { [key in Location]: EquipmentType[] } = {
   [Location.CommercialGym]: ['barbell', 'dumbbell', 'cable', 'machine', 'bodyweight', 'kettlebell', 'ez_bar'],
-  [Location.HomeGym]: ['barbell', 'dumbbell', 'bodyweight', 'kettlebell'],
   [Location.Bodyweight]: ['bodyweight', 'resistance_band'],
   [Location.FitCube]: ['dumbbell', 'kettlebell', 'resistance_band', 'bodyweight'],
 };

@@ -202,7 +202,7 @@ const BACK_EXERCISES: ExerciseDefinition[] = [
   },
   {
     id: 'inverted_row',
-    name: 'Австралийские подтягивания',
+    name: 'Горизонтальные подтягивания',
     nameEn: 'Inverted Row',
     primaryMuscle: 'back',
     secondaryMuscles: ['biceps', 'rear_delts'],
@@ -566,7 +566,7 @@ const TRICEPS_EXERCISES: ExerciseDefinition[] = [
   },
   {
     id: 'diamond_push_ups',
-    name: 'Алмазные отжимания',
+    name: 'Отжимания с узкой постановкой рук',
     nameEn: 'Diamond Push-ups',
     primaryMuscle: 'triceps',
     secondaryMuscles: ['chest'],
@@ -609,7 +609,7 @@ const QUAD_EXERCISES: ExerciseDefinition[] = [
   },
   {
     id: 'goblet_squat',
-    name: 'Кубковые приседания',
+    name: 'Приседания с гантелью у груди',
     nameEn: 'Goblet Squat',
     primaryMuscle: 'quads',
     secondaryMuscles: ['glutes', 'core'],
@@ -645,7 +645,7 @@ const QUAD_EXERCISES: ExerciseDefinition[] = [
   },
   {
     id: 'bulgarian_split_squat',
-    name: 'Болгарские сплит-приседания',
+    name: 'Приседания с задней ногой на опоре',
     nameEn: 'Bulgarian Split Squat',
     primaryMuscle: 'quads',
     secondaryMuscles: ['glutes', 'hamstrings'],
@@ -736,7 +736,7 @@ const HAMSTRING_EXERCISES: ExerciseDefinition[] = [
   },
   {
     id: 'good_morning',
-    name: 'Гуд-морнинг (наклоны со штангой)',
+    name: 'Наклоны со штангой на плечах',
     nameEn: 'Good Morning',
     primaryMuscle: 'hamstrings',
     secondaryMuscles: ['glutes', 'back'],
@@ -748,7 +748,7 @@ const HAMSTRING_EXERCISES: ExerciseDefinition[] = [
   },
   {
     id: 'nordic_curl',
-    name: 'Скандинавские сгибания',
+    name: 'Негативные сгибания ног',
     nameEn: 'Nordic Curl',
     primaryMuscle: 'hamstrings',
     secondaryMuscles: [],
@@ -961,7 +961,7 @@ const CORE_EXERCISES: ExerciseDefinition[] = [
   },
   {
     id: 'russian_twist',
-    name: 'Русские скручивания',
+    name: 'Скручивания с поворотом',
     nameEn: 'Russian Twist',
     primaryMuscle: 'core',
     secondaryMuscles: [],
@@ -973,7 +973,7 @@ const CORE_EXERCISES: ExerciseDefinition[] = [
   },
   {
     id: 'dead_bug',
-    name: 'Мёртвый жук',
+    name: 'Поочерёдные подъёмы рук и ног лёжа',
     nameEn: 'Dead Bug',
     primaryMuscle: 'core',
     secondaryMuscles: [],

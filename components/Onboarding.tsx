@@ -539,9 +539,7 @@ const LogisticsStep = ({ profile, updateProfile, setProfile }: any) => {
             <div>
                 <label className="block mb-3 text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Оборудование</label>
                 <div className="space-y-2">
-                    {Object.values(Location)
-                        .filter(loc => loc !== Location.HomeGym)
-                        .map(loc => (
+                    {Object.values(Location).map(loc => (
                             <SelectionCard
                                 key={loc}
                                 selected={profile.location === loc}

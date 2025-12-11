@@ -26,7 +26,6 @@ export enum Goal {
 
 export enum Location {
   CommercialGym = "Фитнес-клуб",
-  HomeGym = "Домашний зал (штанга)",
   Bodyweight = "Дома (свой вес/резинки)",
   FitCube = "ФИТКУБ",
 }
