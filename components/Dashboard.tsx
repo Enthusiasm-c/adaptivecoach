@@ -790,7 +790,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
             <header className="px-6 pt-6 pb-4 flex items-center justify-between sticky top-0 bg-[#0a0a0a]/80 backdrop-blur-md z-40 border-b border-white/5">
                 <div>
                     <h1 className="text-2xl font-black text-white tracking-tight italic">
-                        SENSEI<span className="text-indigo-500">TRAINING</span>
+                        SENSEI<span className="text-indigo-500">.AI</span>
                     </h1>
                     <p className="text-xs text-gray-400 font-medium">
                         {profile.experience} • {profile.goals.primary}
