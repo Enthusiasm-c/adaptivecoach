@@ -12,19 +12,20 @@ interface VolumeTrackingCardProps {
   onOpenPremium?: () => void;
 }
 
-const MUSCLE_EMOJI: { [key: string]: string } = {
-  chest: '💪',
-  back: '🔙',
-  shoulders: '🎯',
-  quads: '🦵',
-  hamstrings: '🦿',
-  glutes: '🍑',
-  biceps: '💪',
-  triceps: '🦾',
-  rear_delts: '🎯',
-  calves: '🦶',
-  core: '🎽',
-  forearms: '🤝',
+// Russian muscle names (no emoji for cleaner UI)
+const MUSCLE_NAMES_RU: { [key: string]: string } = {
+  chest: 'Грудь',
+  back: 'Спина',
+  shoulders: 'Плечи',
+  quads: 'Квадрицепсы',
+  hamstrings: 'Бицепс бедра',
+  glutes: 'Ягодицы',
+  biceps: 'Бицепс',
+  triceps: 'Трицепс',
+  rear_delts: 'Задние дельты',
+  calves: 'Икры',
+  core: 'Пресс',
+  forearms: 'Предплечья',
 };
 
 const VolumeBar: React.FC<{ data: MuscleVolumeData }> = ({ data }) => {
@@ -45,9 +46,8 @@ const VolumeBar: React.FC<{ data: MuscleVolumeData }> = ({ data }) => {
   return (
     <div className="space-y-1">
       <div className="flex justify-between items-center text-xs">
-        <span className="text-gray-300 flex items-center gap-1.5">
-          <span>{MUSCLE_EMOJI[data.muscleId] || '🏋️'}</span>
-          {data.muscleNameRu.split(' ')[0]}
+        <span className="text-gray-300">
+          {MUSCLE_NAMES_RU[data.muscleId] || data.muscleNameRu.split(' ')[0]}
         </span>
         <span className="flex items-center gap-1 text-gray-400">
           {getStatusIcon()}
@@ -173,7 +173,7 @@ const VolumeTrackingCard: React.FC<VolumeTrackingCardProps> = ({
                 key={m.muscleId}
                 className="px-2 py-1 bg-yellow-500/20 text-yellow-300 rounded-full text-xs"
               >
-                {MUSCLE_EMOJI[m.muscleId]} {m.muscleNameRu.split(' ')[0]}
+                {MUSCLE_NAMES_RU[m.muscleId] || m.muscleNameRu.split(' ')[0]}
               </span>
             ))}
           </div>

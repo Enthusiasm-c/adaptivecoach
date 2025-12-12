@@ -25,16 +25,23 @@ const PERFORMANCE_OPTIONS = [
   { value: 'declining' as const, label: 'Падают', icon: TrendingDown, color: 'text-red-400 bg-red-500/20 border-red-500/30' },
 ];
 
+interface InitialPain {
+  hasPain: boolean;
+  location?: string;
+  details?: string;
+}
+
 interface FeedbackModalProps {
   onSubmit: (feedback: WorkoutFeedback) => void;
   onClose: () => void;
+  initialPain?: InitialPain; // Pre-filled pain data from mid-workout reporting
 }
 
-const FeedbackModal: React.FC<FeedbackModalProps> = ({ onSubmit, onClose }) => {
+const FeedbackModal: React.FC<FeedbackModalProps> = ({ onSubmit, onClose, initialPain }) => {
   const [completion, setCompletion] = useState<WorkoutCompletion>(WorkoutCompletion.Yes);
-  const [hasPain, setHasPain] = useState(false);
-  const [painLocation, setPainLocation] = useState<string>('');
-  const [painDetails, setPainDetails] = useState('');
+  const [hasPain, setHasPain] = useState(initialPain?.hasPain ?? false);
+  const [painLocation, setPainLocation] = useState<string>(initialPain?.location ?? '');
+  const [painDetails, setPainDetails] = useState(initialPain?.details ?? '');
 
   // Autoregulation fields
   const [pumpQuality, setPumpQuality] = useState<1 | 2 | 3 | 4 | 5 | undefined>(undefined);
@@ -126,6 +133,13 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({ onSubmit, onClose }) => {
         {/* Pain */}
         <div className="space-y-2">
             <label className="font-medium">Была боль или дискомфорт?</label>
+            {initialPain?.hasPain && (
+              <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 text-sm">
+                <span className="text-red-400">Уже указано: </span>
+                <span className="text-white">{initialPain.location}</span>
+                {initialPain.details && <span className="text-gray-400"> — {initialPain.details}</span>}
+              </div>
+            )}
              <div className="flex gap-4">
                 <button onClick={() => setHasPain(false)} className={`w-full p-3 rounded-lg transition ${!hasPain ? 'bg-indigo-600 font-bold' : 'bg-gray-700 hover:bg-gray-600'}`}>Нет</button>
                 <button onClick={() => setHasPain(true)} className={`w-full p-3 rounded-lg transition ${hasPain ? 'bg-indigo-600 font-bold' : 'bg-gray-700 hover:bg-gray-600'}`}>Да</button>

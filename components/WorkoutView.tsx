@@ -92,9 +92,10 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
       }
     }
 
-    // 2. Insert Warmups
+    // 2. Insert Warmups for first exercise
     if (adjustedExercises.length > 0 && adjustedExercises[0].weight && adjustedExercises[0].weight > 20) {
-      const warmups = generateWarmupSets(adjustedExercises[0].weight);
+      const firstExercise = adjustedExercises[0];
+      const warmups = generateWarmupSets(firstExercise.weight!, firstExercise.name);
       adjustedExercises = [...warmups, ...adjustedExercises];
     }
 
@@ -148,8 +149,17 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
     } else {
       (newExercises[exIndex].completedSets[setIndex] as any)[field] = value;
 
-      // Auto-fill logic: Copy weight or reps to next empty set
-      if (field === 'weight' || field === 'reps') {
+      // Auto-fill logic: Copy weight from first set to ALL empty subsequent sets
+      if (field === 'weight' && setIndex === 0) {
+        // When changing weight in first set, copy to all empty subsequent sets
+        for (let i = 1; i < newExercises[exIndex].completedSets.length; i++) {
+          const set = newExercises[exIndex].completedSets[i];
+          if (!set.weight || set.weight === 0) {
+            (set as any).weight = value;
+          }
+        }
+      } else if (field === 'weight' || field === 'reps') {
+        // For other sets, copy to next empty set only
         const nextSetIndex = setIndex + 1;
         if (nextSetIndex < newExercises[exIndex].completedSets.length) {
           const nextSet = newExercises[exIndex].completedSets[nextSetIndex];
@@ -183,6 +193,16 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
   const CARDIO_KEYWORDS = ['кардио', 'бег', 'ходьба', 'велосипед', 'сайкл', 'эллипс', 'скакалк', 'прыжк', 'дорожк', 'степпер', 'гребля', 'велотренажёр'];
   const BODYWEIGHT_KEYWORDS = ['планка', 'отжиман', 'подтягив', 'пресс', 'скручиван', 'в висе', 'подъём ног', 'подъем ног', 'берпи', 'выпрыгив', 'присед без', 'гиперэкстензия без'];
   const ISOMETRIC_KEYWORDS = ['удержан', 'статик', 'вис ', 'стойка'];
+
+  // Keywords for detecting dumbbell exercises (show "× 2")
+  const DUMBBELL_KEYWORDS = ['гантел', 'dumbbell', 'с гантел', 'гантелями', 'гантелей'];
+
+  // Helper: check if exercise uses dumbbells (pair = 2 weights)
+  const isDumbbellExercise = (ex: typeof completedExercises[0]): boolean => {
+    if (ex.equipmentCount === 2) return true;
+    const nameLower = ex.name.toLowerCase();
+    return DUMBBELL_KEYWORDS.some(k => nameLower.includes(k));
+  };
 
   // Helper: check if exercise requires weight input
   const exerciseNeedsWeight = (ex: typeof completedExercises[0]): boolean => {
@@ -234,9 +254,8 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
     if (currentExerciseIndex < completedExercises.length - 1) {
       setCurrentExerciseIndex(i => i + 1);
     } else {
-      // Loop to next incomplete
-      const next = findNextIncomplete(currentExerciseIndex);
-      if (next !== -1) setCurrentExerciseIndex(next);
+      // Loop forward: from last exercise to first
+      setCurrentExerciseIndex(0);
     }
   };
 
@@ -244,11 +263,18 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
     hapticFeedback.impactOccurred('light');
     if (currentExerciseIndex > 0) {
       setCurrentExerciseIndex(i => i - 1);
+    } else {
+      // Loop back: from first exercise to last
+      setCurrentExerciseIndex(completedExercises.length - 1);
     }
   };
 
   // Check if all exercises are complete (uses helper that respects exerciseType)
-  const canFinish = completedExercises.every(isExerciseComplete);
+  // Also require at least one set to be filled (prevent finishing empty workout)
+  const hasAtLeastOneFilledSet = completedExercises.some(ex =>
+    ex.completedSets.some(s => s.reps > 0)
+  );
+  const canFinish = hasAtLeastOneFilledSet && completedExercises.every(isExerciseComplete);
 
   const finishWorkout = () => {
     if (!canFinish) {
@@ -374,10 +400,11 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
           {/* Pain Report Button */}
           <button
             onClick={() => setShowPainModal(true)}
-            className="p-2 bg-red-500/10 border border-red-500/20 rounded-full text-red-400 hover:bg-red-500/20 transition"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500/10 border border-red-500/20 rounded-full text-red-400 hover:bg-red-500/20 transition"
             title="Сообщить о боли"
           >
-            <AlertTriangle size={18} />
+            <AlertTriangle size={14} />
+            <span className="text-xs font-medium">Болит?</span>
           </button>
           <div className="flex flex-col items-end">
             <span className="text-xs text-gray-500 font-bold uppercase tracking-wider">Упражнение {currentExerciseIndex + 1} из {completedExercises.length}</span>
@@ -509,7 +536,7 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
                         />
                         <span className={`absolute right-0 top-1/2 -translate-y-1/2 text-[10px] pointer-events-none ${
                           attemptedFinish && getSetErrors(currentExercise, set).weight ? 'text-red-400' : 'text-gray-600'
-                        }`}>кг</span>
+                        }`}>{isDumbbellExercise(currentExercise) ? 'кг×2' : 'кг'}</span>
                       </div>
                     )}
 
@@ -592,8 +619,7 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
         <div className="max-w-lg mx-auto flex gap-4">
           <button
             onClick={goPrev}
-            disabled={currentExerciseIndex === 0}
-            className="px-6 py-4 bg-neutral-900 rounded-2xl font-bold disabled:opacity-30 text-gray-400 hover:text-white border border-white/10 transition"
+            className="px-6 py-4 bg-neutral-900 rounded-2xl font-bold text-gray-400 hover:text-white border border-white/10 transition"
           >
             <ChevronLeft size={24} />
           </button>
@@ -617,6 +643,11 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
         <FeedbackModal
           onSubmit={handleFeedbackSubmit}
           onClose={() => setIsFeedbackModalOpen(false)}
+          initialPain={midWorkoutPainLocation ? {
+            hasPain: true,
+            location: midWorkoutPainLocation,
+            details: midWorkoutPain
+          } : undefined}
         />
       )}
 
@@ -746,16 +777,21 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
               </button>
               <button
                 onClick={() => {
-                  if (midWorkoutPain.trim()) {
+                  if (midWorkoutPainLocation) {
                     hapticFeedback.notificationOccurred('success');
                     setToastMessage('Запомнил! Учту это при завершении');
                     setTimeout(() => setToastMessage(null), 3000);
+                    setShowPainModal(false);
                   }
-                  setShowPainModal(false);
                 }}
-                className="flex-1 py-3 bg-red-500 text-white rounded-xl font-bold hover:bg-red-400 transition"
+                disabled={!midWorkoutPainLocation}
+                className={`flex-1 py-3 rounded-xl font-bold transition ${
+                  midWorkoutPainLocation
+                    ? 'bg-red-500 text-white hover:bg-red-400'
+                    : 'bg-neutral-700 text-gray-500 cursor-not-allowed'
+                }`}
               >
-                Сохранить
+                {midWorkoutPainLocation ? 'Сохранить' : 'Выбери зону'}
               </button>
             </div>
           </div>

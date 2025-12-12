@@ -137,7 +137,7 @@ const BadgesView: React.FC<BadgesViewProps> = ({ onClose }) => {
 
                         <span className={`text-3xl mb-1 ${isPremium && badge.earned ? 'animate-pulse' : ''}`}>{badge.icon}</span>
                         <span className={`text-[10px] font-bold text-center leading-tight ${tier.text}`}>
-                          {badge.name_ru}
+                          {badge.name_ru || badge.name_en || 'Достижение'}
                         </span>
                         {!badge.earned && (
                           <div className="absolute top-1 right-1">
@@ -182,8 +182,8 @@ const BadgesView: React.FC<BadgesViewProps> = ({ onClose }) => {
                 <span className="text-5xl">{selectedBadge.icon}</span>
               </div>
 
-              <h3 className="text-xl font-bold text-white mb-1">{selectedBadge.name_ru}</h3>
-              <p className="text-sm text-gray-400 mb-4">{selectedBadge.description_ru}</p>
+              <h3 className="text-xl font-bold text-white mb-1">{selectedBadge.name_ru || selectedBadge.name_en || 'Достижение'}</h3>
+              <p className="text-sm text-gray-400 mb-4">{selectedBadge.description_ru || selectedBadge.description_en || ''}</p>
 
               <div className={`inline-block px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider
                 ${tierColors[selectedBadge.tier]?.bg || tierColors.bronze.bg}

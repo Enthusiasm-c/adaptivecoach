@@ -130,6 +130,7 @@ export interface Exercise {
   rest: number; // in seconds
   isWarmup?: boolean; // New: to distinguish warmup sets
   description?: string; // Short technical instruction
+  equipmentCount?: number; // 1 = single (barbell, machine), 2 = pair (dumbbells)
 }
 
 export interface WorkoutSession {

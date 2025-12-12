@@ -195,15 +195,17 @@ const calculateE1RM = (weight: number, reps: number): number => {
     return weight * (1 + reps / 30);
 };
 
-// Key lifts configuration with keywords and group keys
+// Key lifts configuration with keywords and group keys (8 categories for TOP-8 PRs)
 const KEY_LIFTS_CONFIG = [
     { keywords: ['squat', 'присед'], groupKey: 'squat' },
     { keywords: ['bench', 'жим лежа'], groupKey: 'bench' },
     { keywords: ['deadlift', 'становая'], groupKey: 'deadlift' },
-    { keywords: ['overhead', 'армейский', 'жим стоя'], groupKey: 'overhead' },
+    { keywords: ['overhead', 'армейский', 'жим стоя', 'жим сидя'], groupKey: 'overhead' },
     { keywords: ['lunge', 'выпад'], groupKey: 'lunges' },
-    { keywords: ['row', 'тяга к поясу', 'тяга штанги'], groupKey: 'row' },
+    { keywords: ['row', 'тяга к поясу', 'тяга штанги', 'тяга гантел'], groupKey: 'row' },
     { keywords: ['pull up', 'подтягиван', 'chin up'], groupKey: 'pullup' },
+    { keywords: ['leg press', 'жим ног', 'жим платформ'], groupKey: 'legpress' },
+    { keywords: ['curl', 'сгибан', 'бицепс', 'bicep'], groupKey: 'curl' },
 ];
 
 // Russian names for key exercises
@@ -215,6 +217,8 @@ const EXERCISE_NAMES_RU: Record<string, string> = {
     'lunges': 'Выпады',
     'row': 'Тяга к поясу',
     'pullup': 'Подтягивания',
+    'legpress': 'Жим ногами',
+    'curl': 'Бицепс',
 };
 
 // Helper to find matching lift config
@@ -265,14 +269,16 @@ export const calculateReadinessScore = (sleep: number, food: number, stress: num
     return { sleep, food, stress, soreness, score, status };
 };
 
-export const generateWarmupSets = (workingWeight: number): Exercise[] => {
+export const generateWarmupSets = (workingWeight: number, exerciseName?: string): Exercise[] => {
     if (workingWeight <= 20) return [];
 
     const warmups: Exercise[] = [];
+    const forExercise = exerciseName ? ` → ${exerciseName}` : '';
+    const shortName = exerciseName || 'первое упражнение';
 
     warmups.push({
-        name: "Разминка: Гриф / Легкий вес",
-        description: "Подготовьте суставы и мышцы к работе.",
+        name: `🔥 Разминка${forExercise}`,
+        description: `Гриф или лёгкий вес (20кг). Подготовьте суставы и мышцы перед "${shortName}" с рабочим весом ${workingWeight}кг.`,
         sets: 1,
         reps: "10",
         weight: 20,
@@ -281,36 +287,39 @@ export const generateWarmupSets = (workingWeight: number): Exercise[] => {
     });
 
     if (workingWeight > 40) {
+        const weight50 = Math.round((workingWeight * 0.5) / 2.5) * 2.5;
         warmups.push({
-            name: "Разминка: 50%",
-            description: "Умеренный вес, контроль техники.",
+            name: `🔥 50% от ${workingWeight}кг`,
+            description: `Разминочный подход для "${shortName}". ${weight50}кг = 50% от рабочего веса. Контроль техники.`,
             sets: 1,
             reps: "5",
-            weight: Math.round((workingWeight * 0.5) / 2.5) * 2.5,
+            weight: weight50,
             rest: 60,
             isWarmup: true
         });
     }
 
     if (workingWeight > 60) {
+        const weight75 = Math.round((workingWeight * 0.75) / 2.5) * 2.5;
         warmups.push({
-            name: "Разминка: 75%",
-            description: "Рабочий подход близко, не утомляйтесь.",
+            name: `🔥 75% от ${workingWeight}кг`,
+            description: `Разминочный подход для "${shortName}". ${weight75}кг = 75% от рабочего веса. Не утомляйтесь!`,
             sets: 1,
             reps: "3",
-            weight: Math.round((workingWeight * 0.75) / 2.5) * 2.5,
+            weight: weight75,
             rest: 90,
             isWarmup: true
         });
     }
 
     if (workingWeight > 100) {
+        const weight90 = Math.round((workingWeight * 0.9) / 2.5) * 2.5;
         warmups.push({
-            name: "Разминка: 90% (Сингл)",
-            description: "Один повтор для активации ЦНС.",
+            name: `🔥 90% от ${workingWeight}кг`,
+            description: `Разминочный подход для "${shortName}". ${weight90}кг = 90% от рабочего веса. Один повтор для активации ЦНС.`,
             sets: 1,
             reps: "1",
-            weight: Math.round((workingWeight * 0.9) / 2.5) * 2.5,
+            weight: weight90,
             rest: 120,
             isWarmup: true
         });

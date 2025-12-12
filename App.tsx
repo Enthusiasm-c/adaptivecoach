@@ -4,6 +4,7 @@ import { OnboardingProfile, TrainingProgram, WorkoutLog, ChatMessage, TelegramUs
 import Onboarding from './components/Onboarding';
 import Dashboard from './components/Dashboard';
 import FitCubeWelcome from './components/FitCubeWelcome';
+import ExerciseCardTest from './components/ExerciseCardTest';
 import { generateInitialPlan, adaptPlan, getChatbotResponse, currentApiKey, adjustProgramForPain, adaptProgramForLocation } from './services/geminiService';
 import { apiService } from './services/apiService';
 import Chatbot from './components/Chatbot';
@@ -33,6 +34,9 @@ declare global {
 }
 
 const App: React.FC = () => {
+  // Check for test mode in URL
+  const isTestMode = new URLSearchParams(window.location.search).get('test') === 'ui';
+
   const [onboardingProfile, setOnboardingProfile] = useState<OnboardingProfile | null>(null);
   const [trainingProgram, setTrainingProgram] = useState<TrainingProgram | null>(null);
   const [workoutLogs, setWorkoutLogs] = useState<WorkoutLog[]>([]);
@@ -647,6 +651,11 @@ const App: React.FC = () => {
         </div>
       </div>
     );
+  }
+
+  // Test mode - show ExerciseCardTest component
+  if (isTestMode) {
+    return <ExerciseCardTest />;
   }
 
   return (

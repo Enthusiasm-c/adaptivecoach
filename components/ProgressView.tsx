@@ -448,7 +448,7 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
                     <div className="text-2xl font-black text-white">
                         {currentStreak}
                         <span className="text-sm text-gray-500 ml-1">
-                            {pluralizeRu(currentStreak, 'день', 'дня', 'дней')}
+                            {pluralizeRu(currentStreak, 'тренировка', 'тренировки', 'тренировок')}
                         </span>
                     </div>
                     {nextScheduledDay && (
@@ -716,22 +716,25 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
                                             {entry.exerciseNameRu}
                                         </span>
                                         <div className="flex items-center gap-2 mt-1">
+                                            <span className="text-gray-500 text-xs">
+                                                {entry.previousWeight}кг → {entry.currentWeight}кг
+                                            </span>
                                             {entry.trend === 'up' && (
-                                                <span className="flex items-center gap-1 text-green-400 text-xs">
+                                                <span className="flex items-center gap-1 text-green-400 text-xs font-medium">
                                                     <TrendingUp size={12} />
-                                                    +{entry.changeFromPrevious.toFixed(1)} кг
+                                                    +{entry.changeFromPrevious.toFixed(1)}
                                                 </span>
                                             )}
                                             {entry.trend === 'down' && (
-                                                <span className="flex items-center gap-1 text-red-400 text-xs">
+                                                <span className="flex items-center gap-1 text-red-400 text-xs font-medium">
                                                     <TrendingDown size={12} />
-                                                    {entry.changeFromPrevious.toFixed(1)} кг
+                                                    {entry.changeFromPrevious.toFixed(1)}
                                                 </span>
                                             )}
                                             {entry.trend === 'stable' && (
                                                 <span className="flex items-center gap-1 text-gray-400 text-xs">
                                                     <Minus size={12} />
-                                                    Стабильно
+                                                    =
                                                 </span>
                                             )}
                                         </div>

@@ -351,14 +351,23 @@ export function convertToLegacyFormat(
         const exerciseDef = slot.exercise!;
         const isStrength = exerciseDef.isCompound;
 
-        // Determine rep range based on goal
-        let reps: string;
+        // Determine rep range based on goal and convert to exact number
+        let repsRange: string;
         if (profile.goals.primary === Goal.GetStronger) {
-          reps = exerciseDef.repRanges.strength;
+          repsRange = exerciseDef.repRanges.strength;
         } else if (profile.goals.primary === Goal.LoseFat) {
-          reps = exerciseDef.repRanges.endurance;
+          repsRange = exerciseDef.repRanges.endurance;
         } else {
-          reps = exerciseDef.repRanges.hypertrophy;
+          repsRange = exerciseDef.repRanges.hypertrophy;
+        }
+
+        // Convert range "8-12" to exact number (middle value)
+        let reps: string;
+        if (repsRange.includes('-')) {
+          const [min, max] = repsRange.split('-').map(Number);
+          reps = String(Math.round((min + max) / 2)); // "8-12" → "10"
+        } else {
+          reps = repsRange;
         }
 
         // Calculate rest time
