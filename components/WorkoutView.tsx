@@ -11,7 +11,6 @@ import Stopwatch from './Stopwatch';
 import { hapticFeedback } from '../utils/hapticUtils';
 import { getCoachFeedback } from '../services/geminiService';
 import { generateWarmupSets, getLastPerformance, getExerciseHistory } from '../utils/progressUtils';
-import { apiService } from '../services/apiService';
 
 interface WorkoutViewProps {
   session: WorkoutSession;
@@ -68,10 +67,6 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
     'Локти', 'Запястья', 'Спина (верх)', 'Другое'
   ];
 
-  // GIF technique state
-  const [exerciseGifUrl, setExerciseGifUrl] = useState<string | null>(null);
-  const [showTechniqueGif, setShowTechniqueGif] = useState(false);
-  const [isLoadingGif, setIsLoadingGif] = useState(false);
 
   useEffect(() => {
     if (initialState) {
@@ -148,31 +143,6 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
     if (scrollRef.current) scrollRef.current.scrollTop = 0;
   }, [currentExerciseIndex, completedExercises.length]); // Depend on length to ensure init triggers
 
-  // Fetch GIF URL on exercise change
-  useEffect(() => {
-    const currentEx = completedExercises[currentExerciseIndex];
-    if (!currentEx || currentEx.isWarmup) {
-      setExerciseGifUrl(null);
-      setShowTechniqueGif(false);
-      return;
-    }
-
-    const fetchGif = async () => {
-      setIsLoadingGif(true);
-      try {
-        const response = await apiService.exercises.getGif(currentEx.name);
-        setExerciseGifUrl(response.found ? response.gifUrl : null);
-      } catch (e) {
-        console.error('Failed to fetch GIF:', e);
-        setExerciseGifUrl(null);
-      } finally {
-        setIsLoadingGif(false);
-      }
-    };
-
-    fetchGif();
-    setShowTechniqueGif(false); // Reset on exercise change
-  }, [currentExerciseIndex, completedExercises.length]);
 
   const handleValueChange = (exIndex: number, setIndex: number, field: 'reps' | 'weight' | 'rir', value: number) => {
     const newExercises = [...completedExercises];
@@ -511,44 +481,14 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
                 </p>
               )}
 
-              {/* Technique GIF Section */}
+              {/* YouTube technique button */}
               {!currentExercise.isWarmup && (
-                <div className="mb-4">
-                  {isLoadingGif ? (
-                    <div className="flex items-center gap-2 text-xs text-gray-500 py-2">
-                      <div className="w-4 h-4 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-                      Загрузка техники...
-                    </div>
-                  ) : exerciseGifUrl ? (
-                    <div>
-                      <button
-                        onClick={() => setShowTechniqueGif(!showTechniqueGif)}
-                        className="flex items-center gap-2 text-xs font-bold text-indigo-400 bg-indigo-500/10 px-3 py-2 rounded-lg hover:bg-indigo-500/20 transition"
-                      >
-                        <Video size={14} />
-                        {showTechniqueGif ? 'Скрыть технику' : 'Показать технику'}
-                        {showTechniqueGif ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                      </button>
-                      {showTechniqueGif && (
-                        <div className="mt-3 rounded-xl overflow-hidden bg-black animate-slide-up">
-                          <img
-                            src={exerciseGifUrl}
-                            alt={`Техника: ${currentExercise.name}`}
-                            className="w-full h-auto"
-                            loading="lazy"
-                          />
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => openYouTubeSearch()}
-                      className="flex items-center gap-2 text-xs font-bold text-red-400 bg-red-500/10 px-3 py-2 rounded-lg hover:bg-red-500/20 transition"
-                    >
-                      <Video size={14} /> Смотреть технику (YouTube)
-                    </button>
-                  )}
-                </div>
+                <button
+                  onClick={() => openYouTubeSearch()}
+                  className="mb-4 flex items-center gap-2 text-xs font-bold text-red-400 bg-red-500/10 px-3 py-2 rounded-lg hover:bg-red-500/20 transition"
+                >
+                  <Video size={14} /> Смотреть технику (YouTube)
+                </button>
               )}
 
               {/* Contextual History Section (if applicable for this exercise) */}
