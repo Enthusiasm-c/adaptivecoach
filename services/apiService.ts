@@ -17,6 +17,7 @@ async function apiRequest<T>(
 
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
+    'x-api-key': '9a361ff33289e0723fad20cbf91b263a6cea0d7cf29c44fe7bbe59dd91d2a50d',
     ...(options.headers as Record<string, string> || {}),
   };
 

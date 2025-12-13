@@ -110,7 +110,7 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
     setCompletedExercises(
       adjustedExercises.map(ex => ({
         ...ex,
-        completedSets: Array.from({ length: ex.sets }, () => ({ reps: parseInt(ex.reps.split('-')[0] || '0'), weight: ex.weight || 0, rir: undefined })),
+        completedSets: Array.from({ length: ex.sets }, () => ({ reps: 0, weight: 0, rir: undefined })),
       }))
     );
 
@@ -388,7 +388,7 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
       if (ex.name === newExercise.name) {
         return {
           ...ex,
-          completedSets: Array.from({ length: ex.sets }, () => ({ reps: parseInt(ex.reps.split('-')[0] || '0'), weight: ex.weight || 0, rir: undefined })),
+          completedSets: Array.from({ length: ex.sets }, () => ({ reps: 0, weight: 0, rir: undefined })),
         }
       }
       return completedExercises[i];
