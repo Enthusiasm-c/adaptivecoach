@@ -1,48 +1,175 @@
-import React, { useState } from 'react';
-import { Image, X, ChevronUp, Sparkles } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Image, X, ChevronUp, Sparkles, Video, Play, ThumbsUp, ThumbsDown, Save, Loader2, Check, ChevronDown } from 'lucide-react';
 
 type LayoutVariant = 'A' | 'B' | 'C' | 'D';
-type AspectRatio = '16:9' | '1:1' | '4:3';
+
+// 25 уникальных упражнений из базы пользователей
+const EXERCISES_FROM_DB = [
+  '"Птица-собака" (Bird-Dog)',
+  'Боковая планка',
+  'Выпады с гантелями',
+  'Жим в тренажере сидя (Грудь)',
+  'Жим гантелей лежа на горизонтальной скамье',
+  'Жим гантелей сидя',
+  'Жим ногами в тренажере',
+  'Жим штанги лежа',
+  'Жим штанги на наклонной скамье',
+  'Кардио: Ходьба на беговой дорожке под уклоном',
+  'Махи гантелями в стороны стоя',
+  'Подъем гантелей на бицепс',
+  'Подъемы ног в висе',
+  'Приседания с гантелью (Гоблет-приседания)',
+  'Приседания со штангой',
+  'Разведения гантелей в стороны стоя',
+  'Разведения гантелей лежа на наклонной скамье',
+  'Разгибание ног в тренажере сидя',
+  'Румынская тяга с гантелями',
+  'Сгибание ног в тренажере лежа',
+  'Тяга верхнего блока к груди широким хватом',
+  'Тяга верхнего блока широким хватом',
+  'Тяга горизонтального блока к животу',
+  'Тяга одной гантели в наклоне (Тяга гантели к поясу)',
+  'Французский жим со штангой лежа',
+];
+
+interface ExerciseMedia {
+  exerciseName: string;
+  imageBase64?: string;
+  videoUrl?: string;
+  generatedAt: string;
+  source: 'gemini' | 'veo' | 'manual';
+  approved?: boolean;
+  metrics?: {
+    generationTimeMs: number;
+    costEstimate: number;
+    fileSize?: number;
+  };
+}
 
 const ExerciseCardTest: React.FC = () => {
-  const [variant, setVariant] = useState<LayoutVariant>('B'); // Default to B since user liked it
-  const [aspectRatio, setAspectRatio] = useState<AspectRatio>('16:9');
+  const [variant, setVariant] = useState<LayoutVariant>('B');
   const [showImage, setShowImage] = useState(false);
   const [fullScreenImage, setFullScreenImage] = useState(false);
   const [bottomSheetOpen, setBottomSheetOpen] = useState(false);
 
-  // AI Image Generation states
-  const [imageSource, setImageSource] = useState<'svg' | 'ai'>('svg');
+  // Exercise selection
+  const [selectedExercise, setSelectedExercise] = useState(EXERCISES_FROM_DB[0]);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+
+  // Generation states
+  const [imageSource, setImageSource] = useState<'svg' | 'ai' | 'video'>('svg');
   const [aiImageData, setAiImageData] = useState<string | null>(null);
-  const [isGenerating, setIsGenerating] = useState(false);
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
+  const [isGeneratingVideo, setIsGeneratingVideo] = useState(false);
+  const [videoOperationName, setVideoOperationName] = useState<string | null>(null);
+  const [videoPollingStatus, setVideoPollingStatus] = useState<string>('');
+
   const [generationMetrics, setGenerationMetrics] = useState<{
     generationTimeMs: number;
-    promptTokens: number;
-    totalTokens: number;
+    promptTokens?: number;
+    totalTokens?: number;
     costEstimate: number;
-    cached: boolean;
+    cached?: boolean;
+    fileSize?: number;
   } | null>(null);
   const [generationError, setGenerationError] = useState<string | null>(null);
 
-  // Mock data
-  const mockExercise = {
-    name: "High Bar Squat",
-    sets: 3,
-    reps: "3-5",
-    weight: 45,
-    rest: 180,
-    description: "Штанга на плечах, ноги на ширине плеч. Приседайте до параллели или ниже. Держите спину прямой, колени над носками.",
-    imageUrl: "https://images.unsplash.com/photo-1574680096145-d05b474e2155?w=800&h=450&fit=crop", // Will be replaced with canvas
-    history: [
-      { date: "2024-01-10", sets: [{ weight: 40, reps: 5 }, { weight: 45, reps: 5 }] },
-      { date: "2024-01-07", sets: [{ weight: 40, reps: 6 }, { weight: 45, reps: 4 }] }
-    ]
-  };
+  // Video ref for autoplay test
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [videoAutoplayWorks, setVideoAutoplayWorks] = useState<boolean | null>(null);
 
-  // Handle AI image generation
-  const handleGenerateAIImage = async () => {
-    setIsGenerating(true);
+  // localStorage cache
+  const [cachedMedia, setCachedMedia] = useState<ExerciseMedia | null>(null);
+
+  // Load from cache on exercise change
+  useEffect(() => {
+    const cacheKey = `exercise_media_${encodeURIComponent(selectedExercise)}`;
+    const cached = localStorage.getItem(cacheKey);
+    if (cached) {
+      const media = JSON.parse(cached) as ExerciseMedia;
+      setCachedMedia(media);
+      if (media.imageBase64) {
+        setAiImageData(media.imageBase64);
+        setImageSource('ai');
+      }
+      if (media.videoUrl) {
+        setVideoUrl(media.videoUrl);
+      }
+      setGenerationMetrics(media.metrics || null);
+    } else {
+      setCachedMedia(null);
+      setAiImageData(null);
+      setVideoUrl(null);
+      setGenerationMetrics(null);
+      setImageSource('svg');
+    }
     setGenerationError(null);
+  }, [selectedExercise]);
+
+  // Test video autoplay capability
+  useEffect(() => {
+    if (videoRef.current && videoUrl) {
+      const video = videoRef.current;
+      const playPromise = video.play();
+      if (playPromise !== undefined) {
+        playPromise
+          .then(() => {
+            setVideoAutoplayWorks(true);
+          })
+          .catch(() => {
+            setVideoAutoplayWorks(false);
+          });
+      }
+    }
+  }, [videoUrl]);
+
+  // Poll for video generation status
+  useEffect(() => {
+    if (!videoOperationName) return;
+
+    const pollInterval = setInterval(async () => {
+      try {
+        const response = await fetch(
+          `https://api.sensei.training/api/videos/status/${videoOperationName}`,
+          {
+            headers: {
+              'x-api-key': '9a361ff33289e0723fad20cbf91b263a6cea0d7cf29c44fe7bbe59dd91d2a50d'
+            }
+          }
+        );
+        const data = await response.json();
+
+        if (data.done) {
+          clearInterval(pollInterval);
+          setVideoOperationName(null);
+          setIsGeneratingVideo(false);
+
+          if (data.video?.downloadUrl) {
+            setVideoUrl(data.video.downloadUrl);
+            setVideoPollingStatus('✅ Видео готово!');
+            setImageSource('video');
+          } else {
+            setGenerationError('Видео сгенерировано, но URL недоступен');
+            setVideoPollingStatus('❌ Ошибка получения URL');
+          }
+        } else {
+          setVideoPollingStatus(`⏳ Генерация... ${data.message || ''}`);
+        }
+      } catch (error) {
+        console.error('Polling error:', error);
+        setVideoPollingStatus('❌ Ошибка polling');
+      }
+    }, 5000); // Poll every 5 seconds
+
+    return () => clearInterval(pollInterval);
+  }, [videoOperationName]);
+
+  // Generate image via Gemini 3 Pro
+  const handleGenerateImage = async () => {
+    setIsGeneratingImage(true);
+    setGenerationError(null);
+    const startTime = Date.now();
 
     try {
       const response = await fetch('https://api.sensei.training/api/images/generate', {
@@ -52,7 +179,7 @@ const ExerciseCardTest: React.FC = () => {
           'x-api-key': '9a361ff33289e0723fad20cbf91b263a6cea0d7cf29c44fe7bbe59dd91d2a50d'
         },
         body: JSON.stringify({
-          exerciseName: mockExercise.name
+          exerciseName: selectedExercise
         })
       });
 
@@ -64,128 +191,164 @@ const ExerciseCardTest: React.FC = () => {
 
       if (data.success) {
         setAiImageData(data.imageBase64);
+        const fileSize = Math.round((data.imageBase64.length * 3) / 4 / 1024); // Base64 to KB
         setGenerationMetrics({
           ...data.metrics,
-          cached: data.cached
+          cached: data.cached,
+          fileSize
         });
-        setImageSource('ai'); // Switch to AI image automatically
+        setImageSource('ai');
       } else {
         throw new Error(data.error || 'Unknown error');
       }
     } catch (error) {
       setGenerationError(error instanceof Error ? error.message : 'Failed to generate image');
-      console.error('Image generation error:', error);
     } finally {
-      setIsGenerating(false);
+      setIsGeneratingImage(false);
     }
+  };
+
+  // Generate video via Veo 2
+  const handleGenerateVideo = async () => {
+    if (!aiImageData) {
+      setGenerationError('Сначала сгенерируйте изображение');
+      return;
+    }
+
+    setIsGeneratingVideo(true);
+    setGenerationError(null);
+    setVideoPollingStatus('🚀 Запуск генерации видео...');
+
+    try {
+      const response = await fetch('https://api.sensei.training/api/videos/generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': '9a361ff33289e0723fad20cbf91b263a6cea0d7cf29c44fe7bbe59dd91d2a50d'
+        },
+        body: JSON.stringify({
+          exerciseName: selectedExercise,
+          imageBase64: aiImageData
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.success && data.operationName) {
+        setVideoOperationName(data.operationName);
+        setVideoPollingStatus(`⏳ Операция: ${data.operationName}`);
+      } else {
+        throw new Error(data.error || 'Failed to start video generation');
+      }
+    } catch (error) {
+      setGenerationError(error instanceof Error ? error.message : 'Failed to generate video');
+      setIsGeneratingVideo(false);
+      setVideoPollingStatus('');
+    }
+  };
+
+  // Save to cache
+  const handleSaveToCache = (approved: boolean) => {
+    const media: ExerciseMedia = {
+      exerciseName: selectedExercise,
+      imageBase64: aiImageData || undefined,
+      videoUrl: videoUrl || undefined,
+      generatedAt: new Date().toISOString(),
+      source: videoUrl ? 'veo' : 'gemini',
+      approved,
+      metrics: generationMetrics || undefined
+    };
+
+    const cacheKey = `exercise_media_${encodeURIComponent(selectedExercise)}`;
+    localStorage.setItem(cacheKey, JSON.stringify(media));
+    setCachedMedia(media);
+  };
+
+  // Clear cache for current exercise
+  const handleClearCache = () => {
+    const cacheKey = `exercise_media_${encodeURIComponent(selectedExercise)}`;
+    localStorage.removeItem(cacheKey);
+    setCachedMedia(null);
+    setAiImageData(null);
+    setVideoUrl(null);
+    setGenerationMetrics(null);
+    setImageSource('svg');
   };
 
   // SVG Split-screen exercise demonstration component
   const SplitScreenDemo = () => (
     <svg viewBox="0 0 800 450" className="w-full h-auto" xmlns="http://www.w3.org/2000/svg">
-      {/* Background */}
       <rect width="800" height="450" fill="#1a1a1a" />
-
-      {/* Split line */}
       <line x1="400" y1="0" x2="400" y2="450" stroke="#4a4a4a" strokeWidth="3" strokeDasharray="10,5" />
-
-      {/* Left label - Starting position */}
       <rect x="20" y="20" width="160" height="40" fill="#6366f1" rx="8" />
       <text x="100" y="46" fill="white" fontSize="16" fontWeight="bold" textAnchor="middle">ИСХОДНОЕ</text>
-
-      {/* Right label - Final position */}
       <rect x="620" y="20" width="160" height="40" fill="#10b981" rx="8" />
       <text x="700" y="46" fill="white" fontSize="16" fontWeight="bold" textAnchor="middle">ФИНАЛЬНОЕ</text>
-
-      {/* Starting position - Standing figure */}
       <g>
-        {/* Head */}
         <circle cx="200" cy="150" r="20" fill="none" stroke="white" strokeWidth="4" />
-        {/* Body */}
         <line x1="200" y1="170" x2="200" y2="250" stroke="white" strokeWidth="4" strokeLinecap="round" />
-        {/* Arms */}
         <line x1="150" y1="190" x2="250" y2="190" stroke="white" strokeWidth="4" strokeLinecap="round" />
-        {/* Barbell */}
         <line x1="140" y1="190" x2="260" y2="190" stroke="#fbbf24" strokeWidth="6" strokeLinecap="round" />
-        {/* Legs */}
         <line x1="200" y1="250" x2="180" y2="330" stroke="white" strokeWidth="4" strokeLinecap="round" />
         <line x1="200" y1="250" x2="220" y2="330" stroke="white" strokeWidth="4" strokeLinecap="round" />
       </g>
-
-      {/* Final position - Squatting figure */}
       <g>
-        {/* Head */}
         <circle cx="600" cy="140" r="20" fill="none" stroke="white" strokeWidth="4" />
-        {/* Body */}
         <line x1="600" y1="160" x2="590" y2="230" stroke="white" strokeWidth="4" strokeLinecap="round" />
-        {/* Arms */}
         <line x1="550" y1="180" x2="650" y2="180" stroke="white" strokeWidth="4" strokeLinecap="round" />
-        {/* Barbell */}
         <line x1="540" y1="180" x2="660" y2="180" stroke="#fbbf24" strokeWidth="6" strokeLinecap="round" />
-        {/* Upper legs */}
         <line x1="590" y1="230" x2="560" y2="280" stroke="white" strokeWidth="4" strokeLinecap="round" />
         <line x1="590" y1="230" x2="620" y2="280" stroke="white" strokeWidth="4" strokeLinecap="round" />
-        {/* Lower legs */}
         <line x1="560" y1="280" x2="560" y2="330" stroke="white" strokeWidth="4" strokeLinecap="round" />
         <line x1="620" y1="280" x2="620" y2="330" stroke="white" strokeWidth="4" strokeLinecap="round" />
       </g>
-
-      {/* Arrows showing movement - Red */}
-      <defs>
-        <marker id="arrowRed" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
-          <path d="M0,0 L0,6 L9,3 z" fill="#ef4444" />
-        </marker>
-        <marker id="arrowGreen" markerWidth="12" markerHeight="12" refX="11" refY="3" orient="auto" markerUnits="strokeWidth">
-          <path d="M0,0 L0,6 L11,3 z" fill="#10b981" />
-        </marker>
-      </defs>
-
-      {/* Movement arrows on left side */}
-      <line x1="200" y1="260" x2="200" y2="310" stroke="#ef4444" strokeWidth="3" markerEnd="url(#arrowRed)" />
-      <line x1="190" y1="280" x2="160" y2="280" stroke="#ef4444" strokeWidth="3" markerEnd="url(#arrowRed)" />
-      <line x1="180" y1="320" x2="165" y2="335" stroke="#ef4444" strokeWidth="3" markerEnd="url(#arrowRed)" />
-
-      {/* Central arrow */}
-      <line x1="320" y1="225" x2="480" y2="225" stroke="#10b981" strokeWidth="4" markerEnd="url(#arrowGreen)" />
-      <text x="400" y="215" fill="#10b981" fontSize="18" fontWeight="bold" textAnchor="middle">ДВИЖЕНИЕ</text>
-
-      {/* Key points text */}
-      <text x="100" y="380" fill="#9ca3af" fontSize="14">Спина прямая</text>
-      <text x="80" y="400" fill="#9ca3af" fontSize="14">Колени над носками</text>
-      <text x="520" y="380" fill="#9ca3af" fontSize="14">Бедра параллельно</text>
-      <text x="560" y="400" fill="#9ca3af" fontSize="14">Таз назад</text>
+      <text x="400" y="420" fill="#9ca3af" fontSize="14" textAnchor="middle">{selectedExercise}</text>
     </svg>
   );
 
-  // Calculate padding for aspect ratio
-  const getAspectPadding = () => {
-    switch (aspectRatio) {
-      case '16:9': return '56.25%';
-      case '1:1': return '100%';
-      case '4:3': return '75%';
+  // Render media content
+  const renderMedia = (className = '') => {
+    // Video
+    if (imageSource === 'video' && videoUrl) {
+      return (
+        <div className={`relative w-full overflow-hidden rounded-xl bg-black ${className}`}>
+          <video
+            ref={videoRef}
+            src={videoUrl}
+            autoPlay
+            loop
+            muted
+            playsInline
+            className="w-full h-auto"
+          />
+          {videoAutoplayWorks === false && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+              <button
+                onClick={() => videoRef.current?.play()}
+                className="p-4 bg-white/20 rounded-full"
+              >
+                <Play size={32} className="text-white" />
+              </button>
+            </div>
+          )}
+        </div>
+      );
     }
-  };
 
-  // Render image with proper aspect ratio - using SVG for split-screen demo or AI generated
-  const renderImage = (className = '') => {
+    // AI Image
     if (imageSource === 'ai' && aiImageData) {
       return (
         <div className={`relative w-full overflow-hidden rounded-xl bg-black ${className}`}>
           <img
             src={aiImageData}
-            alt={mockExercise.name}
+            alt={selectedExercise}
             className="w-full h-auto"
-            style={{
-              mixBlendMode: 'screen',
-              maskImage: 'linear-gradient(to bottom, black 85%, transparent 100%)',
-              WebkitMaskImage: 'linear-gradient(to bottom, black 85%, transparent 100%)'
-            }}
           />
         </div>
       );
     }
 
-    // Default SVG demo
+    // SVG demo
     return (
       <div className={`relative w-full overflow-hidden rounded-xl bg-neutral-800 ${className}`}>
         <SplitScreenDemo />
@@ -193,249 +356,36 @@ const ExerciseCardTest: React.FC = () => {
     );
   };
 
-  // Variant A: Image always visible after title
-  const renderVariantA = () => (
+  // Variant B: Collapsed + expand button (recommended)
+  const renderPreviewCard = () => (
     <div className="bg-neutral-900 rounded-2xl p-5 border border-white/10 space-y-4">
-      {/* Exercise Name */}
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-bold text-white">🏋️ {mockExercise.name}</h3>
-      </div>
+      <h3 className="text-lg font-bold text-white">🏋️ {selectedExercise}</h3>
 
-      {/* Image - Always visible */}
-      {renderImage('animate-fade-in')}
-
-      {/* Description */}
-      <p className="text-sm text-gray-400 leading-relaxed">
-        {mockExercise.description}
-      </p>
-
-      {/* Sets Info */}
-      <div className="text-sm text-gray-500">
-        {mockExercise.sets} sets × {mockExercise.reps} reps
-      </div>
-
-      {/* Mock Sets */}
-      <div className="space-y-2">
-        {Array.from({ length: 3 }).map((_, i) => (
-          <div key={i} className="flex items-center gap-3 p-3 bg-neutral-800 rounded-xl">
-            <span className="text-gray-500 text-sm">#{i + 1}</span>
-            <input
-              type="number"
-              placeholder="45"
-              className="w-20 bg-neutral-900 border border-neutral-700 rounded-lg px-2 py-1 text-white text-sm text-center"
-            />
-            <span className="text-gray-600 text-xs">кг</span>
-            <input
-              type="number"
-              placeholder="5"
-              className="w-16 bg-neutral-900 border border-neutral-700 rounded-lg px-2 py-1 text-white text-sm text-center"
-            />
-            <span className="text-gray-600 text-xs">повт</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-
-  // Variant B: Collapsed + expand button
-  const renderVariantB = () => (
-    <div className="bg-neutral-900 rounded-2xl p-5 border border-white/10 space-y-4">
-      {/* Exercise Name */}
-      <h3 className="text-lg font-bold text-white">🏋️ {mockExercise.name}</h3>
-
-      {/* Sets Info */}
-      <div className="text-sm text-gray-500">
-        {mockExercise.sets} sets × {mockExercise.reps} reps
-      </div>
-
-      {/* Show Technique Button */}
       <button
         onClick={() => setShowImage(!showImage)}
         className="flex items-center gap-2 text-sm font-medium text-indigo-400 bg-indigo-500/10 px-4 py-2 rounded-lg hover:bg-indigo-500/20 transition"
       >
-        <Image size={16} />
+        {imageSource === 'video' ? <Video size={16} /> : <Image size={16} />}
         {showImage ? 'Скрыть технику' : 'Показать технику'}
       </button>
 
-      {/* Expandable Image */}
       {showImage && (
         <div className="animate-fade-in">
-          {renderImage()}
-          <p className="text-sm text-gray-400 mt-3 leading-relaxed">
-            {mockExercise.description}
-          </p>
+          {renderMedia()}
+
+          {/* Autoplay status */}
+          {imageSource === 'video' && (
+            <div className={`mt-2 text-xs ${videoAutoplayWorks ? 'text-green-400' : 'text-yellow-400'}`}>
+              {videoAutoplayWorks === null && '⏳ Проверка autoplay...'}
+              {videoAutoplayWorks === true && '✅ Autoplay работает!'}
+              {videoAutoplayWorks === false && '⚠️ Autoplay заблокирован, нужен клик'}
+            </div>
+          )}
         </div>
       )}
 
-      {/* Mock Sets */}
-      <div className="space-y-2">
-        {Array.from({ length: 3 }).map((_, i) => (
-          <div key={i} className="flex items-center gap-3 p-3 bg-neutral-800 rounded-xl">
-            <span className="text-gray-500 text-sm">#{i + 1}</span>
-            <input
-              type="number"
-              placeholder="45"
-              className="w-20 bg-neutral-900 border border-neutral-700 rounded-lg px-2 py-1 text-white text-sm text-center"
-            />
-            <span className="text-gray-600 text-xs">кг</span>
-            <input
-              type="number"
-              placeholder="5"
-              className="w-16 bg-neutral-900 border border-neutral-700 rounded-lg px-2 py-1 text-white text-sm text-center"
-            />
-            <span className="text-gray-600 text-xs">повт</span>
-          </div>
-        ))}
-      </div>
+      <div className="text-sm text-gray-500">3 подхода × 8-12 повторений</div>
     </div>
-  );
-
-  // Variant C: Thumbnail + Full screen modal
-  const renderVariantC = () => (
-    <>
-      <div className="bg-neutral-900 rounded-2xl p-5 border border-white/10 space-y-4">
-        {/* Exercise Name with preview */}
-        <div className="flex items-center justify-between gap-3">
-          <h3 className="text-lg font-bold text-white flex-1">🏋️ {mockExercise.name}</h3>
-          <button
-            onClick={() => setFullScreenImage(true)}
-            className="flex-shrink-0"
-          >
-            {renderImage('w-16 h-16 cursor-pointer hover:opacity-80 transition')}
-          </button>
-        </div>
-
-        {/* Sets Info */}
-        <div className="text-sm text-gray-500">
-          {mockExercise.sets} sets × {mockExercise.reps} reps
-        </div>
-
-        {/* Mock Sets */}
-        <div className="space-y-2">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="flex items-center gap-3 p-3 bg-neutral-800 rounded-xl">
-              <span className="text-gray-500 text-sm">#{i + 1}</span>
-              <input
-                type="number"
-                placeholder="45"
-                className="w-20 bg-neutral-900 border border-neutral-700 rounded-lg px-2 py-1 text-white text-sm text-center"
-              />
-              <span className="text-gray-600 text-xs">кг</span>
-              <input
-                type="number"
-                placeholder="5"
-                className="w-16 bg-neutral-900 border border-neutral-700 rounded-lg px-2 py-1 text-white text-sm text-center"
-              />
-              <span className="text-gray-600 text-xs">повт</span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Full Screen Modal */}
-      {fullScreenImage && (
-        <div className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center p-4 animate-fade-in">
-          <button
-            onClick={() => setFullScreenImage(false)}
-            className="absolute top-4 right-4 p-2 bg-white/10 rounded-full text-white hover:bg-white/20 transition"
-          >
-            <X size={24} />
-          </button>
-          <div className="max-w-2xl w-full">
-            {renderImage()}
-            <p className="text-white mt-6 text-center leading-relaxed">
-              {mockExercise.description}
-            </p>
-          </div>
-        </div>
-      )}
-    </>
-  );
-
-  // Variant D: Bottom Sheet
-  const renderVariantD = () => (
-    <>
-      <div className="bg-neutral-900 rounded-2xl p-5 border border-white/10 space-y-4">
-        {/* Exercise Name */}
-        <h3 className="text-lg font-bold text-white">🏋️ {mockExercise.name}</h3>
-
-        {/* Sets Info */}
-        <div className="text-sm text-gray-500">
-          {mockExercise.sets} sets × {mockExercise.reps} reps
-        </div>
-
-        {/* Mock Sets */}
-        <div className="space-y-2">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="flex items-center gap-3 p-3 bg-neutral-800 rounded-xl">
-              <span className="text-gray-500 text-sm">#{i + 1}</span>
-              <input
-                type="number"
-                placeholder="45"
-                className="w-20 bg-neutral-900 border border-neutral-700 rounded-lg px-2 py-1 text-white text-sm text-center"
-              />
-              <span className="text-gray-600 text-xs">кг</span>
-              <input
-                type="number"
-                placeholder="5"
-                className="w-16 bg-neutral-900 border border-neutral-700 rounded-lg px-2 py-1 text-white text-sm text-center"
-              />
-              <span className="text-gray-600 text-xs">повт</span>
-            </div>
-          ))}
-        </div>
-
-        {/* Swipe up hint */}
-        <button
-          onClick={() => setBottomSheetOpen(true)}
-          className="w-full flex items-center justify-center gap-2 text-sm text-gray-500 hover:text-gray-300 transition py-2"
-        >
-          <ChevronUp size={16} />
-          Свайп вверх для техники
-        </button>
-      </div>
-
-      {/* Bottom Sheet */}
-      {bottomSheetOpen && (
-        <div
-          className="fixed inset-0 z-50 bg-black/50"
-          onClick={() => setBottomSheetOpen(false)}
-        >
-          <div
-            className="absolute bottom-0 left-0 right-0 bg-neutral-900 rounded-t-3xl p-6 max-h-[80vh] overflow-y-auto animate-slide-up"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Handle */}
-            <div className="w-12 h-1 bg-gray-600 rounded-full mx-auto mb-6" />
-
-            {/* Close button */}
-            <button
-              onClick={() => setBottomSheetOpen(false)}
-              className="absolute top-4 right-4 p-2 bg-white/10 rounded-full text-gray-400 hover:text-white transition"
-            >
-              <X size={20} />
-            </button>
-
-            <h3 className="text-xl font-bold text-white mb-4">{mockExercise.name}</h3>
-
-            {renderImage('mb-4')}
-
-            <div className="space-y-3 text-gray-300">
-              <h4 className="font-bold text-white">Описание техники:</h4>
-              <p className="leading-relaxed">{mockExercise.description}</p>
-
-              <h4 className="font-bold text-white mt-4">Ключевые моменты:</h4>
-              <ul className="space-y-2 text-sm">
-                <li>• Штанга на плечах, ноги на ширине плеч</li>
-                <li>• Приседайте до параллели или ниже</li>
-                <li>• Держите спину прямой, колени над носками</li>
-                <li>• Таз назад, грудь вперёд</li>
-              </ul>
-            </div>
-          </div>
-        </div>
-      )}
-    </>
   );
 
   return (
@@ -443,151 +393,208 @@ const ExerciseCardTest: React.FC = () => {
       <div className="max-w-md mx-auto space-y-6">
         {/* Header */}
         <div className="text-center space-y-2 mb-8">
-          <h1 className="text-2xl font-black">🧪 Exercise Card UI Test</h1>
-          <p className="text-sm text-gray-500">Тестирование вариантов размещения изображений</p>
+          <h1 className="text-2xl font-black">🧪 Песочница генерации</h1>
+          <p className="text-sm text-gray-500">Тестирование AI генерации техники упражнений</p>
         </div>
 
-        {/* Controls */}
-        <div className="bg-neutral-900 rounded-2xl p-5 border border-white/10 space-y-5">
-          {/* Layout Variant Tabs */}
-          <div>
-            <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Layout Variant</label>
-            <div className="grid grid-cols-4 gap-2">
-              {(['A', 'B', 'C', 'D'] as LayoutVariant[]).map((v) => (
-                <button
-                  key={v}
-                  onClick={() => {
-                    setVariant(v);
-                    setShowImage(false);
-                    setFullScreenImage(false);
-                    setBottomSheetOpen(false);
-                  }}
-                  className={`py-2 rounded-lg font-bold text-sm transition ${
-                    variant === v
-                      ? 'bg-indigo-600 text-white'
-                      : 'bg-neutral-800 text-gray-400 hover:bg-neutral-700'
-                  }`}
-                >
-                  {v}
-                </button>
-              ))}
-            </div>
-            <p className="text-xs text-gray-600 mt-2">
-              {variant === 'A' && 'A: Изображение всегда видно'}
-              {variant === 'B' && 'B: Кнопка "Показать технику"'}
-              {variant === 'C' && 'C: Thumbnail + Full Screen'}
-              {variant === 'D' && 'D: Bottom Sheet (свайп вверх)'}
-            </p>
-          </div>
+        {/* Exercise Selector */}
+        <div className="bg-neutral-900 rounded-2xl p-5 border border-white/10 space-y-4">
+          <label className="block text-xs font-bold text-gray-500 uppercase">Упражнение ({EXERCISES_FROM_DB.indexOf(selectedExercise) + 1}/{EXERCISES_FROM_DB.length})</label>
 
-          {/* Aspect Ratio */}
-          <div>
-            <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Aspect Ratio</label>
-            <div className="grid grid-cols-3 gap-2">
-              {(['16:9', '1:1', '4:3'] as AspectRatio[]).map((ratio) => (
-                <button
-                  key={ratio}
-                  onClick={() => setAspectRatio(ratio)}
-                  className={`py-2 rounded-lg font-mono text-sm transition ${
-                    aspectRatio === ratio
-                      ? 'bg-emerald-600 text-white'
-                      : 'bg-neutral-800 text-gray-400 hover:bg-neutral-700'
-                  }`}
-                >
-                  {ratio}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Image Source Toggle */}
-          <div>
-            <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Image Source</label>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                onClick={() => setImageSource('svg')}
-                className={`py-2 rounded-lg font-bold text-sm transition ${
-                  imageSource === 'svg'
-                    ? 'bg-purple-600 text-white'
-                    : 'bg-neutral-800 text-gray-400 hover:bg-neutral-700'
-                }`}
-              >
-                SVG Demo
-              </button>
-              <button
-                onClick={() => setImageSource('ai')}
-                disabled={!aiImageData}
-                className={`py-2 rounded-lg font-bold text-sm transition ${
-                  imageSource === 'ai'
-                    ? 'bg-purple-600 text-white'
-                    : 'bg-neutral-800 text-gray-400 hover:bg-neutral-700'
-                } disabled:opacity-50 disabled:cursor-not-allowed`}
-              >
-                AI Generated
-              </button>
-            </div>
-          </div>
-
-          {/* AI Generation Button */}
-          <div>
-            <label className="block text-xs font-bold text-gray-500 uppercase mb-2">AI Image Generation (Nano Banana Pro)</label>
+          <div className="relative">
             <button
-              onClick={handleGenerateAIImage}
-              disabled={isGenerating}
-              className="w-full flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg font-bold hover:from-indigo-700 hover:to-purple-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={() => setDropdownOpen(!dropdownOpen)}
+              className="w-full flex items-center justify-between p-3 bg-neutral-800 rounded-lg text-left"
             >
-              {isGenerating ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  Generating...
-                </>
-              ) : (
-                <>
-                  <Sparkles size={16} />
-                  Generate AI Image
-                </>
-              )}
+              <span className="text-white truncate pr-2">{selectedExercise}</span>
+              <ChevronDown size={20} className={`text-gray-400 transition ${dropdownOpen ? 'rotate-180' : ''}`} />
             </button>
 
-            {generationError && (
-              <p className="text-xs text-red-400 mt-2">❌ {generationError}</p>
-            )}
-
-            {generationMetrics && (
-              <div className="mt-3 p-3 bg-neutral-800 rounded-lg text-xs space-y-1">
-                <p className="font-bold text-white">📊 Generation Metrics:</p>
-                <p className="text-gray-400">
-                  {generationMetrics.cached ? '📦 Loaded from cache' : '✨ Freshly generated'}
-                </p>
-                <p className="text-gray-400">⏱️ Time: {generationMetrics.generationTimeMs}ms</p>
-                <p className="text-gray-400">🔢 Tokens: {generationMetrics.promptTokens} prompt / {generationMetrics.totalTokens} total</p>
-                <p className="text-gray-400">💰 Cost: ${generationMetrics.costEstimate.toFixed(4)}</p>
+            {dropdownOpen && (
+              <div className="absolute z-50 w-full mt-2 max-h-60 overflow-y-auto bg-neutral-800 rounded-lg border border-white/10 shadow-xl">
+                {EXERCISES_FROM_DB.map((ex, i) => (
+                  <button
+                    key={ex}
+                    onClick={() => {
+                      setSelectedExercise(ex);
+                      setDropdownOpen(false);
+                      setShowImage(false);
+                    }}
+                    className={`w-full flex items-center gap-2 p-3 text-left text-sm hover:bg-neutral-700 transition ${
+                      ex === selectedExercise ? 'bg-indigo-600/20 text-indigo-300' : 'text-gray-300'
+                    }`}
+                  >
+                    <span className="text-gray-500 w-6">{i + 1}.</span>
+                    <span className="truncate">{ex}</span>
+                    {localStorage.getItem(`exercise_media_${encodeURIComponent(ex)}`) && (
+                      <Check size={14} className="text-green-400 ml-auto" />
+                    )}
+                  </button>
+                ))}
               </div>
             )}
+          </div>
+
+          {/* Cache Status */}
+          {cachedMedia && (
+            <div className="flex items-center gap-2 text-xs">
+              <span className={`px-2 py-1 rounded ${cachedMedia.approved ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'}`}>
+                {cachedMedia.approved ? '✅ Одобрено' : '⏳ На проверке'}
+              </span>
+              <span className="text-gray-500">
+                {new Date(cachedMedia.generatedAt).toLocaleDateString('ru-RU')}
+              </span>
+              <button onClick={handleClearCache} className="ml-auto text-red-400 hover:text-red-300">
+                Очистить
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Generation Controls */}
+        <div className="bg-neutral-900 rounded-2xl p-5 border border-white/10 space-y-4">
+          <label className="block text-xs font-bold text-gray-500 uppercase">Генерация</label>
+
+          {/* Generate Image Button */}
+          <button
+            onClick={handleGenerateImage}
+            disabled={isGeneratingImage}
+            className="w-full flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg font-bold hover:from-indigo-700 hover:to-purple-700 transition disabled:opacity-50"
+          >
+            {isGeneratingImage ? (
+              <>
+                <Loader2 size={16} className="animate-spin" />
+                Генерация фото...
+              </>
+            ) : (
+              <>
+                <Sparkles size={16} />
+                Генерировать фото (Gemini)
+              </>
+            )}
+          </button>
+
+          {/* Generate Video Button */}
+          <button
+            onClick={handleGenerateVideo}
+            disabled={isGeneratingVideo || !aiImageData}
+            className="w-full flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-pink-600 to-red-600 text-white rounded-lg font-bold hover:from-pink-700 hover:to-red-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isGeneratingVideo ? (
+              <>
+                <Loader2 size={16} className="animate-spin" />
+                {videoPollingStatus}
+              </>
+            ) : (
+              <>
+                <Video size={16} />
+                Генерировать видео (Veo) {!aiImageData && '⚠️'}
+              </>
+            )}
+          </button>
+
+          {/* Polling Status */}
+          {videoPollingStatus && !isGeneratingVideo && (
+            <p className="text-xs text-center text-gray-400">{videoPollingStatus}</p>
+          )}
+
+          {/* Error */}
+          {generationError && (
+            <p className="text-xs text-red-400 text-center">❌ {generationError}</p>
+          )}
+
+          {/* Metrics */}
+          {generationMetrics && (
+            <div className="p-3 bg-neutral-800 rounded-lg text-xs space-y-1">
+              <p className="font-bold text-white">📊 Метрики:</p>
+              {generationMetrics.cached && <p className="text-green-400">📦 Из кеша</p>}
+              <p className="text-gray-400">⏱️ Время: {generationMetrics.generationTimeMs}ms</p>
+              <p className="text-gray-400">💰 Стоимость: ${generationMetrics.costEstimate?.toFixed(4) || '?'}</p>
+              {generationMetrics.fileSize && (
+                <p className="text-gray-400">📁 Размер: {generationMetrics.fileSize}KB</p>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Approval Buttons */}
+        {(aiImageData || videoUrl) && (
+          <div className="bg-neutral-900 rounded-2xl p-5 border border-white/10 space-y-4">
+            <label className="block text-xs font-bold text-gray-500 uppercase">Оценка качества</label>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                onClick={() => handleSaveToCache(true)}
+                className="flex items-center justify-center gap-2 py-3 bg-green-600 text-white rounded-lg font-bold hover:bg-green-700 transition"
+              >
+                <ThumbsUp size={16} />
+                Одобрить
+              </button>
+              <button
+                onClick={() => handleSaveToCache(false)}
+                className="flex items-center justify-center gap-2 py-3 bg-orange-600 text-white rounded-lg font-bold hover:bg-orange-700 transition"
+              >
+                <ThumbsDown size={16} />
+                На доработку
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Source Toggle */}
+        <div className="bg-neutral-900 rounded-2xl p-5 border border-white/10 space-y-4">
+          <label className="block text-xs font-bold text-gray-500 uppercase">Источник</label>
+          <div className="grid grid-cols-3 gap-2">
+            <button
+              onClick={() => setImageSource('svg')}
+              className={`py-2 rounded-lg font-bold text-sm transition ${
+                imageSource === 'svg' ? 'bg-purple-600 text-white' : 'bg-neutral-800 text-gray-400'
+              }`}
+            >
+              SVG
+            </button>
+            <button
+              onClick={() => setImageSource('ai')}
+              disabled={!aiImageData}
+              className={`py-2 rounded-lg font-bold text-sm transition disabled:opacity-50 ${
+                imageSource === 'ai' ? 'bg-purple-600 text-white' : 'bg-neutral-800 text-gray-400'
+              }`}
+            >
+              Фото
+            </button>
+            <button
+              onClick={() => setImageSource('video')}
+              disabled={!videoUrl}
+              className={`py-2 rounded-lg font-bold text-sm transition disabled:opacity-50 ${
+                imageSource === 'video' ? 'bg-purple-600 text-white' : 'bg-neutral-800 text-gray-400'
+              }`}
+            >
+              Видео
+            </button>
           </div>
         </div>
 
         {/* Preview Card */}
         <div className="space-y-2">
           <label className="block text-xs font-bold text-gray-500 uppercase">Preview</label>
-          {variant === 'A' && renderVariantA()}
-          {variant === 'B' && renderVariantB()}
-          {variant === 'C' && renderVariantC()}
-          {variant === 'D' && renderVariantD()}
+          {renderPreviewCard()}
         </div>
 
         {/* Notes */}
         <div className="bg-neutral-900/50 border border-white/5 rounded-xl p-4 text-xs text-gray-500 space-y-2">
-          <p className="font-bold text-gray-400">📝 Заметки:</p>
-          <ul className="space-y-1">
-            <li><strong>Вариант A:</strong> Максимальная наглядность, подходит для новичков</li>
-            <li><strong>Вариант B:</strong> ✅ Экономит место, загрузка по требованию (Рекомендован!)</li>
-            <li><strong>Вариант C:</strong> Компактный preview + детальный просмотр</li>
-            <li><strong>Вариант D:</strong> Mobile-native паттерн, максимум информации</li>
-          </ul>
-          <div className="mt-3 p-3 bg-indigo-500/10 border border-indigo-500/20 rounded-lg">
-            <p className="font-bold text-indigo-400 mb-1">🎨 Split-Screen изображение:</p>
-            <p className="text-indigo-300">Изображение показывает две позиции: ИСХОДНОЕ (слева) и ФИНАЛЬНОЕ (справа) положение с красными стрелками, указывающими направление движения</p>
+          <p className="font-bold text-gray-400">📝 Как использовать:</p>
+          <ol className="space-y-1 list-decimal list-inside">
+            <li>Выберите упражнение из dropdown</li>
+            <li>Нажмите "Генерировать фото" (Gemini, ~$0.13)</li>
+            <li>Оцените качество 👍/👎</li>
+            <li>Если ОК → "Генерировать видео" (Veo, ~$1.40)</li>
+            <li>Проверьте autoplay в Telegram</li>
+          </ol>
+
+          <div className="mt-3 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+            <p className="font-bold text-yellow-400">⚠️ Video autoplay требует:</p>
+            <code className="text-yellow-300 text-[10px] block mt-1">
+              {'<video autoplay loop muted playsinline>'}
+            </code>
           </div>
         </div>
       </div>
