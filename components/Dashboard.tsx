@@ -109,9 +109,26 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
                 // Verify if session still exists in program
                 const sessionExists = program.sessions.some(s => s.name === parsedState.session.name);
                 if (sessionExists) {
-                    setRestoredState(parsedState);
-                    setActiveWorkout(parsedState.session.name);
-                    setCurrentReadiness(parsedState.readiness);
+                    // Migration: Check if state has old pre-filled values (bug fix)
+                    // Old bug: reps/weight were pre-filled, so canFinish was true immediately
+                    // Detect: if ALL sets have identical reps values matching the exercise template, it's old data
+                    const hasOldPrefilledData = parsedState.completedExercises.some(ex => {
+                        if (!ex.completedSets || ex.completedSets.length === 0) return false;
+                        const firstReps = ex.completedSets[0]?.reps;
+                        // If all sets have same non-zero reps and no set is marked complete, likely old pre-filled data
+                        return firstReps > 0 &&
+                               ex.completedSets.every(s => s.reps === firstReps && !s.isCompleted);
+                    });
+
+                    if (hasOldPrefilledData) {
+                        // Clear old buggy data
+                        localStorage.removeItem('activeWorkoutState');
+                        console.log('Cleared old pre-filled workout state (migration)');
+                    } else {
+                        setRestoredState(parsedState);
+                        setActiveWorkout(parsedState.session.name);
+                        setCurrentReadiness(parsedState.readiness);
+                    }
                 } else {
                     localStorage.removeItem('activeWorkoutState');
                 }
