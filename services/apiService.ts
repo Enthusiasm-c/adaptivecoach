@@ -160,6 +160,13 @@ export interface NotificationSettings {
   notification_response_rate?: number;
 }
 
+// Exercise GIF types
+export interface ExerciseGifResponse {
+  exerciseName: string;
+  gifUrl: string | null;
+  found: boolean;
+}
+
 // Enhanced profile types
 export interface EnhancedUserProfile {
   user: {
@@ -381,6 +388,13 @@ export const apiService = {
         method: 'POST',
         body: JSON.stringify({ sessionToken, action, deviceInfo }),
       });
+    },
+  },
+
+  // Exercise GIFs
+  exercises: {
+    getGif: async (name: string): Promise<ExerciseGifResponse> => {
+      return apiRequest<ExerciseGifResponse>(`/api/exercises/gif?name=${encodeURIComponent(name)}`);
     },
   },
 };
