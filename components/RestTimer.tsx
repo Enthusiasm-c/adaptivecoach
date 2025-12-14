@@ -52,8 +52,14 @@ const RestTimer: React.FC<RestTimerProps> = ({ initialSeconds, isOpen, onClose }
     };
 
     return (
-        <div className="fixed top-6 left-1/2 transform -translate-x-1/2 z-50 animate-slide-up">
-            <div className="bg-neutral-800/90 backdrop-blur-xl border border-white/10 shadow-2xl rounded-full p-2 pl-6 pr-2 flex items-center gap-6">
+        <>
+            {/* Overlay - клик закрывает таймер */}
+            <div
+                className="fixed inset-0 z-40"
+                onClick={onClose}
+            />
+            <div className="fixed top-6 left-1/2 transform -translate-x-1/2 z-50 animate-slide-up">
+                <div className="bg-neutral-800/90 backdrop-blur-xl border border-white/10 shadow-2xl rounded-full p-2 pl-4 pr-2 flex items-center gap-3">
                 
                 <div className="flex items-center gap-3">
                     <div className="relative w-10 h-10 flex items-center justify-center">
@@ -90,8 +96,9 @@ const RestTimer: React.FC<RestTimerProps> = ({ initialSeconds, isOpen, onClose }
                     </button>
                 </div>
 
+                </div>
             </div>
-        </div>
+        </>
     );
 };
 
