@@ -43,6 +43,19 @@ export interface StreakResult {
     streakProtected: boolean;  // True if shield is currently protecting the streak
 }
 
+/**
+ * Get ISO week number (Monday = start of week)
+ */
+const getISOWeek = (date: Date): { year: number; week: number } => {
+    const d = new Date(date);
+    d.setHours(0, 0, 0, 0);
+    // Set to Thursday of current week (ISO week starts Monday)
+    d.setDate(d.getDate() + 4 - (d.getDay() || 7));
+    const yearStart = new Date(d.getFullYear(), 0, 1);
+    const weekNo = Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+    return { year: d.getFullYear(), week: weekNo };
+};
+
 export const calculateStreaks = (
     logs: WorkoutLog[],
     shieldOptions?: StreakShieldOptions,
@@ -50,84 +63,115 @@ export const calculateStreaks = (
 ): StreakResult => {
     if (logs.length === 0) return { currentStreak: 0, bestStreak: 0, streakProtected: false };
 
-    // Получаем уникальные даты тренировок (без времени), сортируем от новых к старым
-    const workoutDates = [...new Set(logs.map(l => {
+    // Получаем уникальные недели с тренировками
+    const workoutWeeks = new Map<string, boolean>();
+    logs.forEach(l => {
         const d = new Date(l.date);
-        d.setHours(0, 0, 0, 0);
-        return d.getTime();
-    }))].sort((a, b) => b - a); // От новых к старым
+        const { year, week } = getISOWeek(d);
+        workoutWeeks.set(`${year}-W${week}`, true);
+    });
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const todayTime = today.getTime();
     const oneDayMs = 24 * 60 * 60 * 1000;
 
-    // Check if shield was used recently (within last 24 hours)
+    // Check if shield was used recently (within last 7 days)
     let streakProtected = false;
     if (shieldOptions?.shieldUsedAt) {
         const shieldDate = new Date(shieldOptions.shieldUsedAt);
         shieldDate.setHours(0, 0, 0, 0);
         const daysSinceShield = Math.floor((todayTime - shieldDate.getTime()) / oneDayMs);
-        if (daysSinceShield <= 1) {
+        if (daysSinceShield <= 7) {
             streakProtected = true;
         }
     }
 
-    // Простая логика: считаем тренировки подряд (каждый день)
-    // Streak начинается с сегодня (или вчера если сегодня ещё не тренировался)
+    // Считаем недели подряд с тренировками (от текущей недели назад)
+    const { year: currentYear, week: currentWeek } = getISOWeek(today);
+
+    // Генерируем список недель от текущей назад
     let currentStreak = 0;
+    let checkDate = new Date(today);
 
-    if (workoutDates.length === 0) {
-        return { currentStreak: 0, bestStreak: 0, streakProtected };
-    }
+    // Проверяем текущую неделю
+    const currentWeekKey = `${currentYear}-W${currentWeek}`;
+    const hasWorkoutThisWeek = workoutWeeks.has(currentWeekKey);
 
-    const latestWorkout = workoutDates[0];
-    const daysSinceLatest = Math.floor((todayTime - latestWorkout) / oneDayMs);
+    // Если на текущей неделе нет тренировки, проверяем прошлую
+    if (!hasWorkoutThisWeek) {
+        // Возвращаемся на прошлую неделю
+        checkDate.setDate(checkDate.getDate() - 7);
+        const { year: lastYear, week: lastWeek } = getISOWeek(checkDate);
+        const lastWeekKey = `${lastYear}-W${lastWeek}`;
 
-    // Если последняя тренировка была больше чем вчера - streak = 0
-    if (daysSinceLatest > 1) {
-        // Streak прервался, но вычисляем bestStreak из истории
-        let bestStreak = 1;
-        let tempStreak = 1;
-        for (let i = 1; i < workoutDates.length; i++) {
-            const diff = (workoutDates[i - 1] - workoutDates[i]) / oneDayMs;
-            if (diff === 1) {
-                tempStreak++;
-            } else {
-                bestStreak = Math.max(bestStreak, tempStreak);
-                tempStreak = 1;
-            }
+        if (!workoutWeeks.has(lastWeekKey)) {
+            // Две недели без тренировок - streak = 0
+            return { currentStreak: 0, bestStreak: calculateBestWeekStreak(logs), streakProtected };
         }
-        bestStreak = Math.max(bestStreak, tempStreak);
-        return { currentStreak: 0, bestStreak, streakProtected };
     }
 
-    // Считаем текущий streak от последней тренировки
-    currentStreak = 1;
-    for (let i = 1; i < workoutDates.length; i++) {
-        const diff = (workoutDates[i - 1] - workoutDates[i]) / oneDayMs;
-        if (diff === 1) {
+    // Считаем недели подряд с тренировками
+    checkDate = hasWorkoutThisWeek ? new Date(today) : new Date(today.getTime() - 7 * oneDayMs);
+
+    for (let i = 0; i < 52; i++) { // Максимум год назад
+        const { year, week } = getISOWeek(checkDate);
+        const weekKey = `${year}-W${week}`;
+
+        if (workoutWeeks.has(weekKey)) {
             currentStreak++;
+            checkDate.setDate(checkDate.getDate() - 7);
         } else {
             break;
         }
     }
 
-    // Вычисляем лучший streak
-    let bestStreak = currentStreak;
+    const bestStreak = Math.max(currentStreak, calculateBestWeekStreak(logs));
+
+    return { currentStreak, bestStreak, streakProtected };
+};
+
+/**
+ * Calculate best streak of consecutive weeks with workouts
+ */
+const calculateBestWeekStreak = (logs: WorkoutLog[]): number => {
+    if (logs.length === 0) return 0;
+
+    // Получаем уникальные недели, сортируем
+    const weeks = [...new Set(logs.map(l => {
+        const { year, week } = getISOWeek(new Date(l.date));
+        return year * 100 + week; // Уникальный номер недели для сортировки
+    }))].sort((a, b) => b - a);
+
+    if (weeks.length === 0) return 0;
+
+    let bestStreak = 1;
     let tempStreak = 1;
-    for (let i = 1; i < workoutDates.length; i++) {
-        const diff = (workoutDates[i - 1] - workoutDates[i]) / oneDayMs;
-        if (diff === 1) {
+
+    for (let i = 1; i < weeks.length; i++) {
+        // Проверяем разницу между неделями
+        const prevYear = Math.floor(weeks[i - 1] / 100);
+        const prevWeek = weeks[i - 1] % 100;
+        const currYear = Math.floor(weeks[i] / 100);
+        const currWeek = weeks[i] % 100;
+
+        // Проверяем последовательность (с учётом перехода года)
+        let isConsecutive = false;
+        if (prevYear === currYear && prevWeek === currWeek + 1) {
+            isConsecutive = true;
+        } else if (prevYear === currYear + 1 && prevWeek === 1 && currWeek >= 52) {
+            isConsecutive = true;
+        }
+
+        if (isConsecutive) {
             tempStreak++;
         } else {
             bestStreak = Math.max(bestStreak, tempStreak);
             tempStreak = 1;
         }
     }
-    bestStreak = Math.max(bestStreak, tempStreak);
 
-    return { currentStreak, bestStreak, streakProtected };
+    return Math.max(bestStreak, tempStreak);
 };
 
 export const calculateWorkoutVolume = (log: WorkoutLog): number => {

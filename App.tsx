@@ -24,6 +24,7 @@ import {
   checkMesocycleEvents,
   getEventNotificationMessage,
   getMesocycleSummary,
+  syncMesocycleWithLogs,
 } from './services/mesocycleService';
 import { runAutoMigration } from './services/migrationService';
 
@@ -70,7 +71,24 @@ const App: React.FC = () => {
 
   // Mesocycle state (Phase 3)
   const [mesocycleState, setMesocycleState] = useState<MesocycleState | null>(() => {
-    return loadMesocycleState();
+    const savedState = loadMesocycleState();
+    if (savedState) {
+      // Try to sync with logs on init
+      try {
+        const savedLogs = localStorage.getItem('workoutLogs');
+        const logs = savedLogs ? JSON.parse(savedLogs) : [];
+        if (logs.length > 0) {
+          const synced = syncMesocycleWithLogs(savedState, logs);
+          if (synced !== savedState) {
+            saveMesocycleState(synced);
+          }
+          return synced;
+        }
+      } catch {
+        // Ignore errors, use saved state
+      }
+    }
+    return savedState;
   });
 
   // Partner/Collaboration tracking (e.g., FitCube)

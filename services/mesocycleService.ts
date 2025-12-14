@@ -108,6 +108,60 @@ export function calculateCurrentWeek(startDate: string): number {
 }
 
 /**
+ * Calculate current week based on first workout in logs (more reliable)
+ * Falls back to startDate if no logs exist
+ */
+export function calculateCurrentWeekFromLogs(logs: WorkoutLog[], startDate: string): number {
+  if (!logs || logs.length === 0) {
+    return calculateCurrentWeek(startDate);
+  }
+
+  // Find the earliest workout date
+  const sortedDates = logs
+    .map(l => new Date(l.date).getTime())
+    .sort((a, b) => a - b);
+
+  const firstWorkoutDate = new Date(sortedDates[0]);
+  const weekStart = getWeekStartDate(firstWorkoutDate);
+
+  const now = new Date();
+  const diffTime = now.getTime() - weekStart.getTime();
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+  const weekNumber = Math.floor(diffDays / 7) + 1;
+
+  return Math.min(6, Math.max(1, weekNumber));
+}
+
+/**
+ * Sync mesocycle state with workout logs
+ * Call this when loading state to ensure consistency
+ */
+export function syncMesocycleWithLogs(state: MesocycleState, logs: WorkoutLog[]): MesocycleState {
+  if (!logs || logs.length === 0) {
+    return state;
+  }
+
+  // Calculate week based on first workout
+  const calculatedWeek = calculateCurrentWeekFromLogs(logs, state.mesocycle.startDate);
+  const phase = getPhaseForWeek(calculatedWeek);
+
+  // If week differs, update state
+  if (calculatedWeek !== state.mesocycle.weekNumber || phase !== state.mesocycle.phase) {
+    return {
+      ...state,
+      mesocycle: {
+        ...state.mesocycle,
+        weekNumber: calculatedWeek,
+        phase,
+        volumeMultiplier: VOLUME_MULTIPLIERS[phase],
+      },
+    };
+  }
+
+  return state;
+}
+
+/**
  * Get phase for a given week number
  */
 export function getPhaseForWeek(weekNumber: number): MesocyclePhase {
