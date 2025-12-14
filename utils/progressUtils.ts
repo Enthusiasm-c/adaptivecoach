@@ -508,12 +508,12 @@ export const calculateLevel = (logs: WorkoutLog[]) => {
     const nextLevelBaseXp = 50 * Math.pow(level, 2);
     const levelProgress = Math.min(100, Math.max(0, ((xp - currentLevelBaseXp) / (nextLevelBaseXp - currentLevelBaseXp)) * 100));
 
-    let title = "Новичок";
-    if (level >= 3) title = "Любитель";
-    if (level >= 6) title = "Атлет";
-    if (level >= 10) title = "Профи";
-    if (level >= 15) title = "Машина";
-    if (level >= 25) title = "Легенда";
+    let title = "Уровень 1";
+    if (level >= 3) title = "Уровень 2";
+    if (level >= 6) title = "Уровень 3";
+    if (level >= 10) title = "Уровень 4";
+    if (level >= 15) title = "Уровень 5";
+    if (level >= 25) title = "Уровень 6";
 
     return { level, title, xp, levelProgress, nextLevelBaseXp: Math.floor(nextLevelBaseXp) };
 };

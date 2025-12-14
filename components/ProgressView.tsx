@@ -373,7 +373,7 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
                                 <div key={`${log.date}-${idx}`} className="bg-neutral-800 rounded-xl p-3">
                                     <div className="flex justify-between text-sm mb-1">
                                         <span className="text-red-400 font-medium">
-                                            {log.feedback?.pain?.location || 'Не указано'}
+                                            {log.feedback?.pain?.location || (log.feedback?.pain?.details ? 'См. описание' : 'Не указано')}
                                         </span>
                                         <span className="text-gray-500">
                                             {new Date(log.date).toLocaleDateString('ru-RU', {

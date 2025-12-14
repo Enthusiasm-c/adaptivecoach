@@ -157,6 +157,7 @@ export interface CompletedSet {
   reps: number;
   weight: number;
   rir?: number;
+  isCompleted?: boolean;
 }
 
 export interface CompletedExercise extends Exercise {

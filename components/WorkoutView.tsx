@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { WorkoutSession, CompletedExercise, WorkoutLog, OnboardingProfile, Exercise, ReadinessData } from '../types';
 import FeedbackModal from './FeedbackModal';
-import { ChevronLeft, ChevronRight, Timer, Replace, AlertTriangle, Info, Calculator, History, CheckCircle2, ExternalLink, Video, ChevronDown, ChevronUp } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Timer, Replace, AlertTriangle, Info, Calculator, History, CheckCircle2, ExternalLink, Video, ChevronDown, ChevronUp, Minus, Plus } from 'lucide-react';
 import CoachFeedbackModal from './CoachFeedbackModal';
 import ExerciseSwapModal from './ExerciseSwapModal';
 import PlateCalculatorModal from './PlateCalculatorModal';
@@ -110,7 +110,7 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
     setCompletedExercises(
       adjustedExercises.map(ex => ({
         ...ex,
-        completedSets: Array.from({ length: ex.sets }, () => ({ reps: 0, weight: 0, rir: undefined })),
+        completedSets: Array.from({ length: ex.sets }, () => ({ reps: 0, weight: 0, rir: undefined, isCompleted: false })),
       }))
     );
 
@@ -286,6 +286,35 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
     return CARDIO_KEYWORDS.some(k => nameLower.includes(k));
   };
 
+  // Helper: check if exercise is isometric (plank, hold, etc.)
+  const isIsometricExercise = (ex: typeof completedExercises[0]): boolean => {
+    if (ex.exerciseType === 'isometric') return true;
+    const nameLower = ex.name.toLowerCase();
+    return ISOMETRIC_KEYWORDS.some(k => nameLower.includes(k));
+  };
+
+  // Helper: get weight step for exercise (dumbbells = 2kg, barbell = 5kg)
+  const getWeightStep = (ex: typeof completedExercises[0]): number => {
+    const nameLower = ex.name.toLowerCase();
+    // Dumbbells: 2kg step
+    if (PAIRED_DUMBBELL_PATTERNS.some(p => nameLower.includes(p)) ||
+        SINGLE_DUMBBELL_PATTERNS.some(p => nameLower.includes(p))) {
+      return 2;
+    }
+    // Default (barbell, machines): 5kg step
+    return 5;
+  };
+
+  // Stepper handlers for weight and reps
+  const adjustValue = (exIndex: number, setIndex: number, field: 'weight' | 'reps', delta: number) => {
+    const newExercises = [...completedExercises];
+    const currentValue = newExercises[exIndex].completedSets[setIndex][field] || 0;
+    const step = field === 'weight' ? getWeightStep(newExercises[exIndex]) : 1;
+    const newValue = Math.max(0, currentValue + delta * step);
+
+    handleValueChange(exIndex, setIndex, field, newValue);
+  };
+
   // Helper: check if all sets are complete for an exercise
   const isExerciseComplete = (ex: typeof completedExercises[0]): boolean => {
     const needsWeight = exerciseNeedsWeight(ex);
@@ -421,7 +450,7 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
       if (ex.name === newExercise.name) {
         return {
           ...ex,
-          completedSets: Array.from({ length: ex.sets }, () => ({ reps: 0, weight: 0, rir: undefined })),
+          completedSets: Array.from({ length: ex.sets }, () => ({ reps: 0, weight: 0, rir: undefined, isCompleted: false })),
         }
       }
       return completedExercises[i];
@@ -618,68 +647,94 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
               {/* Sets */}
               <div className="space-y-3">
                 {currentExercise.completedSets.map((set, setIndex) => (
-                  <div key={setIndex} className={`grid ${exerciseNeedsWeight(currentExercise) ? 'grid-cols-[auto_1fr_1fr_0.7fr_auto]' : 'grid-cols-[auto_1fr_0.7fr_auto]'} gap-2 items-center p-3 rounded-xl transition-all ${set.isCompleted
+                  <div key={setIndex} className={`grid ${
+                    exerciseNeedsWeight(currentExercise) && !isCardioExercise(currentExercise) && !isIsometricExercise(currentExercise)
+                      ? 'grid-cols-[auto_1fr_1fr_0.7fr_auto]'  // weight + reps + RIR + check
+                      : exerciseNeedsWeight(currentExercise)
+                        ? 'grid-cols-[auto_1fr_1fr_auto]'      // weight + reps + check (no RIR)
+                        : 'grid-cols-[auto_1fr_auto]'          // reps + check only
+                  } gap-2 items-center p-3 rounded-xl transition-all ${set.isCompleted
                     ? 'bg-emerald-500/10 border border-emerald-500/20'
                     : 'bg-neutral-900/50 border border-white/5'
                     }`}>
                     <div className="w-6 text-center font-mono text-gray-500 text-sm">#{setIndex + 1}</div>
 
                     {exerciseNeedsWeight(currentExercise) && (
-                      <div className="relative">
-                        <input
-                          type="number"
-                          value={set.weight || ''}
-                          onChange={(e) => handleValueChange(currentExerciseIndex, setIndex, 'weight', parseInt(e.target.value))}
-                          placeholder={currentExercise.weight?.toString() || "кг"}
-                          className={`w-full bg-transparent text-center font-mono font-bold text-white outline-none border-b transition py-1 ${
-                            attemptedFinish && getSetErrors(currentExercise, set).weight
-                              ? 'border-red-500 bg-red-500/10'
-                              : 'border-gray-700 focus:border-indigo-500'
-                          }`}
-                        />
-                        <span className={`absolute right-0 top-1/2 -translate-y-1/2 text-[10px] pointer-events-none ${
-                          attemptedFinish && getSetErrors(currentExercise, set).weight ? 'text-red-400' : 'text-gray-600'
-                        }`}>{isPairedDumbbellExercise(currentExercise) ? 'кг×2' : 'кг'}</span>
+                      <div className={`flex items-center justify-center gap-1 rounded-lg py-1 px-1 ${
+                        attemptedFinish && getSetErrors(currentExercise, set).weight
+                          ? 'bg-red-500/10 border border-red-500/30'
+                          : 'bg-neutral-800/50'
+                      }`}>
+                        <button
+                          onClick={() => adjustValue(currentExerciseIndex, setIndex, 'weight', -1)}
+                          className="w-8 h-8 flex items-center justify-center rounded-lg bg-neutral-700 hover:bg-neutral-600 text-white transition active:scale-95"
+                        >
+                          <Minus size={16} />
+                        </button>
+                        <div className="flex flex-col items-center min-w-[40px]">
+                          <span className="font-mono font-bold text-white text-sm">
+                            {set.weight || currentExercise.weight || '—'}
+                          </span>
+                          <span className="text-[9px] text-gray-500">
+                            {isPairedDumbbellExercise(currentExercise) ? 'кг×2' : 'кг'}
+                          </span>
+                        </div>
+                        <button
+                          onClick={() => adjustValue(currentExerciseIndex, setIndex, 'weight', 1)}
+                          className="w-8 h-8 flex items-center justify-center rounded-lg bg-neutral-700 hover:bg-neutral-600 text-white transition active:scale-95"
+                        >
+                          <Plus size={16} />
+                        </button>
                       </div>
                     )}
 
-                    <div className="relative">
-                      <input
-                        type="number"
-                        value={set.reps || ''}
-                        onChange={(e) => handleValueChange(currentExerciseIndex, setIndex, 'reps', parseInt(e.target.value))}
-                        placeholder={currentExercise.reps.split('-')[0]}
-                        className={`w-full bg-transparent text-center font-mono font-bold text-white outline-none border-b transition py-1 ${
-                          attemptedFinish && getSetErrors(currentExercise, set).reps
-                            ? 'border-red-500 bg-red-500/10'
-                            : 'border-gray-700 focus:border-indigo-500'
-                        }`}
-                      />
-                      <span className={`absolute right-0 top-1/2 -translate-y-1/2 text-[10px] pointer-events-none ${
-                        attemptedFinish && getSetErrors(currentExercise, set).reps ? 'text-red-400' : 'text-gray-600'
-                      }`}>повт</span>
-                    </div>
+                    <div className={`flex items-center justify-center gap-1 rounded-lg py-1 px-1 ${
+                        attemptedFinish && getSetErrors(currentExercise, set).reps
+                          ? 'bg-red-500/10 border border-red-500/30'
+                          : 'bg-neutral-800/50'
+                      }`}>
+                        <button
+                          onClick={() => adjustValue(currentExerciseIndex, setIndex, 'reps', -1)}
+                          className="w-8 h-8 flex items-center justify-center rounded-lg bg-neutral-700 hover:bg-neutral-600 text-white transition active:scale-95"
+                        >
+                          <Minus size={16} />
+                        </button>
+                        <div className="flex flex-col items-center min-w-[32px]">
+                          <span className="font-mono font-bold text-white text-sm">
+                            {set.reps || currentExercise.reps.split('-')[0] || '—'}
+                          </span>
+                          <span className="text-[9px] text-gray-500">повт</span>
+                        </div>
+                        <button
+                          onClick={() => adjustValue(currentExerciseIndex, setIndex, 'reps', 1)}
+                          className="w-8 h-8 flex items-center justify-center rounded-lg bg-neutral-700 hover:bg-neutral-600 text-white transition active:scale-95"
+                        >
+                          <Plus size={16} />
+                        </button>
+                      </div>
 
-                    {/* RIR - Reps In Reserve */}
-                    <div className="relative flex items-center gap-1">
-                      <select
-                        value={set.rir ?? ''}
-                        onChange={(e) => handleValueChange(currentExerciseIndex, setIndex, 'rir', parseInt(e.target.value))}
-                        className="w-full bg-transparent text-center font-mono font-bold text-white outline-none border-b border-gray-700 focus:border-indigo-500 transition py-1 appearance-none cursor-pointer"
-                      >
-                        <option value="" className="bg-neutral-900">-</option>
-                        <option value="0" className="bg-neutral-900">0</option>
-                        <option value="1" className="bg-neutral-900">1</option>
-                        <option value="2" className="bg-neutral-900">2</option>
-                        <option value="3" className="bg-neutral-900">3+</option>
-                      </select>
-                      <button
-                        onClick={() => setShowRirInfo(true)}
-                        className="text-gray-500 hover:text-indigo-400 transition p-0.5"
-                      >
-                        <Info size={14} />
-                      </button>
-                    </div>
+                    {/* RIR - Reps In Reserve (only for strength exercises, not cardio/isometric) */}
+                    {exerciseNeedsWeight(currentExercise) && !isCardioExercise(currentExercise) && !isIsometricExercise(currentExercise) && (
+                      <div className="relative flex items-center gap-1">
+                        <select
+                          value={set.rir ?? ''}
+                          onChange={(e) => handleValueChange(currentExerciseIndex, setIndex, 'rir', parseInt(e.target.value))}
+                          className="w-full bg-transparent text-center font-mono font-bold text-white outline-none border-b border-gray-700 focus:border-indigo-500 transition py-1 appearance-none cursor-pointer"
+                        >
+                          <option value="" className="bg-neutral-900">-</option>
+                          <option value="0" className="bg-neutral-900">0</option>
+                          <option value="1" className="bg-neutral-900">1</option>
+                          <option value="2" className="bg-neutral-900">2</option>
+                          <option value="3" className="bg-neutral-900">3+</option>
+                        </select>
+                        <button
+                          onClick={() => setShowRirInfo(true)}
+                          className="text-gray-500 hover:text-indigo-400 transition p-0.5"
+                        >
+                          <Info size={14} />
+                        </button>
+                      </div>
+                    )}
 
                     <button
                       onClick={() => toggleSetComplete(currentExerciseIndex, setIndex)}
@@ -695,17 +750,6 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
               </div>
             </div>
           </div>
-        </div>
-
-        {/* Timer Trigger */}
-        <div className="mt-6 flex justify-center">
-          <button
-            onClick={() => handleSetComplete(currentExercise.rest)}
-            className="flex items-center gap-3 px-6 py-3 bg-neutral-800 rounded-full border border-white/10 hover:bg-neutral-700 transition text-sm font-bold text-indigo-300"
-          >
-            <Timer size={18} />
-            Отдых ({currentExercise.rest}с)
-          </button>
         </div>
 
         {/* Stopwatch for Time-based exercises */}

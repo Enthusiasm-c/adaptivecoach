@@ -3,14 +3,14 @@ import { Play, Pause, RotateCcw } from 'lucide-react';
 
 const Stopwatch: React.FC = () => {
     const [isRunning, setIsRunning] = useState(false);
-    const [time, setTime] = useState(0);
+    const [time, setTime] = useState(0); // Now in centiseconds (hundredths of a second)
     const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
     useEffect(() => {
         if (isRunning) {
             intervalRef.current = setInterval(() => {
                 setTime((prev) => prev + 1);
-            }, 1000);
+            }, 10); // Update every 10ms for centisecond precision
         } else if (intervalRef.current) {
             clearInterval(intervalRef.current);
         }
@@ -19,10 +19,11 @@ const Stopwatch: React.FC = () => {
         };
     }, [isRunning]);
 
-    const formatTime = (seconds: number) => {
-        const mins = Math.floor(seconds / 60);
-        const secs = seconds % 60;
-        return `${mins}:${secs.toString().padStart(2, '0')}`;
+    const formatTime = (centiseconds: number) => {
+        const mins = Math.floor(centiseconds / 6000);
+        const secs = Math.floor((centiseconds % 6000) / 100);
+        const centis = centiseconds % 100;
+        return `${mins}:${secs.toString().padStart(2, '0')}.${centis.toString().padStart(2, '0')}`;
     };
 
     const reset = () => {

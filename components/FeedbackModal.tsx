@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { WorkoutFeedback, WorkoutCompletion } from '../types';
-import { Flame, TrendingUp, TrendingDown, Minus, Zap, Battery } from 'lucide-react';
+import { Zap } from 'lucide-react';
 
 // Pain location options
 const PAIN_LOCATIONS = [
@@ -17,13 +17,6 @@ const PUMP_LABELS: { [key: number]: string } = {
   4: 'Хороший',
   5: 'Отличный',
 };
-
-// Performance trend options
-const PERFORMANCE_OPTIONS = [
-  { value: 'improving' as const, label: 'Растут', icon: TrendingUp, color: 'text-green-400 bg-green-500/20 border-green-500/30' },
-  { value: 'stable' as const, label: 'Стабильно', icon: Minus, color: 'text-yellow-400 bg-yellow-500/20 border-yellow-500/30' },
-  { value: 'declining' as const, label: 'Падают', icon: TrendingDown, color: 'text-red-400 bg-red-500/20 border-red-500/30' },
-];
 
 interface InitialPain {
   hasPain: boolean;
@@ -45,7 +38,6 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({ onSubmit, onClose, initia
 
   // Autoregulation fields
   const [pumpQuality, setPumpQuality] = useState<1 | 2 | 3 | 4 | 5 | undefined>(undefined);
-  const [performanceTrend, setPerformanceTrend] = useState<'improving' | 'stable' | 'declining' | undefined>(undefined);
 
   const handleSubmit = () => {
     onSubmit({
@@ -56,7 +48,6 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({ onSubmit, onClose, initia
         details: hasPain ? painDetails : undefined,
       },
       pumpQuality,
-      performanceTrend,
     });
   };
 
@@ -102,32 +93,6 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({ onSubmit, onClose, initia
               {PUMP_LABELS[pumpQuality]}
             </p>
           )}
-        </div>
-
-        {/* Performance Trend (Autoregulation) */}
-        <div className="space-y-2">
-          <div className="flex items-center gap-2">
-            <Battery size={16} className="text-blue-400" />
-            <label className="font-medium">Как с рабочими весами?</label>
-          </div>
-          <div className="grid grid-cols-3 gap-2">
-            {PERFORMANCE_OPTIONS.map(option => {
-              const Icon = option.icon;
-              const isSelected = performanceTrend === option.value;
-              return (
-                <button
-                  key={option.value}
-                  onClick={() => setPerformanceTrend(option.value)}
-                  className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border transition ${
-                    isSelected ? option.color : 'bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600'
-                  }`}
-                >
-                  <Icon size={18} />
-                  <span className="text-xs font-medium">{option.label}</span>
-                </button>
-              );
-            })}
-          </div>
         </div>
 
         {/* Pain */}
