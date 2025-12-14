@@ -61,8 +61,15 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
 
     const painByLocation = useMemo(() => {
         const grouped: { [key: string]: WorkoutLog[] } = {};
+        const bodyParts = ['плечо', 'колено', 'спина', 'поясница', 'шея', 'локоть', 'запястье', 'бедро', 'голень', 'стопа', 'кисть', 'грудь', 'живот'];
+
         painLogs.forEach(log => {
-            const location = log.feedback?.pain?.location || 'Не указано';
+            let location = log.feedback?.pain?.location;
+            if (!location) {
+                const details = log.feedback?.pain?.details || '';
+                const found = bodyParts.find(part => details.toLowerCase().includes(part));
+                location = found ? found.charAt(0).toUpperCase() + found.slice(1) : (details.slice(0, 20) || 'Боль');
+            }
             if (!grouped[location]) grouped[location] = [];
             grouped[location].push(log);
         });
@@ -402,11 +409,22 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
                                     : 0
                             })).filter(e => e.maxWeight > 0);
 
+                            // Extract pain location from details if location not specified
+                            const getPainLocation = () => {
+                                if (log.feedback?.pain?.location) return log.feedback.pain.location;
+                                const details = log.feedback?.pain?.details || '';
+                                // Try to extract body part from details
+                                const bodyParts = ['плечо', 'колено', 'спина', 'поясница', 'шея', 'локоть', 'запястье', 'бедро', 'голень', 'стопа', 'кисть', 'грудь', 'живот'];
+                                const found = bodyParts.find(part => details.toLowerCase().includes(part));
+                                if (found) return found.charAt(0).toUpperCase() + found.slice(1);
+                                return details.slice(0, 30) || 'Боль';
+                            };
+
                             return (
                                 <div key={`${log.date}-${idx}`} className="bg-neutral-800 rounded-xl p-3">
                                     <div className="flex justify-between text-sm mb-1">
                                         <span className="text-red-400 font-medium">
-                                            {log.feedback?.pain?.location || (log.feedback?.pain?.details ? 'См. описание' : 'Не указано')}
+                                            {getPainLocation()}
                                         </span>
                                         <span className="text-gray-500">
                                             {new Date(log.date).toLocaleDateString('ru-RU', {
@@ -481,7 +499,7 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
                     <div className="text-2xl font-black text-white">
                         {currentStreak}
                         <span className="text-sm text-gray-500 ml-1">
-                            {pluralizeRu(currentStreak, 'тренировка', 'тренировки', 'тренировок')}
+                            {pluralizeRu(currentStreak, 'неделя', 'недели', 'недель')}
                         </span>
                     </div>
                     {nextScheduledDay && (
@@ -770,7 +788,7 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
                                             {entry.trend === 'stable' && (
                                                 <span className="flex items-center gap-1 text-gray-400 text-xs">
                                                     <Minus size={12} />
-                                                    =
+                                                    стабильно
                                                 </span>
                                             )}
                                         </div>

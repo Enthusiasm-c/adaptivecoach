@@ -546,12 +546,8 @@ export const calculateLevel = (logs: WorkoutLog[]) => {
     const nextLevelBaseXp = 50 * Math.pow(level, 2);
     const levelProgress = Math.min(100, Math.max(0, ((xp - currentLevelBaseXp) / (nextLevelBaseXp - currentLevelBaseXp)) * 100));
 
-    let title = "Уровень 1";
-    if (level >= 3) title = "Уровень 2";
-    if (level >= 6) title = "Уровень 3";
-    if (level >= 10) title = "Уровень 4";
-    if (level >= 15) title = "Уровень 5";
-    if (level >= 25) title = "Уровень 6";
+    // Title simply shows the same level number for consistency
+    const title = `Уровень ${level}`;
 
     return { level, title, xp, levelProgress, nextLevelBaseXp: Math.floor(nextLevelBaseXp) };
 };
@@ -869,9 +865,18 @@ export const calculateWeekComparison = (logs: WorkoutLog[]): WeekComparison => {
     const previousWeekAvgPerDay = previousWeekDays > 0 ? previousWeekVolume / previousWeekDays : 0;
 
     // Compare by AVERAGE per day, not total volume
-    const changePercent = previousWeekAvgPerDay > 0
-        ? Math.round(((currentWeekAvgPerDay - previousWeekAvgPerDay) / previousWeekAvgPerDay) * 100)
-        : 0;
+    // If no previous week data, don't show percentage change
+    let changePercent = 0;
+    let trend: 'up' | 'down' | 'same' = 'same';
+
+    if (previousWeekAvgPerDay > 0 && currentWeekAvgPerDay > 0) {
+        changePercent = Math.round(((currentWeekAvgPerDay - previousWeekAvgPerDay) / previousWeekAvgPerDay) * 100);
+        trend = changePercent > 5 ? 'up' : changePercent < -5 ? 'down' : 'same';
+    } else if (currentWeekAvgPerDay > 0 && previousWeekAvgPerDay === 0) {
+        // First week with data - don't show as -100%
+        changePercent = 0;
+        trend = 'same';
+    }
 
     return {
         currentWeekVolume,
@@ -881,7 +886,7 @@ export const calculateWeekComparison = (logs: WorkoutLog[]): WeekComparison => {
         currentWeekAvgPerDay,
         previousWeekAvgPerDay,
         changePercent,
-        trend: changePercent > 0 ? 'up' : changePercent < 0 ? 'down' : 'same'
+        trend
     };
 };
 

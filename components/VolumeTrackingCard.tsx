@@ -51,7 +51,7 @@ const VolumeBar: React.FC<{ data: MuscleVolumeData }> = ({ data }) => {
         </span>
         <span className="flex items-center gap-1 text-gray-400">
           {getStatusIcon()}
-          {data.totalSets}/{data.targetOptimal}
+          <span title="подходов за неделю / оптимум">{data.totalSets} подх.</span>
         </span>
       </div>
       <div className="h-2 bg-neutral-800 rounded-full overflow-hidden">
