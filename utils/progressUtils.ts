@@ -168,8 +168,14 @@ const calculateE1RM = (weight: number, reps: number): number => {
     return weight * (1 + reps / 30);
 };
 
-// Key lifts configuration with keywords and group keys (8 categories for TOP-8 PRs)
-const KEY_LIFTS_CONFIG = [
+// Key lifts configuration with keywords, excludes and group keys
+interface LiftConfig {
+    keywords: string[];
+    excludes?: string[];  // If name contains any of these, skip this group
+    groupKey: string;
+}
+
+const KEY_LIFTS_CONFIG: LiftConfig[] = [
     { keywords: ['squat', 'присед'], groupKey: 'squat' },
     { keywords: ['bench', 'жим лежа'], groupKey: 'bench' },
     { keywords: ['deadlift', 'становая'], groupKey: 'deadlift' },
@@ -178,7 +184,10 @@ const KEY_LIFTS_CONFIG = [
     { keywords: ['row', 'тяга к поясу', 'тяга штанги', 'тяга гантел'], groupKey: 'row' },
     { keywords: ['pull up', 'подтягиван', 'chin up'], groupKey: 'pullup' },
     { keywords: ['leg press', 'жим ног', 'жим платформ'], groupKey: 'legpress' },
-    { keywords: ['curl', 'сгибан', 'бицепс', 'bicep'], groupKey: 'curl' },
+    // Leg curl / hamstring curl - separate from bicep curl
+    { keywords: ['сгибание ног', 'leg curl', 'бицепс бедра'], groupKey: 'legcurl' },
+    // Bicep curls - exclude leg/hamstring exercises
+    { keywords: ['curl', 'сгибан', 'бицепс', 'bicep'], excludes: ['ног', 'бедр', 'leg', 'hamstring'], groupKey: 'curl' },
 ];
 
 // Russian names for key exercises
@@ -191,15 +200,25 @@ const EXERCISE_NAMES_RU: Record<string, string> = {
     'row': 'Тяга к поясу',
     'pullup': 'Подтягивания',
     'legpress': 'Жим ногами',
+    'legcurl': 'Сгибание ног',
     'curl': 'Бицепс',
 };
 
 // Helper to find matching lift config
 const findMatchingLift = (exerciseName: string) => {
     const lowerName = exerciseName.toLowerCase();
-    return KEY_LIFTS_CONFIG.find(lift =>
-        lift.keywords.some(kw => lowerName.includes(kw))
-    );
+    return KEY_LIFTS_CONFIG.find(lift => {
+        // Check if name contains any keyword
+        const hasKeyword = lift.keywords.some(kw => lowerName.includes(kw));
+        if (!hasKeyword) return false;
+
+        // Check excludes - if name contains any exclude word, skip this group
+        if (lift.excludes && lift.excludes.some(ex => lowerName.includes(ex))) {
+            return false;
+        }
+
+        return true;
+    });
 };
 
 export const calculatePersonalRecords = (logs: WorkoutLog[]): PersonalRecord[] => {
