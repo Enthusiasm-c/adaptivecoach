@@ -253,6 +253,13 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
     return true;
   };
 
+  // Helper: check if exercise is cardio (no technique needed, no weight history)
+  const isCardioExercise = (ex: typeof completedExercises[0]): boolean => {
+    if (ex.exerciseType === 'cardio') return true;
+    const nameLower = ex.name.toLowerCase();
+    return CARDIO_KEYWORDS.some(k => nameLower.includes(k));
+  };
+
   // Helper: check if all sets are complete for an exercise
   const isExerciseComplete = (ex: typeof completedExercises[0]): boolean => {
     const needsWeight = exerciseNeedsWeight(ex);
@@ -504,8 +511,8 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
                 </button>
               </div>
 
-              {/* Technique GIF Section - moved above description */}
-              {!currentExercise.isWarmup && (
+              {/* Technique GIF Section - hidden for cardio exercises */}
+              {!currentExercise.isWarmup && !isCardioExercise(currentExercise) && (
                 <div className="mb-4">
                   {isLoadingGif ? (
                     <div className="flex items-center gap-2 text-xs text-gray-500 py-2">
@@ -551,8 +558,8 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
                 </p>
               )}
 
-              {/* Contextual History Section (if applicable for this exercise) */}
-              {showHistory && !currentExercise.isWarmup && (
+              {/* Contextual History Section - hidden for cardio (old data has incorrect weight) */}
+              {showHistory && !currentExercise.isWarmup && !isCardioExercise(currentExercise) && (
                 <div className="mt-4 bg-neutral-900 rounded-xl border border-indigo-500/30 p-4 animate-slide-up mb-4">
                   <h4 className="text-xs font-bold text-indigo-400 uppercase mb-3 flex items-center gap-2">
                     <History size={12} /> Прошлые тренировки
