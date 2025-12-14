@@ -1116,3 +1116,106 @@ ${JSON.stringify(exerciseList.map(e => ({
         sessions: adaptedSessions
     };
 };
+
+// Интерфейс для результата анализа боли
+export interface PainAnalysisResult {
+    zones: Array<{
+        bodyPart: string;
+        count: number;
+        severity: 'low' | 'medium' | 'high';
+    }>;
+    patterns: string[];
+    recommendation: string;
+}
+
+// Анализ паттернов боли через Gemini
+export const analyzePainPatterns = async (painLogs: WorkoutLog[]): Promise<PainAnalysisResult> => {
+    if (!painLogs || painLogs.length === 0) {
+        return { zones: [], patterns: [], recommendation: '' };
+    }
+
+    // Подготовка данных о боли для анализа
+    const painData = painLogs.map(log => ({
+        date: log.date,
+        session: log.sessionId || 'Неизвестно',
+        exercises: log.completedExercises?.map(e => e.name).join(', ') || '',
+        painDetails: log.feedback?.pain?.details || '',
+        painLocation: log.feedback?.pain?.location || ''
+    }));
+
+    const prompt = [
+        {
+            role: 'user',
+            parts: [{
+                text: `Проанализируй записи о боли после тренировок и выяви паттерны.
+
+ДАННЫЕ О БОЛИ:
+${JSON.stringify(painData, null, 2)}
+
+ЗАДАЧА:
+1. Определи части тела, которые болят чаще всего
+2. Найди связь между упражнениями и болью
+3. Дай краткую рекомендацию (1-2 предложения)
+
+ФОРМАТ ОТВЕТА (строго JSON):
+{
+  "zones": [
+    {"bodyPart": "Плечо", "count": 2, "severity": "medium"},
+    {"bodyPart": "Колено", "count": 1, "severity": "low"}
+  ],
+  "patterns": [
+    "Боль в плече связана с жимовыми упражнениями",
+    "Колено болит после выпадов"
+  ],
+  "recommendation": "Рекомендую снизить нагрузку на жимы и добавить разминку плечевого пояса."
+}
+
+ПРАВИЛА:
+- bodyPart: название части тела на русском с большой буквы
+- count: сколько раз упоминалась боль в этой зоне
+- severity: low (лёгкая), medium (умеренная), high (сильная/частая)
+- patterns: краткие выводы о связях (максимум 3)
+- recommendation: одно короткое практичное предложение`
+            }]
+        }
+    ];
+
+    try {
+        const response = await callGeminiProxy(`/v1beta/models/${GEMINI_MODEL}:generateContent`, {
+            contents: prompt,
+            generationConfig: {
+                responseMimeType: 'application/json',
+                responseSchema: {
+                    type: Type.OBJECT,
+                    properties: {
+                        zones: {
+                            type: Type.ARRAY,
+                            items: {
+                                type: Type.OBJECT,
+                                properties: {
+                                    bodyPart: { type: Type.STRING },
+                                    count: { type: Type.INTEGER },
+                                    severity: { type: Type.STRING }
+                                },
+                                required: ['bodyPart', 'count', 'severity']
+                            }
+                        },
+                        patterns: {
+                            type: Type.ARRAY,
+                            items: { type: Type.STRING }
+                        },
+                        recommendation: { type: Type.STRING }
+                    },
+                    required: ['zones', 'patterns', 'recommendation']
+                }
+            }
+        });
+
+        const text = extractText(response);
+        const result = JSON.parse(text);
+        return result as PainAnalysisResult;
+    } catch (error) {
+        console.error('Error analyzing pain patterns:', error);
+        return { zones: [], patterns: [], recommendation: '' };
+    }
+};

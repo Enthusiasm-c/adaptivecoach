@@ -1,5 +1,5 @@
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { WorkoutLog, TrainingProgram, ReadinessData, WorkoutCompletion, OnboardingProfile, WorkoutSession } from '../types';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -13,6 +13,7 @@ import {
     calculateWeekComparison, getNextScheduledDay, pluralizeRu,
     formatKg, calculateWeightProgression, WeightProgressionEntry
 } from '../utils/progressUtils';
+import { analyzePainPatterns, PainAnalysisResult } from '../services/geminiService';
 import { Dumbbell, Flame, TrendingUp, TrendingDown, Minus, Trophy, Battery, PieChart as PieIcon, Calendar, Crown, Star, Activity, HeartPulse, ChevronLeft, ChevronRight, Check, Target, BarChart2, X, Repeat, Timer, AlertTriangle } from 'lucide-react';
 import { hapticFeedback } from '../utils/hapticUtils';
 import BlurredContent from './BlurredContent';
@@ -61,20 +62,97 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
 
     const painByLocation = useMemo(() => {
         const grouped: { [key: string]: WorkoutLog[] } = {};
-        const bodyParts = ['плечо', 'колено', 'спина', 'поясница', 'шея', 'локоть', 'запястье', 'бедро', 'голень', 'стопа', 'кисть', 'грудь', 'живот'];
+        // Расширенный список частей тела с нормализованными названиями
+        const bodyPartsMap: { [key: string]: string } = {
+            // Плечи
+            'плечо': 'Плечо',
+            'плечи': 'Плечо',
+            'плечевой': 'Плечо',
+            'дельт': 'Плечо',
+            // Спина
+            'спина': 'Спина',
+            'спину': 'Спина',
+            'спине': 'Спина',
+            'поясниц': 'Поясница',
+            'лопатк': 'Лопатка',
+            // Ноги
+            'колен': 'Колено',
+            'бедр': 'Бедро',
+            'голен': 'Голень',
+            'икр': 'Икры',
+            'стоп': 'Стопа',
+            'ног': 'Нога',
+            'квадрицепс': 'Бедро',
+            // Руки
+            'локот': 'Локоть',
+            'локт': 'Локоть',
+            'запяст': 'Запястье',
+            'кист': 'Кисть',
+            'рук': 'Рука',
+            'бицепс': 'Бицепс',
+            'трицепс': 'Трицепс',
+            'предплеч': 'Предплечье',
+            // Шея/голова
+            'ше': 'Шея',
+            'голов': 'Голова',
+            // Корпус
+            'груд': 'Грудь',
+            'живот': 'Живот',
+            'прес': 'Пресс',
+            'ребр': 'Рёбра',
+            'бок': 'Бок',
+            // Суставы
+            'сустав': 'Сустав',
+            'связк': 'Связки',
+            'мышц': 'Мышцы',
+            // Ягодицы
+            'ягодиц': 'Ягодицы',
+            'попа': 'Ягодицы',
+            // Таз
+            'таз': 'Таз',
+            'пах': 'Пах',
+        };
 
         painLogs.forEach(log => {
             let location = log.feedback?.pain?.location;
             if (!location) {
-                const details = log.feedback?.pain?.details || '';
-                const found = bodyParts.find(part => details.toLowerCase().includes(part));
-                location = found ? found.charAt(0).toUpperCase() + found.slice(1) : (details.slice(0, 20) || 'Боль');
+                const details = (log.feedback?.pain?.details || '').toLowerCase();
+                // Ищем первое совпадение части тела
+                for (const [keyword, normalizedName] of Object.entries(bodyPartsMap)) {
+                    if (details.includes(keyword)) {
+                        location = normalizedName;
+                        break;
+                    }
+                }
             }
-            if (!grouped[location]) grouped[location] = [];
-            grouped[location].push(log);
+            // Только добавляем если нашли реальную часть тела
+            if (location) {
+                if (!grouped[location]) grouped[location] = [];
+                grouped[location].push(log);
+            }
         });
         return grouped;
     }, [painLogs]);
+
+    // AI-анализ паттернов боли
+    const [painAnalysis, setPainAnalysis] = useState<PainAnalysisResult | null>(null);
+    const [painAnalysisLoading, setPainAnalysisLoading] = useState(false);
+
+    useEffect(() => {
+        if (painLogs.length > 0 && !painAnalysis && !painAnalysisLoading) {
+            setPainAnalysisLoading(true);
+            analyzePainPatterns(painLogs)
+                .then(result => {
+                    setPainAnalysis(result);
+                })
+                .catch(err => {
+                    console.error('Pain analysis failed:', err);
+                })
+                .finally(() => {
+                    setPainAnalysisLoading(false);
+                });
+        }
+    }, [painLogs, painAnalysis, painAnalysisLoading]);
 
     // --- Calendar Logic ---
     const [currentDate, setCurrentDate] = React.useState(new Date());
@@ -454,24 +532,60 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
                         })}
                     </div>
 
-                    {/* Pain patterns summary */}
-                    {Object.keys(painByLocation).length > 0 && (
+                    {/* AI Pain Analysis */}
+                    {painAnalysisLoading && (
                         <div className="mt-4 bg-red-500/10 border border-red-500/20 rounded-xl p-3">
-                            <p className="text-red-300 text-sm font-bold mb-2">Частые зоны:</p>
-                            <div className="flex flex-wrap gap-2">
-                                {(Object.entries(painByLocation) as [string, WorkoutLog[]][])
-                                    .sort((a, b) => b[1].length - a[1].length)
-                                    .slice(0, 4)
-                                    .map(([location, locationLogs]) => (
+                            <p className="text-red-300 text-sm font-bold mb-2">Анализирую паттерны...</p>
+                            <div className="animate-pulse h-4 bg-red-500/20 rounded w-3/4"></div>
+                        </div>
+                    )}
+
+                    {painAnalysis && painAnalysis.zones.length > 0 && (
+                        <div className="mt-4 bg-red-500/10 border border-red-500/20 rounded-xl p-3 space-y-3">
+                            {/* Zones */}
+                            <div>
+                                <p className="text-red-300 text-sm font-bold mb-2">Проблемные зоны:</p>
+                                <div className="flex flex-wrap gap-2">
+                                    {painAnalysis.zones.map((zone, idx) => (
                                         <span
-                                            key={location}
-                                            className="px-2 py-1 bg-red-500/20 text-red-200 rounded-full text-xs font-medium"
+                                            key={idx}
+                                            className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                                zone.severity === 'high'
+                                                    ? 'bg-red-600/30 text-red-200'
+                                                    : zone.severity === 'medium'
+                                                    ? 'bg-orange-500/30 text-orange-200'
+                                                    : 'bg-yellow-500/30 text-yellow-200'
+                                            }`}
                                         >
-                                            {location}: {locationLogs.length}×
+                                            {zone.bodyPart}: {zone.count}×
                                         </span>
-                                    ))
-                                }
+                                    ))}
+                                </div>
                             </div>
+
+                            {/* Patterns */}
+                            {painAnalysis.patterns.length > 0 && (
+                                <div>
+                                    <p className="text-red-300 text-xs font-medium mb-1">Паттерны:</p>
+                                    <ul className="text-xs text-gray-400 space-y-1">
+                                        {painAnalysis.patterns.map((pattern, idx) => (
+                                            <li key={idx} className="flex items-start gap-1">
+                                                <span className="text-red-400">•</span>
+                                                {pattern}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            )}
+
+                            {/* Recommendation */}
+                            {painAnalysis.recommendation && (
+                                <div className="pt-2 border-t border-red-500/20">
+                                    <p className="text-xs text-red-200 italic">
+                                        💡 {painAnalysis.recommendation}
+                                    </p>
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>
