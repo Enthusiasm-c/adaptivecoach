@@ -700,11 +700,9 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
               <div className="space-y-3">
                 {currentExercise.completedSets.map((set, setIndex) => (
                   <div key={setIndex} className={`grid ${
-                    exerciseNeedsWeight(currentExercise) && !isCardioExercise(currentExercise) && !isIsometricExercise(currentExercise)
-                      ? 'grid-cols-[auto_1fr_1fr_0.7fr_auto]'  // weight + reps + RIR + check
-                      : exerciseNeedsWeight(currentExercise)
-                        ? 'grid-cols-[auto_1fr_1fr_auto]'      // weight + reps + check (no RIR)
-                        : 'grid-cols-[auto_1fr_auto]'          // reps + check only
+                    exerciseNeedsWeight(currentExercise)
+                      ? 'grid-cols-[auto_1fr_1fr_auto]'      // weight + reps + check
+                      : 'grid-cols-[auto_1fr_auto]'          // reps + check only
                   } gap-2 items-center p-3 rounded-xl transition-all ${set.isCompleted
                     ? 'bg-emerald-500/10 border border-emerald-500/20'
                     : 'bg-neutral-900/50 border border-white/5'
@@ -765,28 +763,8 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
                         </button>
                       </div>
 
-                    {/* RIR - Reps In Reserve (only for strength exercises, not cardio/isometric) */}
-                    {exerciseNeedsWeight(currentExercise) && !isCardioExercise(currentExercise) && !isIsometricExercise(currentExercise) && (
-                      <div className="relative flex items-center gap-1">
-                        <select
-                          value={set.rir ?? ''}
-                          onChange={(e) => handleValueChange(currentExerciseIndex, setIndex, 'rir', parseInt(e.target.value))}
-                          className="w-full bg-transparent text-center font-mono font-bold text-white outline-none border-b border-gray-700 focus:border-indigo-500 transition py-1 appearance-none cursor-pointer"
-                        >
-                          <option value="" className="bg-neutral-900">-</option>
-                          <option value="0" className="bg-neutral-900">0</option>
-                          <option value="1" className="bg-neutral-900">1</option>
-                          <option value="2" className="bg-neutral-900">2</option>
-                          <option value="3" className="bg-neutral-900">3+</option>
-                        </select>
-                        <button
-                          onClick={() => setShowRirInfo(true)}
-                          className="text-gray-500 hover:text-indigo-400 transition p-0.5"
-                        >
-                          <Info size={14} />
-                        </button>
-                      </div>
-                    )}
+                    {/* RIR - Hidden for now to fix layout */}
+                    {/* TODO: Re-enable RIR when we have better mobile layout */}
 
                     <button
                       onClick={() => toggleSetComplete(currentExerciseIndex, setIndex)}
