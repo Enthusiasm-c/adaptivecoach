@@ -226,14 +226,40 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
   const BODYWEIGHT_KEYWORDS = ['планка', 'отжиман', 'подтягив', 'пресс', 'скручиван', 'в висе', 'подъём ног', 'подъем ног', 'берпи', 'выпрыгив', 'присед без', 'гиперэкстензия без'];
   const ISOMETRIC_KEYWORDS = ['удержан', 'статик', 'вис ', 'стойка'];
 
-  // Keywords for detecting dumbbell exercises (show "× 2")
-  const DUMBBELL_KEYWORDS = ['гантел', 'dumbbell', 'с гантел', 'гантелями', 'гантелей'];
+  // Patterns for SINGLE dumbbell exercises (show "кг", not "кг×2")
+  const SINGLE_DUMBBELL_PATTERNS = [
+    'с гантелью',      // instrumental singular: "присед с гантелью"
+    'гантели ',        // genitive singular: "тяга гантели в наклоне"
+    'гантель ',        // nominative singular
+    'одной рукой',     // "подъём одной рукой"
+    'single arm',
+    'single-arm',
+    'one-arm',
+  ];
 
-  // Helper: check if exercise uses dumbbells (pair = 2 weights)
-  const isDumbbellExercise = (ex: typeof completedExercises[0]): boolean => {
+  // Patterns for PAIRED dumbbell exercises (show "кг×2")
+  const PAIRED_DUMBBELL_PATTERNS = [
+    'гантелей',        // genitive plural: "жим гантелей"
+    'с гантелями',     // instrumental plural: "сгибание рук с гантелями"
+    'гантелями',       // instrumental plural
+    'dumbbells',       // English plural
+  ];
+
+  // Helper: check if exercise uses PAIRED dumbbells (need to show "× 2")
+  const isPairedDumbbellExercise = (ex: typeof completedExercises[0]): boolean => {
+    // Explicit equipment count overrides name detection
+    if (ex.equipmentCount === 1) return false;
     if (ex.equipmentCount === 2) return true;
+
     const nameLower = ex.name.toLowerCase();
-    return DUMBBELL_KEYWORDS.some(k => nameLower.includes(k));
+
+    // First check for single dumbbell patterns (higher priority)
+    if (SINGLE_DUMBBELL_PATTERNS.some(p => nameLower.includes(p))) {
+      return false;
+    }
+
+    // Then check for paired dumbbell patterns
+    return PAIRED_DUMBBELL_PATTERNS.some(p => nameLower.includes(p));
   };
 
   // Helper: check if exercise requires weight input
@@ -613,7 +639,7 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
                         />
                         <span className={`absolute right-0 top-1/2 -translate-y-1/2 text-[10px] pointer-events-none ${
                           attemptedFinish && getSetErrors(currentExercise, set).weight ? 'text-red-400' : 'text-gray-600'
-                        }`}>{isDumbbellExercise(currentExercise) ? 'кг×2' : 'кг'}</span>
+                        }`}>{isPairedDumbbellExercise(currentExercise) ? 'кг×2' : 'кг'}</span>
                       </div>
                     )}
 
