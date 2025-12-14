@@ -278,7 +278,7 @@ export const generateWarmupSets = (workingWeight: number, exerciseName?: string)
 
     warmups.push({
         name: `🔥 Разминка${forExercise}`,
-        description: `Гриф или лёгкий вес (20кг). Подготовьте суставы и мышцы перед "${shortName}" с рабочим весом ${workingWeight}кг.`,
+        description: `Гриф или лёгкий вес (20кг). Подготовь суставы и мышцы перед "${shortName}" с рабочим весом ${workingWeight}кг.`,
         sets: 1,
         reps: "10",
         weight: 20,
@@ -303,7 +303,7 @@ export const generateWarmupSets = (workingWeight: number, exerciseName?: string)
         const weight75 = Math.round((workingWeight * 0.75) / 2.5) * 2.5;
         warmups.push({
             name: `🔥 75% от ${workingWeight}кг`,
-            description: `Разминочный подход для "${shortName}". ${weight75}кг = 75% от рабочего веса. Не утомляйтесь!`,
+            description: `Разминочный подход для "${shortName}". ${weight75}кг = 75% от рабочего веса. Не утомляйся!`,
             sets: 1,
             reps: "3",
             weight: weight75,
