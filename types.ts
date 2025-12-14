@@ -212,7 +212,9 @@ export interface ChatResponse {
 
 export interface PersonalRecord {
   exerciseName: string;
-  e1rm: number;
+  weight: number;      // Actual weight lifted
+  reps: number;        // Actual reps performed
+  e1rm: number;        // Estimated 1RM (kept for sorting)
   date: string;
 }
 

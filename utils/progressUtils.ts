@@ -240,6 +240,8 @@ export const calculatePersonalRecords = (logs: WorkoutLog[]): PersonalRecord[] =
                     if (!records[matchedLift.groupKey] || e1rm > records[matchedLift.groupKey].e1rm) {
                         records[matchedLift.groupKey] = {
                             exerciseName: ex.name,
+                            weight: bestSet.weight,
+                            reps: bestSet.reps,
                             e1rm,
                             date: log.date
                         };

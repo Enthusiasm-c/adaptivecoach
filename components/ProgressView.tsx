@@ -680,15 +680,10 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
             {/* Enhanced PR List with Dates */}
             {logs.length >= WORKOUT_THRESHOLDS.PERSONAL_RECORDS && personalRecords.length > 0 ? (
                 <div className="space-y-3">
-                    <div>
-                        <h3 className="font-bold text-white text-lg flex items-center gap-2">
-                            <Trophy size={18} className="text-yellow-500" />
-                            Личные Рекорды
-                        </h3>
-                        <p className="text-[10px] text-gray-500 mt-1">
-                            E1RM = расчётный максимум на 1 повтор
-                        </p>
-                    </div>
+                    <h3 className="font-bold text-white text-lg flex items-center gap-2">
+                        <Trophy size={18} className="text-yellow-500" />
+                        Личные Рекорды
+                    </h3>
                     <div className="grid gap-2">
                         {personalRecords.map(pr => (
                             <div
@@ -710,13 +705,13 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
                                     </div>
                                     <div className="text-right">
                                         <span className="font-black text-xl text-white">
-                                            {pr.e1rm.toFixed(0)}
+                                            {pr.weight}
                                         </span>
                                         <span className="text-xs text-gray-500 font-bold ml-1">
                                             кг
                                         </span>
-                                        <div className="text-[9px] text-gray-600 mt-0.5">
-                                            E1RM
+                                        <div className="text-[10px] text-gray-500 mt-0.5">
+                                            × {pr.reps} повт.
                                         </div>
                                     </div>
                                 </div>

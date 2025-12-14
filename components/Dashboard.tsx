@@ -847,12 +847,14 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
                     isActive={activeView === 'today'}
                     onClick={() => handleViewChange('today')}
                 />
+                {/* TODO: Re-enable when social features are ready
                 <NavButton
                     icon={<Users size={24} />}
                     label="Команда"
                     isActive={activeView === 'squad'}
                     onClick={() => handleViewChange('squad')}
                 />
+                */}
                 <NavButton
                     icon={<BarChart2 size={24} />}
                     label="Прогресс"
