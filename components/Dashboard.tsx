@@ -838,7 +838,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
             </main>
 
             {/* Navigation Bar - hide when keyboard is visible */}
-            <nav className={`fixed bottom-6 left-6 right-6 bg-[#111]/90 backdrop-blur-xl border border-white/10 rounded-2xl p-2 flex justify-between items-center shadow-2xl z-40 transition-all duration-200 ${
+            <nav className={`fixed bottom-6 left-1/2 -translate-x-1/2 bg-[#111]/90 backdrop-blur-xl border border-white/10 rounded-2xl px-6 py-2 flex items-center gap-8 shadow-2xl z-40 transition-all duration-200 ${
                 isInputFocused ? 'translate-y-full opacity-0 pointer-events-none' : ''
             }`}>
                 <NavButton
@@ -966,21 +966,21 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
 const NavButton = ({ icon, label, isActive, onClick }: any) => (
     <button
         onClick={onClick}
-        className={`relative flex flex-col items-center justify-center gap-1 w-16 py-1 transition-all duration-300 group ${isActive ? 'text-white' : 'text-gray-500 hover:text-gray-300'}`}
+        className={`relative flex flex-col items-center justify-center gap-0.5 py-1.5 px-2 transition-all duration-300 group ${isActive ? 'text-white' : 'text-gray-500 hover:text-gray-300'}`}
     >
-        <div className={`relative p-1 transition-transform duration-300 ${isActive ? '-translate-y-1' : ''}`}>
+        <div className={`relative transition-transform duration-300 ${isActive ? '-translate-y-0.5' : ''}`}>
             {icon}
             {isActive && (
                 <div className="absolute inset-0 bg-indigo-500/30 blur-lg rounded-full opacity-60"></div>
             )}
         </div>
-        <span className={`text-[10px] font-medium tracking-wider transition-opacity duration-300 ${isActive ? 'opacity-100 text-indigo-300' : 'opacity-70'}`}>
+        <span className={`text-[10px] font-medium transition-opacity duration-300 ${isActive ? 'opacity-100 text-indigo-300' : 'opacity-70'}`}>
             {label}
         </span>
 
-        {/* Top indicator line for active state */}
+        {/* Bottom indicator dot for active state */}
         {isActive && (
-            <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 w-8 h-1 bg-indigo-500 rounded-b-full shadow-[0_0_10px_rgba(99,102,241,0.8)]"></div>
+            <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-indigo-500 rounded-full shadow-[0_0_6px_rgba(99,102,241,0.8)]"></div>
         )}
     </button>
 )
