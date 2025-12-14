@@ -374,13 +374,27 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
     if (!canFinish) {
       hapticFeedback.notificationOccurred('warning');
       setAttemptedFinish(true);
+
+      // Find all incomplete exercises
+      const incompleteExercises = completedExercises
+        .map((ex, idx) => ({ ex, idx }))
+        .filter(({ ex }) => !isExerciseComplete(ex));
+
+      const incompleteCount = incompleteExercises.length;
+      const firstIncomplete = incompleteExercises[0]?.idx ?? -1;
+
       // Navigate to first incomplete exercise
-      const firstIncomplete = completedExercises.findIndex(ex => !isExerciseComplete(ex));
       if (firstIncomplete !== -1) {
         setCurrentExerciseIndex(firstIncomplete);
       }
-      setToastMessage('Заполни все поля, отмеченные красным');
-      setTimeout(() => setToastMessage(null), 3000);
+
+      // Show informative toast with count
+      if (incompleteCount === 1) {
+        setToastMessage(`Заполни поля в упражнении #${firstIncomplete + 1}`);
+      } else {
+        setToastMessage(`Осталось заполнить ${incompleteCount} упражнений`);
+      }
+      setTimeout(() => setToastMessage(null), 4000);
       return;
     }
     setIsFeedbackModalOpen(true);
@@ -503,9 +517,27 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
           <div className="flex flex-col items-end">
             <span className="text-xs text-gray-500 font-bold uppercase tracking-wider">Упражнение {currentExerciseIndex + 1} из {completedExercises.length}</span>
             <div className="flex gap-1 mt-1">
-              {completedExercises.map((_, idx) => (
-                <div key={idx} className={`h-1 w-4 rounded-full ${idx === currentExerciseIndex ? 'bg-indigo-500' : idx < currentExerciseIndex ? 'bg-indigo-900' : 'bg-neutral-800'}`}></div>
-              ))}
+              {completedExercises.map((ex, idx) => {
+                const isIncomplete = attemptedFinish && !isExerciseComplete(ex);
+                const isCurrent = idx === currentExerciseIndex;
+                const isPast = idx < currentExerciseIndex;
+
+                return (
+                  <button
+                    key={idx}
+                    onClick={() => setCurrentExerciseIndex(idx)}
+                    className={`h-1.5 w-4 rounded-full transition-all ${
+                      isIncomplete
+                        ? 'bg-red-500 animate-pulse'
+                        : isCurrent
+                          ? 'bg-indigo-500'
+                          : isPast
+                            ? 'bg-indigo-900'
+                            : 'bg-neutral-800'
+                    } ${isCurrent ? 'scale-110' : 'hover:scale-105'}`}
+                  />
+                );
+              })}
             </div>
           </div>
         </div>
@@ -777,7 +809,21 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
             </button>
           ) : (
             <button
-              onClick={goNext}
+              onClick={() => {
+                // On last exercise - go to first incomplete, otherwise just next
+                if (currentExerciseIndex >= completedExercises.length - 1) {
+                  const firstIncomplete = completedExercises.findIndex(ex => !isExerciseComplete(ex));
+                  if (firstIncomplete !== -1) {
+                    setAttemptedFinish(true);
+                    setCurrentExerciseIndex(firstIncomplete);
+                    hapticFeedback.impactOccurred('medium');
+                  } else {
+                    goNext();
+                  }
+                } else {
+                  goNext();
+                }
+              }}
               className="flex-grow py-4 bg-white text-black rounded-2xl font-bold hover:bg-gray-200 transition shadow-[0_0_20px_rgba(255,255,255,0.2)] text-lg"
             >
               {currentExerciseIndex < completedExercises.length - 1 ? 'Дальше' : 'К незаполненным'}
