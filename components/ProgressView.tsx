@@ -366,7 +366,9 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
                             // Get max weight for each exercise
                             const exerciseWeights = log.completedExercises.slice(0, 3).map(ex => ({
                                 name: ex.name,
-                                maxWeight: Math.max(...ex.completedSets.map(s => s.weight || 0))
+                                maxWeight: ex.completedSets?.length > 0
+                                    ? Math.max(...ex.completedSets.map(s => s.weight || 0))
+                                    : 0
                             })).filter(e => e.maxWeight > 0);
 
                             return (

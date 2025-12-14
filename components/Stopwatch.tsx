@@ -3,14 +3,16 @@ import { Play, Pause, RotateCcw } from 'lucide-react';
 
 const Stopwatch: React.FC = () => {
     const [isRunning, setIsRunning] = useState(false);
-    const [time, setTime] = useState(0); // Now in centiseconds (hundredths of a second)
+    const [time, setTime] = useState(0); // In deciseconds (tenths of a second) for better performance
     const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
     useEffect(() => {
         if (isRunning) {
+            // Update every 100ms (10 times/sec) instead of 10ms (100 times/sec)
+            // This reduces re-renders by 10x while still showing smooth updates
             intervalRef.current = setInterval(() => {
                 setTime((prev) => prev + 1);
-            }, 10); // Update every 10ms for centisecond precision
+            }, 100);
         } else if (intervalRef.current) {
             clearInterval(intervalRef.current);
         }
@@ -19,11 +21,11 @@ const Stopwatch: React.FC = () => {
         };
     }, [isRunning]);
 
-    const formatTime = (centiseconds: number) => {
-        const mins = Math.floor(centiseconds / 6000);
-        const secs = Math.floor((centiseconds % 6000) / 100);
-        const centis = centiseconds % 100;
-        return `${mins}:${secs.toString().padStart(2, '0')}.${centis.toString().padStart(2, '0')}`;
+    const formatTime = (deciseconds: number) => {
+        const mins = Math.floor(deciseconds / 600);
+        const secs = Math.floor((deciseconds % 600) / 10);
+        const decis = deciseconds % 10;
+        return `${mins}:${secs.toString().padStart(2, '0')}.${decis}`;
     };
 
     const reset = () => {
