@@ -504,14 +504,7 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
                 </button>
               </div>
 
-              {/* Description */}
-              {currentExercise.description && (
-                <p className="text-sm text-gray-400 mt-2 leading-relaxed mb-4">
-                  {currentExercise.description}
-                </p>
-              )}
-
-              {/* Technique GIF Section */}
+              {/* Technique GIF Section - moved above description */}
               {!currentExercise.isWarmup && (
                 <div className="mb-4">
                   {isLoadingGif ? (
@@ -551,6 +544,13 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
                 </div>
               )}
 
+              {/* Description - moved below technique button */}
+              {currentExercise.description && (
+                <p className="text-sm text-gray-400 mt-2 leading-relaxed mb-4">
+                  {currentExercise.description}
+                </p>
+              )}
+
               {/* Contextual History Section (if applicable for this exercise) */}
               {showHistory && !currentExercise.isWarmup && (
                 <div className="mt-4 bg-neutral-900 rounded-xl border border-indigo-500/30 p-4 animate-slide-up mb-4">
@@ -558,20 +558,26 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
                     <History size={12} /> Прошлые тренировки
                   </h4>
                   <div className="space-y-3">
-                    {exerciseHistory.map((h, i) => (
-                      <div key={i} className="text-sm">
-                        <div className="flex justify-between text-gray-500 text-xs mb-1">
-                          <span>{new Date(h.date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })}</span>
+                    {exerciseHistory.length === 0 ? (
+                      <p className="text-sm text-gray-500 italic">
+                        Нет данных. После выполнения появится прогресс.
+                      </p>
+                    ) : (
+                      exerciseHistory.map((h, i) => (
+                        <div key={i} className="text-sm">
+                          <div className="flex justify-between text-gray-500 text-xs mb-1">
+                            <span>{new Date(h.date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })}</span>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            {h.sets.map((s, idx) => (
+                              <span key={idx} className="px-2 py-1 bg-neutral-800 rounded text-white font-mono text-xs border border-white/5">
+                                {s.weight}кг x {s.reps}
+                              </span>
+                            ))}
+                          </div>
                         </div>
-                        <div className="flex flex-wrap gap-2">
-                          {h.sets.map((s, idx) => (
-                            <span key={idx} className="px-2 py-1 bg-neutral-800 rounded text-white font-mono text-xs border border-white/5">
-                              {s.weight}кг x {s.reps}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
+                      ))
+                    )}
                   </div>
                 </div>
               )}
