@@ -46,113 +46,86 @@ export interface StreakResult {
 export const calculateStreaks = (
     logs: WorkoutLog[],
     shieldOptions?: StreakShieldOptions,
-    preferredDays: number[] = [1, 3, 5] // Default: Mon, Wed, Fri (0=Sun, 1=Mon, etc.)
+    _preferredDays: number[] = [1, 3, 5] // Deprecated: no longer used, kept for API compatibility
 ): StreakResult => {
     if (logs.length === 0) return { currentStreak: 0, bestStreak: 0, streakProtected: false };
 
-    // Получаем уникальные даты тренировок (без времени)
+    // Получаем уникальные даты тренировок (без времени), сортируем от новых к старым
     const workoutDates = [...new Set(logs.map(l => {
         const d = new Date(l.date);
-        return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
-    }))];
-
-    // Преобразуем в Set для быстрого поиска
-    const workoutDateSet = new Set(workoutDates);
+        d.setHours(0, 0, 0, 0);
+        return d.getTime();
+    }))].sort((a, b) => b - a); // От новых к старым
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+    const todayTime = today.getTime();
+    const oneDayMs = 24 * 60 * 60 * 1000;
 
     // Check if shield was used recently (within last 24 hours)
     let streakProtected = false;
-    let shieldProtectedDate: Date | null = null;
     if (shieldOptions?.shieldUsedAt) {
-        shieldProtectedDate = new Date(shieldOptions.shieldUsedAt);
-        shieldProtectedDate.setHours(0, 0, 0, 0);
-        const daysSinceShield = Math.floor(
-            (today.getTime() - shieldProtectedDate.getTime()) / (24 * 60 * 60 * 1000)
-        );
-        // Shield protects for 1 day
+        const shieldDate = new Date(shieldOptions.shieldUsedAt);
+        shieldDate.setHours(0, 0, 0, 0);
+        const daysSinceShield = Math.floor((todayTime - shieldDate.getTime()) / oneDayMs);
         if (daysSinceShield <= 1) {
             streakProtected = true;
         }
     }
 
-    // Новая логика: считаем тренировки без пропуска ЗАПЛАНИРОВАННЫХ дней
-    // Дни отдыха (не в preferredDays) не сбивают streak
+    // Простая логика: считаем тренировки подряд (каждый день)
+    // Streak начинается с сегодня (или вчера если сегодня ещё не тренировался)
     let currentStreak = 0;
-    let checkDate = new Date(today);
-    let foundFirstScheduledDay = false;
 
-    // Идём назад по календарю, проверяя только запланированные дни
-    for (let i = 0; i < 365; i++) {
-        const dayOfWeek = checkDate.getDay(); // 0=Sun, 1=Mon, etc.
-        const checkStr = `${checkDate.getFullYear()}-${checkDate.getMonth()}-${checkDate.getDate()}`;
-        const isScheduledDay = preferredDays.includes(dayOfWeek);
-        const hasWorkout = workoutDateSet.has(checkStr);
-        const isShieldProtected = streakProtected && shieldProtectedDate &&
-            checkDate.getTime() === shieldProtectedDate.getTime();
-
-        if (isScheduledDay) {
-            // Это запланированный день тренировки
-            if (hasWorkout) {
-                currentStreak++;
-                foundFirstScheduledDay = true;
-            } else if (isShieldProtected) {
-                // День защищён щитом
-                currentStreak++;
-                foundFirstScheduledDay = true;
-            } else if (foundFirstScheduledDay) {
-                // Пропустили запланированный день после того как уже начали считать
-                break;
-            }
-            // Если ещё не нашли первый день с тренировкой - продолжаем искать
-        }
-        // Дни отдыха (не в preferredDays) просто пропускаем
-
-        checkDate.setDate(checkDate.getDate() - 1);
+    if (workoutDates.length === 0) {
+        return { currentStreak: 0, bestStreak: 0, streakProtected };
     }
 
-    // Вычисляем лучший streak с учётом preferredDays
-    // Берём все даты тренировок и считаем последовательности запланированных дней
-    const sortedDates = workoutDates
-        .map(str => {
-            const [y, m, d] = str.split('-').map(Number);
-            return new Date(y, m, d);
-        })
-        .filter(d => preferredDays.includes(d.getDay())) // Только запланированные дни
-        .sort((a, b) => a.getTime() - b.getTime()); // От старых к новым
+    const latestWorkout = workoutDates[0];
+    const daysSinceLatest = Math.floor((todayTime - latestWorkout) / oneDayMs);
 
-    let bestStreak = currentStreak;
-    if (sortedDates.length > 0) {
+    // Если последняя тренировка была больше чем вчера - streak = 0
+    if (daysSinceLatest > 1) {
+        // Streak прервался, но вычисляем bestStreak из истории
+        let bestStreak = 1;
         let tempStreak = 1;
-
-        for (let i = 1; i < sortedDates.length; i++) {
-            const prev = sortedDates[i - 1];
-            const curr = sortedDates[i];
-
-            // Проверяем, есть ли пропущенные запланированные дни между prev и curr
-            let missedScheduledDays = 0;
-            const checkBetween = new Date(prev);
-            checkBetween.setDate(checkBetween.getDate() + 1);
-
-            while (checkBetween < curr) {
-                if (preferredDays.includes(checkBetween.getDay())) {
-                    missedScheduledDays++;
-                }
-                checkBetween.setDate(checkBetween.getDate() + 1);
-            }
-
-            if (missedScheduledDays === 0) {
-                // Нет пропущенных запланированных дней - streak продолжается
+        for (let i = 1; i < workoutDates.length; i++) {
+            const diff = (workoutDates[i - 1] - workoutDates[i]) / oneDayMs;
+            if (diff === 1) {
                 tempStreak++;
             } else {
-                // Есть пропуск - сбрасываем
                 bestStreak = Math.max(bestStreak, tempStreak);
                 tempStreak = 1;
             }
         }
         bestStreak = Math.max(bestStreak, tempStreak);
+        return { currentStreak: 0, bestStreak, streakProtected };
     }
+
+    // Считаем текущий streak от последней тренировки
+    currentStreak = 1;
+    for (let i = 1; i < workoutDates.length; i++) {
+        const diff = (workoutDates[i - 1] - workoutDates[i]) / oneDayMs;
+        if (diff === 1) {
+            currentStreak++;
+        } else {
+            break;
+        }
+    }
+
+    // Вычисляем лучший streak
+    let bestStreak = currentStreak;
+    let tempStreak = 1;
+    for (let i = 1; i < workoutDates.length; i++) {
+        const diff = (workoutDates[i - 1] - workoutDates[i]) / oneDayMs;
+        if (diff === 1) {
+            tempStreak++;
+        } else {
+            bestStreak = Math.max(bestStreak, tempStreak);
+            tempStreak = 1;
+        }
+    }
+    bestStreak = Math.max(bestStreak, tempStreak);
 
     return { currentStreak, bestStreak, streakProtected };
 };
