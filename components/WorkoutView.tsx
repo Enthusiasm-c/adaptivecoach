@@ -305,6 +305,26 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
     return 5;
   };
 
+  // Helper: shorten long rep descriptions
+  // "30 секунд на каждую сторону" → "30 сек × 2"
+  // "по 15 повторений на каждую ногу" → "15 × 2"
+  const formatReps = (reps: string): string => {
+    if (reps.includes('на каждую сторону') || reps.includes('на каждую ногу') || reps.includes('на каждую руку')) {
+      const match = reps.match(/(\d+)\s*(секунд|сек|повторений|раз)?/i);
+      if (match) {
+        const num = match[1];
+        const hasSeconds = reps.toLowerCase().includes('секунд') || reps.toLowerCase().includes('сек');
+        const unit = hasSeconds ? ' сек' : '';
+        return `${num}${unit} × 2`;
+      }
+    }
+    // Shorten "секунд" to "сек" for long strings
+    if (reps.length > 15 && reps.includes('секунд')) {
+      return reps.replace('секунд', 'сек');
+    }
+    return reps;
+  };
+
   // Stepper handlers for weight and reps
   const adjustValue = (exIndex: number, setIndex: number, field: 'weight' | 'reps', delta: number) => {
     const newExercises = [...completedExercises];
@@ -587,7 +607,7 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
                   </div>
                   <div>
                     <h3 className="font-bold text-lg text-white leading-tight">{currentExercise.name}</h3>
-                    <p className="text-xs text-gray-400 mt-0.5">{currentExercise.sets} подхода × {currentExercise.reps}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">{currentExercise.sets} подхода × {formatReps(currentExercise.reps)}</p>
                   </div>
                 </div>
                 <button

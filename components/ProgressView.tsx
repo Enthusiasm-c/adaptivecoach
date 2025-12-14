@@ -76,6 +76,28 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
     const [workoutLogToView, setWorkoutLogToView] = React.useState<WorkoutLog | null>(null);
 
     // Get workout for specific date based on preferredDays rotation
+    // Helper: get start of week (Monday) for a given date
+    const getWeekStart = (date: Date): Date => {
+        const d = new Date(date);
+        const day = d.getDay();
+        const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Monday
+        return new Date(d.setDate(diff));
+    };
+
+    // Helper: check if a session was already completed this week
+    const isSessionCompletedThisWeek = (sessionName: string, targetDate: Date): boolean => {
+        const weekStart = getWeekStart(targetDate);
+        const weekEnd = new Date(weekStart);
+        weekEnd.setDate(weekEnd.getDate() + 7);
+
+        return logs.some(log => {
+            const logDate = new Date(log.date);
+            return logDate >= weekStart &&
+                   logDate < weekEnd &&
+                   log.sessionId === sessionName;
+        });
+    };
+
     const getWorkoutForDate = (date: Date): WorkoutSession | null => {
         if (!program || program.sessions.length === 0) return null;
 
@@ -246,9 +268,18 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
                         // Check if this is a planned workout day (from preferredDays)
                         const isPlannedDay = plannedDates.has(dateStr);
 
+                        // Get the workout session for this date
+                        const plannedSession = getWorkoutForDate(day);
+
+                        // Check if this session was already completed this week (even on different day)
+                        const sessionAlreadyDone = plannedSession
+                            ? isSessionCompletedThisWeek(plannedSession.name, day)
+                            : false;
+
                         if (log) {
                             status = { type: 'completed', data: log };
-                        } else if (isPlannedDay) {
+                        } else if (isPlannedDay && !sessionAlreadyDone) {
+                            // Only show as planned if session not yet done this week
                             status = { type: 'planned', data: null };
                         }
 
