@@ -46,6 +46,17 @@ interface ExerciseMedia {
   };
 }
 
+interface ExerciseMetadata {
+  found: boolean;
+  exerciseName: string;
+  exerciseId?: string;
+  equipment: string;
+  equipmentId?: string | null;
+  equipmentDescription: string;
+  primaryMuscle: string;
+  secondaryMuscles: string[];
+}
+
 const ExerciseCardTest: React.FC = () => {
   const [variant, setVariant] = useState<LayoutVariant>('B');
   const [showImage, setShowImage] = useState(false);
@@ -57,10 +68,13 @@ const ExerciseCardTest: React.FC = () => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
   // Generation states
-  const [imageSource, setImageSource] = useState<'svg' | 'ai' | 'video'>('svg');
+  const [imageSource, setImageSource] = useState<'svg' | 'ai' | 'video' | 'pair'>('svg');
   const [aiImageData, setAiImageData] = useState<string | null>(null);
+  const [startImageData, setStartImageData] = useState<string | null>(null);
+  const [endImageData, setEndImageData] = useState<string | null>(null);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
+  const [isGeneratingPair, setIsGeneratingPair] = useState(false);
   const [isGeneratingVideo, setIsGeneratingVideo] = useState(false);
   const [videoOperationName, setVideoOperationName] = useState<string | null>(null);
   const [videoPollingStatus, setVideoPollingStatus] = useState<string>('');
@@ -81,6 +95,36 @@ const ExerciseCardTest: React.FC = () => {
 
   // localStorage cache
   const [cachedMedia, setCachedMedia] = useState<ExerciseMedia | null>(null);
+
+  // Exercise metadata from API
+  const [exerciseMetadata, setExerciseMetadata] = useState<ExerciseMetadata | null>(null);
+  const [isLoadingMetadata, setIsLoadingMetadata] = useState(false);
+
+  // Fetch exercise metadata on exercise change
+  useEffect(() => {
+    const fetchMetadata = async () => {
+      setIsLoadingMetadata(true);
+      try {
+        const response = await fetch(
+          `https://api.sensei.training/api/exercises/metadata?name=${encodeURIComponent(selectedExercise)}`,
+          {
+            headers: {
+              'x-api-key': '9a361ff33289e0723fad20cbf91b263a6cea0d7cf29c44fe7bbe59dd91d2a50d'
+            }
+          }
+        );
+        const data = await response.json();
+        setExerciseMetadata(data);
+      } catch (error) {
+        console.error('Failed to fetch metadata:', error);
+        setExerciseMetadata(null);
+      } finally {
+        setIsLoadingMetadata(false);
+      }
+    };
+
+    fetchMetadata();
+  }, [selectedExercise]);
 
   // Load from cache on exercise change
   useEffect(() => {
@@ -208,16 +252,59 @@ const ExerciseCardTest: React.FC = () => {
     }
   };
 
-  // Generate video via Veo 2
+  // Generate START + END image pair via Gemini
+  const handleGeneratePair = async () => {
+    setIsGeneratingPair(true);
+    setGenerationError(null);
+
+    try {
+      const response = await fetch('https://api.sensei.training/api/images/generate-pair', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': '9a361ff33289e0723fad20cbf91b263a6cea0d7cf29c44fe7bbe59dd91d2a50d'
+        },
+        body: JSON.stringify({
+          exerciseName: selectedExercise
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate image pair');
+      }
+
+      const data = await response.json();
+
+      if (data.success) {
+        setStartImageData(data.startImage);
+        setEndImageData(data.endImage);
+        setAiImageData(data.startImage); // Use start image as main
+        setGenerationMetrics({
+          ...data.metrics,
+          cached: false
+        });
+        setImageSource('pair');
+      } else {
+        throw new Error(data.error || 'Unknown error');
+      }
+    } catch (error) {
+      setGenerationError(error instanceof Error ? error.message : 'Failed to generate pair');
+    } finally {
+      setIsGeneratingPair(false);
+    }
+  };
+
+  // Generate video via Veo (image-to-video)
   const handleGenerateVideo = async () => {
-    if (!aiImageData) {
+    const imageToUse = startImageData || aiImageData;
+    if (!imageToUse) {
       setGenerationError('Сначала сгенерируйте изображение');
       return;
     }
 
     setIsGeneratingVideo(true);
     setGenerationError(null);
-    setVideoPollingStatus('🚀 Запуск генерации видео...');
+    setVideoPollingStatus('🚀 Запуск генерации видео (image-to-video)...');
 
     try {
       const response = await fetch('https://api.sensei.training/api/videos/generate', {
@@ -228,7 +315,8 @@ const ExerciseCardTest: React.FC = () => {
         },
         body: JSON.stringify({
           exerciseName: selectedExercise,
-          imageBase64: aiImageData
+          startImage: startImageData || aiImageData,
+          endImage: endImageData || undefined
         })
       });
 
@@ -242,6 +330,39 @@ const ExerciseCardTest: React.FC = () => {
       }
     } catch (error) {
       setGenerationError(error instanceof Error ? error.message : 'Failed to generate video');
+      setIsGeneratingVideo(false);
+      setVideoPollingStatus('');
+    }
+  };
+
+  // Generate video directly from text (text-to-video) via Veo 3.1
+  const handleGenerateVideoFromText = async () => {
+    setIsGeneratingVideo(true);
+    setGenerationError(null);
+    setVideoPollingStatus('🚀 Запуск text-to-video генерации (Veo 3.1)...');
+
+    try {
+      const response = await fetch('https://api.sensei.training/api/videos/generate-from-text', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': '9a361ff33289e0723fad20cbf91b263a6cea0d7cf29c44fe7bbe59dd91d2a50d'
+        },
+        body: JSON.stringify({
+          exerciseName: selectedExercise
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.success && data.operationName) {
+        setVideoOperationName(data.operationName);
+        setVideoPollingStatus(`⏳ Text-to-video: ${data.operationName}`);
+      } else {
+        throw new Error(data.error || 'Failed to start text-to-video generation');
+      }
+    } catch (error) {
+      setGenerationError(error instanceof Error ? error.message : 'Failed to generate video from text');
       setIsGeneratingVideo(false);
       setVideoPollingStatus('');
     }
@@ -331,6 +452,18 @@ const ExerciseCardTest: React.FC = () => {
               </button>
             </div>
           )}
+        </div>
+      );
+    }
+
+    // Image Pair (START + END)
+    if (imageSource === 'pair' && startImageData && endImageData) {
+      return (
+        <div className={`relative w-full overflow-hidden rounded-xl bg-black ${className}`}>
+          <div className="grid grid-cols-2 gap-1">
+            <img src={startImageData} alt="START" className="w-full h-auto" />
+            <img src={endImageData} alt="END" className="w-full h-auto" />
+          </div>
         </div>
       );
     }
@@ -449,6 +582,34 @@ const ExerciseCardTest: React.FC = () => {
               </button>
             </div>
           )}
+
+          {/* Exercise Metadata */}
+          {isLoadingMetadata ? (
+            <div className="flex items-center gap-2 text-xs text-gray-500">
+              <Loader2 size={12} className="animate-spin" />
+              Загрузка метаданных...
+            </div>
+          ) : exerciseMetadata && (
+            <div className="p-3 bg-neutral-800 rounded-lg text-xs space-y-2">
+              <div className="flex items-center gap-2">
+                <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${exerciseMetadata.found ? 'bg-green-500/20 text-green-400' : 'bg-orange-500/20 text-orange-400'}`}>
+                  {exerciseMetadata.found ? '✓ В базе' : '⚠ Не найдено'}
+                </span>
+                <span className="text-gray-400">{exerciseMetadata.equipment}</span>
+              </div>
+              <div className="text-gray-500">
+                <span className="text-purple-400">{exerciseMetadata.primaryMuscle}</span>
+                {exerciseMetadata.secondaryMuscles.length > 0 && (
+                  <span> + {exerciseMetadata.secondaryMuscles.join(', ')}</span>
+                )}
+              </div>
+              {exerciseMetadata.found && (
+                <div className="text-[10px] text-gray-600 italic truncate">
+                  🏋️ {exerciseMetadata.equipmentDescription}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Generation Controls */}
@@ -458,7 +619,7 @@ const ExerciseCardTest: React.FC = () => {
           {/* Generate Image Button */}
           <button
             onClick={handleGenerateImage}
-            disabled={isGeneratingImage}
+            disabled={isGeneratingImage || isGeneratingPair}
             className="w-full flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg font-bold hover:from-indigo-700 hover:to-purple-700 transition disabled:opacity-50"
           >
             {isGeneratingImage ? (
@@ -469,15 +630,39 @@ const ExerciseCardTest: React.FC = () => {
             ) : (
               <>
                 <Sparkles size={16} />
-                Генерировать фото (Gemini)
+                1 фото (Gemini) ~$0.13
               </>
             )}
           </button>
 
-          {/* Generate Video Button */}
+          {/* Generate Pair Button - NEW */}
+          <button
+            onClick={handleGeneratePair}
+            disabled={isGeneratingPair || isGeneratingImage}
+            className="w-full flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-amber-600 to-orange-600 text-white rounded-lg font-bold hover:from-amber-700 hover:to-orange-700 transition disabled:opacity-50"
+          >
+            {isGeneratingPair ? (
+              <>
+                <Loader2 size={16} className="animate-spin" />
+                Генерация START + END...
+              </>
+            ) : (
+              <>
+                <Image size={16} />
+                START + END пара ~$0.27
+              </>
+            )}
+          </button>
+
+          {/* Pair status */}
+          {startImageData && endImageData && (
+            <p className="text-xs text-center text-green-400">✅ Пара изображений готова (START + END)</p>
+          )}
+
+          {/* Generate Video Button (image-to-video) */}
           <button
             onClick={handleGenerateVideo}
-            disabled={isGeneratingVideo || !aiImageData}
+            disabled={isGeneratingVideo || (!aiImageData && !startImageData)}
             className="w-full flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-pink-600 to-red-600 text-white rounded-lg font-bold hover:from-pink-700 hover:to-red-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isGeneratingVideo ? (
@@ -488,7 +673,26 @@ const ExerciseCardTest: React.FC = () => {
             ) : (
               <>
                 <Video size={16} />
-                Генерировать видео (Veo) {!aiImageData && '⚠️'}
+                Видео из картинки ~$1.20 {(!aiImageData && !startImageData) && '⚠️'}
+              </>
+            )}
+          </button>
+
+          {/* Generate Video from Text Button (text-to-video) */}
+          <button
+            onClick={handleGenerateVideoFromText}
+            disabled={isGeneratingVideo}
+            className="w-full flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg font-bold hover:from-purple-700 hover:to-indigo-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isGeneratingVideo ? (
+              <>
+                <Loader2 size={16} className="animate-spin" />
+                {videoPollingStatus}
+              </>
+            ) : (
+              <>
+                <Sparkles size={16} />
+                Text-to-Video (Veo 3.1) ~$1.20
               </>
             )}
           </button>
@@ -543,10 +747,10 @@ const ExerciseCardTest: React.FC = () => {
         {/* Source Toggle */}
         <div className="bg-neutral-900 rounded-2xl p-5 border border-white/10 space-y-4">
           <label className="block text-xs font-bold text-gray-500 uppercase">Источник</label>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-4 gap-2">
             <button
               onClick={() => setImageSource('svg')}
-              className={`py-2 rounded-lg font-bold text-sm transition ${
+              className={`py-2 rounded-lg font-bold text-xs transition ${
                 imageSource === 'svg' ? 'bg-purple-600 text-white' : 'bg-neutral-800 text-gray-400'
               }`}
             >
@@ -555,16 +759,25 @@ const ExerciseCardTest: React.FC = () => {
             <button
               onClick={() => setImageSource('ai')}
               disabled={!aiImageData}
-              className={`py-2 rounded-lg font-bold text-sm transition disabled:opacity-50 ${
+              className={`py-2 rounded-lg font-bold text-xs transition disabled:opacity-50 ${
                 imageSource === 'ai' ? 'bg-purple-600 text-white' : 'bg-neutral-800 text-gray-400'
               }`}
             >
               Фото
             </button>
             <button
+              onClick={() => setImageSource('pair')}
+              disabled={!startImageData || !endImageData}
+              className={`py-2 rounded-lg font-bold text-xs transition disabled:opacity-50 ${
+                imageSource === 'pair' ? 'bg-amber-600 text-white' : 'bg-neutral-800 text-gray-400'
+              }`}
+            >
+              Пара
+            </button>
+            <button
               onClick={() => setImageSource('video')}
               disabled={!videoUrl}
-              className={`py-2 rounded-lg font-bold text-sm transition disabled:opacity-50 ${
+              className={`py-2 rounded-lg font-bold text-xs transition disabled:opacity-50 ${
                 imageSource === 'video' ? 'bg-purple-600 text-white' : 'bg-neutral-800 text-gray-400'
               }`}
             >

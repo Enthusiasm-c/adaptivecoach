@@ -37,10 +37,33 @@ const App: React.FC = () => {
   // Check for test mode in URL
   const isTestMode = new URLSearchParams(window.location.search).get('test') === 'ui';
 
-  const [onboardingProfile, setOnboardingProfile] = useState<OnboardingProfile | null>(null);
-  const [trainingProgram, setTrainingProgram] = useState<TrainingProgram | null>(null);
-  const [workoutLogs, setWorkoutLogs] = useState<WorkoutLog[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  // Initialize state synchronously from localStorage to avoid flash
+  const [onboardingProfile, setOnboardingProfile] = useState<OnboardingProfile | null>(() => {
+    try {
+      const stored = localStorage.getItem('onboardingProfile');
+      return stored ? JSON.parse(stored) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [trainingProgram, setTrainingProgram] = useState<TrainingProgram | null>(() => {
+    try {
+      const stored = localStorage.getItem('trainingProgram');
+      return stored ? JSON.parse(stored) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [workoutLogs, setWorkoutLogs] = useState<WorkoutLog[]>(() => {
+    try {
+      const stored = localStorage.getItem('workoutLogs');
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  });
+  // isLoading is now only for async operations (program generation), not initial load
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [errorDetails, setErrorDetails] = useState<string | null>(null);
   const [telegramUser, setTelegramUser] = useState<TelegramUser | null>(null);
@@ -193,55 +216,35 @@ const App: React.FC = () => {
         }
     }
 
-    try {
-      const storedProfile = localStorage.getItem('onboardingProfile');
-      const storedProgram = localStorage.getItem('trainingProgram');
-      const storedLogs = localStorage.getItem('workoutLogs');
+    // Run migrations if we have existing data (state was loaded synchronously above)
+    // Note: We access localStorage here to get raw data for migration checks
+    const storedProgram = localStorage.getItem('trainingProgram');
+    const storedProfile = localStorage.getItem('onboardingProfile');
 
-      const parsedProfile = storedProfile ? JSON.parse(storedProfile) : null;
-      const parsedProgram = storedProgram ? JSON.parse(storedProgram) : null;
-      const parsedLogs = storedLogs ? JSON.parse(storedLogs) : [];
+    // Migrate exercise names and descriptions if needed
+    if (storedProgram) {
+      const parsedProgram = JSON.parse(storedProgram);
+      import('./utils/exerciseMigration').then(({ migrateExerciseNamesAndDescriptions, needsMigration }) => {
+        if (needsMigration(parsedProgram)) {
+          console.log('[App] Running exercise migration...');
+          const migratedProgram = migrateExerciseNamesAndDescriptions(parsedProgram);
+          setTrainingProgram(migratedProgram);
+          localStorage.setItem('trainingProgram', JSON.stringify(migratedProgram));
+        }
+      }).catch(console.error);
+    }
 
-      if (parsedProfile) setOnboardingProfile(parsedProfile);
-
-      // Migrate exercise names and descriptions if needed
-      if (parsedProgram) {
-        import('./utils/exerciseMigration').then(({ migrateExerciseNamesAndDescriptions, needsMigration }) => {
-          if (needsMigration(parsedProgram)) {
-            console.log('[App] Running exercise migration...');
-            const migratedProgram = migrateExerciseNamesAndDescriptions(parsedProgram);
-            setTrainingProgram(migratedProgram);
-            localStorage.setItem('trainingProgram', JSON.stringify(migratedProgram));
-          } else {
-            setTrainingProgram(parsedProgram);
-          }
-        });
-      }
-
-      if (parsedLogs.length > 0) setWorkoutLogs(parsedLogs);
-
-      // Run automatic migration for existing users (silent, no UI)
-      if (parsedProfile && parsedProgram) {
-        runAutoMigration().then(result => {
-          if (result.migrated && result.program && result.mesocycleState) {
-            console.log('[App] Migration completed successfully');
-            setTrainingProgram(result.program);
-            setMesocycleState(result.mesocycleState);
-          } else if (result.error) {
-            console.warn('[App] Migration failed:', result.error);
-            // Keep using old program if migration fails
-          }
-        });
-      }
-    } catch (e) {
-      console.error("Failed to access or parse from localStorage", e);
-      try {
-        localStorage.clear();
-      } catch (clearError) {
-        console.error("Could not clear localStorage", clearError);
-      }
-    } finally {
-        setIsLoading(false);
+    // Run automatic migration for existing users (silent, no UI)
+    if (storedProfile && storedProgram) {
+      runAutoMigration().then(result => {
+        if (result.migrated && result.program && result.mesocycleState) {
+          console.log('[App] Migration completed successfully');
+          setTrainingProgram(result.program);
+          setMesocycleState(result.mesocycleState);
+        } else if (result.error) {
+          console.warn('[App] Migration failed:', result.error);
+        }
+      }).catch(console.error);
     }
   }, []);
 
