@@ -843,7 +843,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
             }`}>
                 <NavButton
                     icon={<Dumbbell size={24} />}
-                    label="Сегодня"
+                    label="Тренировка"
                     isActive={activeView === 'today'}
                     onClick={() => handleViewChange('today')}
                 />
