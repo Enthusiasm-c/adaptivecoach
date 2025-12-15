@@ -224,7 +224,7 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
   // Keywords for auto-detecting exercise type when AI doesn't set it correctly
   const CARDIO_KEYWORDS = ['кардио', 'бег', 'ходьба', 'велосипед', 'сайкл', 'эллипс', 'скакалк', 'прыжк', 'дорожк', 'степпер', 'гребля', 'велотренажёр'];
   const BODYWEIGHT_KEYWORDS = ['планка', 'отжиман', 'подтягив', 'пресс', 'скручиван', 'в висе', 'подъём ног', 'подъем ног', 'берпи', 'выпрыгив', 'присед без', 'гиперэкстензия без'];
-  const ISOMETRIC_KEYWORDS = ['удержан', 'статик', 'вис ', 'стойка'];
+  const ISOMETRIC_KEYWORDS = ['удержан', 'статик', 'вис ', 'стойка', 'планка', 'планк', 'птица-собака', 'bird-dog'];
 
   // Patterns for SINGLE dumbbell exercises (show "кг", not "кг×2")
   const SINGLE_DUMBBELL_PATTERNS = [
@@ -618,8 +618,8 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
                 </button>
               </div>
 
-              {/* Technique GIF Section - hidden for cardio exercises */}
-              {!currentExercise.isWarmup && !isCardioExercise(currentExercise) && (
+              {/* Technique GIF Section - hidden for cardio and isometric exercises */}
+              {!currentExercise.isWarmup && !isCardioExercise(currentExercise) && !isIsometricExercise(currentExercise) && (
                 <div className="mb-4">
                   {isLoadingGif ? (
                     <div className="flex items-center gap-2 text-xs text-gray-500 py-2">
@@ -665,8 +665,8 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
                 </p>
               )}
 
-              {/* Contextual History Section - hidden for cardio (old data has incorrect weight) */}
-              {showHistory && !currentExercise.isWarmup && !isCardioExercise(currentExercise) && (
+              {/* Contextual History Section - hidden for cardio and isometric (bodyweight) exercises */}
+              {showHistory && !currentExercise.isWarmup && !isCardioExercise(currentExercise) && !isIsometricExercise(currentExercise) && (
                 <div className="mt-4 bg-neutral-900 rounded-xl border border-indigo-500/30 p-4 animate-slide-up mb-4">
                   <h4 className="text-xs font-bold text-indigo-400 uppercase mb-3 flex items-center gap-2">
                     <History size={12} /> Прошлые тренировки
