@@ -699,18 +699,14 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
               {/* Sets */}
               <div className="space-y-3">
                 {currentExercise.completedSets.map((set, setIndex) => (
-                  <div key={setIndex} className={`grid ${
-                    exerciseNeedsWeight(currentExercise)
-                      ? 'grid-cols-[auto_1fr_1fr_auto]'      // weight + reps + check
-                      : 'grid-cols-[auto_1fr_auto]'          // reps + check only
-                  } gap-2 items-center p-3 rounded-xl transition-all ${set.isCompleted
+                  <div key={setIndex} className={`flex items-center gap-2 p-3 rounded-xl transition-all ${set.isCompleted
                     ? 'bg-emerald-500/10 border border-emerald-500/20'
                     : 'bg-neutral-900/50 border border-white/5'
                     }`}>
                     <div className="w-6 text-center font-mono text-gray-500 text-sm">#{setIndex + 1}</div>
 
                     {exerciseNeedsWeight(currentExercise) && (
-                      <div className={`flex items-center justify-center gap-1 rounded-lg py-1 px-1 ${
+                      <div className={`flex-1 flex items-center justify-center gap-1 rounded-lg py-1 px-1 ${
                         attemptedFinish && getSetErrors(currentExercise, set).weight
                           ? 'bg-red-500/10 border border-red-500/30'
                           : 'bg-neutral-800/50'
@@ -738,7 +734,7 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
                       </div>
                     )}
 
-                    <div className={`flex items-center justify-center gap-1 rounded-lg py-1 px-1 ${
+                    <div className={`flex-1 flex items-center justify-center gap-1 rounded-lg py-1 px-1 ${
                         attemptedFinish && getSetErrors(currentExercise, set).reps
                           ? 'bg-red-500/10 border border-red-500/30'
                           : 'bg-neutral-800/50'
