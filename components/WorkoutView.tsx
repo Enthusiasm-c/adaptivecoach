@@ -495,10 +495,10 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
     setExerciseToSwap(null);
   };
 
-  const openYouTubeSearch = () => {
+  const openRutubeSearch = () => {
     if (!currentExercise) return;
     const query = encodeURIComponent(`${currentExercise.name} техника выполнения`);
-    window.open(`https://www.youtube.com/results?search_query=${query}`, '_blank');
+    window.open(`https://rutube.ru/search/?query=${query}`, '_blank');
   };
 
 
@@ -649,10 +649,10 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
                     </div>
                   ) : (
                     <button
-                      onClick={() => openYouTubeSearch()}
-                      className="flex items-center gap-2 text-xs font-bold text-red-400 bg-red-500/10 px-3 py-2 rounded-lg hover:bg-red-500/20 transition"
+                      onClick={() => openRutubeSearch()}
+                      className="flex items-center gap-2 text-xs font-bold text-teal-400 bg-teal-500/10 px-3 py-2 rounded-lg hover:bg-teal-500/20 transition"
                     >
-                      <Video size={14} /> Смотреть технику (YouTube)
+                      <Video size={14} /> Смотреть технику (Rutube)
                     </button>
                   )}
                 </div>
