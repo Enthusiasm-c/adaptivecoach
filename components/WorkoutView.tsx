@@ -76,7 +76,25 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
   useEffect(() => {
     if (initialState) {
       setCurrentSession({ ...session }); // Keep original session structure
-      setCompletedExercises(initialState.completedExercises);
+      // Fix up initialState - ensure sets have proper defaults from exercise
+      // This handles data saved before the default values fix
+      const fixedCompletedExercises = initialState.completedExercises.map(ex => {
+        const repsStr = String(ex.reps || '0');
+        const defaultReps = parseInt(repsStr.split('-')[0].replace(/[^\d]/g, '')) || 0;
+        const defaultWeight = ex.weight || 0;
+
+        return {
+          ...ex,
+          completedSets: ex.completedSets.map(set => ({
+            ...set,
+            // Use default reps if set.reps is 0 and we have a default
+            reps: set.reps || defaultReps,
+            // Use default weight if set.weight is 0 and we have a default
+            weight: set.weight || defaultWeight,
+          })),
+        };
+      });
+      setCompletedExercises(fixedCompletedExercises);
       return;
     }
 
@@ -352,8 +370,11 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
   // A set is complete if: (has reps AND weight if needed) OR explicitly marked complete
   const isExerciseComplete = (ex: typeof completedExercises[0]): boolean => {
     const needsWeight = exerciseNeedsWeight(ex);
+    // Only require weight if exercise has a suggested weight from AI (ex.weight > 0)
+    // This handles cases where AI generates strength exercises without weight suggestion
+    const requiresWeightFilled = needsWeight && ex.weight !== undefined && ex.weight > 0;
     return ex.completedSets.every(s =>
-      s.isCompleted || (s.reps > 0 && (needsWeight ? s.weight > 0 : true))
+      s.isCompleted || (s.reps > 0 && (requiresWeightFilled ? s.weight > 0 : true))
     );
   };
 
@@ -362,8 +383,10 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
   const getSetErrors = (ex: typeof completedExercises[0], set: typeof ex.completedSets[0]): { weight: boolean, reps: boolean } => {
     if (set.isCompleted) return { weight: false, reps: false };
     const needsWeight = exerciseNeedsWeight(ex);
+    // Only show weight error if exercise has a suggested weight from AI
+    const requiresWeightFilled = needsWeight && ex.weight !== undefined && ex.weight > 0;
     return {
-      weight: needsWeight && (!set.weight || set.weight <= 0),
+      weight: requiresWeightFilled && (!set.weight || set.weight <= 0),
       reps: !set.reps || set.reps <= 0
     };
   };
