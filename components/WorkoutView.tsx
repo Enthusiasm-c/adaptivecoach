@@ -359,8 +359,23 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
   // Stepper handlers for weight and reps
   const adjustValue = (exIndex: number, setIndex: number, field: 'weight' | 'reps', delta: number) => {
     const newExercises = [...completedExercises];
-    const currentValue = newExercises[exIndex].completedSets[setIndex][field] || 0;
-    const step = field === 'weight' ? getWeightStep(newExercises[exIndex]) : 1;
+    const exercise = newExercises[exIndex];
+    const set = exercise.completedSets[setIndex];
+
+    let currentValue = set[field] || 0;
+
+    // If value is 0, use exercise default (what's actually displayed to user)
+    // This ensures +/- buttons work from the displayed value, not internal 0
+    if (currentValue === 0) {
+      if (field === 'weight') {
+        currentValue = exercise.weight || 0;
+      } else if (field === 'reps') {
+        const repsStr = String(exercise.reps || '0');
+        currentValue = parseInt(repsStr.split('-')[0].replace(/[^\d]/g, '')) || 0;
+      }
+    }
+
+    const step = field === 'weight' ? getWeightStep(exercise) : 1;
     const newValue = Math.max(0, currentValue + delta * step);
 
     handleValueChange(exIndex, setIndex, field, newValue);
