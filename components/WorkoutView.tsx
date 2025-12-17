@@ -108,10 +108,23 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
     setCurrentSession({ ...session, exercises: adjustedExercises });
 
     setCompletedExercises(
-      adjustedExercises.map(ex => ({
-        ...ex,
-        completedSets: Array.from({ length: ex.sets }, () => ({ reps: 0, weight: 0, rir: undefined, isCompleted: false })),
-      }))
+      adjustedExercises.map(ex => {
+        // Parse default reps from exercise (could be "8-12", "10", "45 секунд", etc.)
+        const repsStr = String(ex.reps || '0');
+        const defaultReps = parseInt(repsStr.split('-')[0].replace(/[^\d]/g, '')) || 0;
+        // Use exercise weight as default (or 0 if not specified)
+        const defaultWeight = ex.weight || 0;
+
+        return {
+          ...ex,
+          completedSets: Array.from({ length: ex.sets }, () => ({
+            reps: defaultReps,
+            weight: defaultWeight,
+            rir: undefined,
+            isCompleted: false
+          })),
+        };
+      })
     );
 
     setCurrentExerciseIndex(0);
@@ -336,15 +349,18 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
   };
 
   // Helper: check if all sets are complete for an exercise
+  // A set is complete if: (has reps AND weight if needed) OR explicitly marked complete
   const isExerciseComplete = (ex: typeof completedExercises[0]): boolean => {
     const needsWeight = exerciseNeedsWeight(ex);
     return ex.completedSets.every(s =>
-      s.reps > 0 && (needsWeight ? s.weight > 0 : true)
+      s.isCompleted || (s.reps > 0 && (needsWeight ? s.weight > 0 : true))
     );
   };
 
   // Helper: check which fields are incomplete for a specific set (for red highlighting)
+  // If set is marked complete, no errors shown
   const getSetErrors = (ex: typeof completedExercises[0], set: typeof ex.completedSets[0]): { weight: boolean, reps: boolean } => {
+    if (set.isCompleted) return { weight: false, reps: false };
     const needsWeight = exerciseNeedsWeight(ex);
     return {
       weight: needsWeight && (!set.weight || set.weight <= 0),
@@ -383,12 +399,13 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
     }
   };
 
-  // Check if all exercises are complete (uses helper that respects exerciseType)
+  // Check if all NON-WARMUP exercises are complete (warmups are not saved to log anyway)
   // Also require at least one set to be filled (prevent finishing empty workout)
-  const hasAtLeastOneFilledSet = completedExercises.some(ex =>
-    ex.completedSets.some(s => s.reps > 0)
+  const mainExercisesForValidation = completedExercises.filter(ex => !ex.isWarmup);
+  const hasAtLeastOneFilledSet = mainExercisesForValidation.some(ex =>
+    ex.completedSets.some(s => s.reps > 0 || s.isCompleted)
   );
-  const canFinish = hasAtLeastOneFilledSet && completedExercises.every(isExerciseComplete);
+  const canFinish = hasAtLeastOneFilledSet && mainExercisesForValidation.every(isExerciseComplete);
 
   const finishWorkout = () => {
     if (!canFinish) {
