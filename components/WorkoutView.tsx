@@ -161,6 +161,12 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
 
   // Fetch history on exercise change
   useEffect(() => {
+    // Fix #8: Explicit bounds check to prevent crash when array is empty
+    if (!completedExercises || completedExercises.length === 0 || currentExerciseIndex >= completedExercises.length) {
+      setExerciseHistory([]);
+      return;
+    }
+
     const currentEx = completedExercises[currentExerciseIndex];
 
     if (currentEx) {
@@ -212,21 +218,24 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
     } else {
       (newExercises[exIndex].completedSets[setIndex] as any)[field] = value;
 
-      // Auto-fill logic: Copy weight from first set to ALL empty subsequent sets
+      // Fix #2: Auto-fill only to sets that are NOT completed (user hasn't touched them)
+      // This prevents overwriting user data when they fill sets in non-sequential order
       if (field === 'weight' && setIndex === 0) {
-        // When changing weight in first set, copy to all empty subsequent sets
+        // When changing weight in first set, copy to subsequent incomplete sets only
         for (let i = 1; i < newExercises[exIndex].completedSets.length; i++) {
           const set = newExercises[exIndex].completedSets[i];
-          if (!set.weight || set.weight === 0) {
+          // Only auto-fill if set is not completed AND has no weight or zero
+          if (!set.isCompleted && (!set.weight || set.weight === 0)) {
             (set as any).weight = value;
           }
         }
       } else if (field === 'weight' || field === 'reps') {
-        // For other sets, copy to next empty set only
+        // For other sets, copy to next incomplete set only
         const nextSetIndex = setIndex + 1;
         if (nextSetIndex < newExercises[exIndex].completedSets.length) {
           const nextSet = newExercises[exIndex].completedSets[nextSetIndex];
-          if (!nextSet[field] || nextSet[field] === 0) {
+          // Only auto-fill if next set is not completed
+          if (!nextSet.isCompleted && (!nextSet[field] || nextSet[field] === 0)) {
             (nextSet as any)[field] = value;
           }
         }
@@ -388,8 +397,13 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
     // Only require weight if exercise has a suggested weight from AI (ex.weight > 0)
     // This handles cases where AI generates strength exercises without weight suggestion
     const requiresWeightFilled = needsWeight && ex.weight !== undefined && ex.weight > 0;
+
+    // Fix #7: For isometric exercises (planks), only require checkmark - no reps validation
+    // Users use stopwatch for timing, reps field is just informational
+    const isTimeBased = isIsometricExercise(ex) || String(ex.reps).toLowerCase().includes('секунд');
+
     return ex.completedSets.every(s =>
-      s.isCompleted || (s.reps > 0 && (requiresWeightFilled ? s.weight > 0 : true))
+      s.isCompleted || (!isTimeBased && s.reps > 0 && (requiresWeightFilled ? s.weight > 0 : true))
     );
   };
 
@@ -397,6 +411,11 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
   // If set is marked complete, no errors shown
   const getSetErrors = (ex: typeof completedExercises[0], set: typeof ex.completedSets[0]): { weight: boolean, reps: boolean } => {
     if (set.isCompleted) return { weight: false, reps: false };
+
+    // Fix #7: No errors for time-based exercises - just need checkmark
+    const isTimeBased = isIsometricExercise(ex) || String(ex.reps).toLowerCase().includes('секунд');
+    if (isTimeBased) return { weight: false, reps: false };
+
     const needsWeight = exerciseNeedsWeight(ex);
     // Only show weight error if exercise has a suggested weight from AI
     const requiresWeightFilled = needsWeight && ex.weight !== undefined && ex.weight > 0;
@@ -444,6 +463,13 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
     ex.completedSets.some(s => s.reps > 0 || s.isCompleted)
   );
   const canFinish = hasAtLeastOneFilledSet && mainExercisesForValidation.every(isExerciseComplete);
+
+  // Fix #10: Reset red highlighting when all exercises become complete
+  useEffect(() => {
+    if (attemptedFinish && canFinish) {
+      setAttemptedFinish(false);
+    }
+  }, [canFinish, attemptedFinish]);
 
   const finishWorkout = () => {
     if (!canFinish) {
@@ -535,14 +561,27 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
 
     setCurrentSession({ ...currentSession, exercises: newSessionExercises });
 
-    const newCompleted = newSessionExercises.map((ex, i) => {
-      if (ex.name === newExercise.name) {
+    // Fix #11: Match by exercise name, not by index (indices shift when warmups are added)
+    // Fix #3: Initialize with proper defaults from new exercise, not 0/0
+    const newCompleted = completedExercises.map((completed) => {
+      if (completed.name === exerciseToSwap.name) {
+        // Parse defaults from new exercise (same logic as initial setup)
+        const repsStr = String(newExercise.reps || '0');
+        const defaultReps = parseInt(repsStr.split('-')[0].replace(/[^\d]/g, '')) || 0;
+        const defaultWeight = newExercise.weight || 0;
+
         return {
-          ...ex,
-          completedSets: Array.from({ length: ex.sets }, () => ({ reps: 0, weight: 0, rir: undefined, isCompleted: false })),
-        }
+          ...newExercise,
+          completedSets: Array.from({ length: newExercise.sets }, () => ({
+            reps: defaultReps,
+            weight: defaultWeight,
+            rir: undefined,
+            isCompleted: false
+          })),
+        };
       }
-      return completedExercises[i];
+      // Keep existing progress for other exercises
+      return completed;
     });
 
     setCompletedExercises(newCompleted);
@@ -774,7 +813,7 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
                         </button>
                         <div className="flex flex-col items-center min-w-[40px]">
                           <span className="font-mono font-bold text-white text-sm">
-                            {set.weight || currentExercise.weight || '—'}
+                            {set.weight ?? currentExercise.weight ?? '—'}
                           </span>
                           <span className="text-[9px] text-gray-500">
                             {isPairedDumbbellExercise(currentExercise) ? 'кг×2' : 'кг'}
@@ -802,7 +841,7 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
                         </button>
                         <div className="flex flex-col items-center min-w-[32px]">
                           <span className="font-mono font-bold text-white text-sm">
-                            {set.reps || currentExercise.reps.split('-')[0] || '—'}
+                            {set.reps ?? (parseInt(String(currentExercise.reps).split('-')[0].replace(/[^\d]/g, '')) || '—')}
                           </span>
                           <span className="text-[9px] text-gray-500">повт</span>
                         </div>
