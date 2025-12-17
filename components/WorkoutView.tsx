@@ -592,7 +592,14 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
   const openRutubeSearch = () => {
     if (!currentExercise) return;
     const query = encodeURIComponent(`${currentExercise.name} техника выполнения`);
-    window.open(`https://rutube.ru/search/?query=${query}`, '_blank');
+    const url = `https://rutube.ru/search/?query=${query}`;
+
+    // Use Telegram WebApp API if available (opens in external browser, not in mini app)
+    if ((window as any).Telegram?.WebApp?.openLink) {
+      (window as any).Telegram.WebApp.openLink(url);
+    } else {
+      window.open(url, '_blank');
+    }
   };
 
 
@@ -619,14 +626,20 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
           <ChevronLeft size={20} />
         </button>
         <div className="flex items-center gap-3">
-          {/* Pain Report Button */}
+          {/* Pain Report Button - changes appearance when pain is reported */}
           <button
             onClick={() => setShowPainModal(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500/10 border border-red-500/20 rounded-full text-red-400 hover:bg-red-500/20 transition"
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full transition ${
+              midWorkoutPainLocation
+                ? 'bg-red-500/30 border border-red-500/50 text-red-300'
+                : 'bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20'
+            }`}
             title="Сообщить о боли"
           >
             <AlertTriangle size={14} />
-            <span className="text-xs font-medium">Болит?</span>
+            <span className="text-xs font-medium">
+              {midWorkoutPainLocation ? `Боль: ${midWorkoutPainLocation}` : 'Болит?'}
+            </span>
           </button>
           <div className="flex flex-col items-end">
             <span className="text-xs text-gray-500 font-bold uppercase tracking-wider">Упражнение {currentExerciseIndex + 1} из {completedExercises.length}</span>
@@ -640,7 +653,11 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
                   <button
                     key={idx}
                     onClick={() => setCurrentExerciseIndex(idx)}
-                    className={`h-1.5 w-4 rounded-full transition-all ${
+                    className="relative p-2 -m-1.5"
+                    aria-label={`Упражнение ${idx + 1}: ${ex.name}`}
+                  >
+                    {/* Visual dot with proper touch target (padding expands tap area to ~32px) */}
+                    <div className={`h-1.5 w-4 rounded-full transition-all ${
                       isIncomplete
                         ? 'bg-red-500 animate-pulse'
                         : isCurrent
@@ -649,7 +666,8 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
                             ? 'bg-indigo-900'
                             : 'bg-neutral-800'
                     } ${isCurrent ? 'scale-110' : 'hover:scale-105'}`}
-                  />
+                    />
+                  </button>
                 );
               })}
             </div>
@@ -673,12 +691,11 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
         <div className="space-y-3">
           <div className="mb-6 bg-neutral-900/50 border border-white/5 rounded-3xl overflow-hidden">
             <div className="p-5">
-              {/* Navigation Arrows */}
+              {/* Navigation Arrows - both directions support circular navigation */}
               <div className="flex items-center justify-between mb-4">
                 <button
                   onClick={goPrev}
-                  disabled={currentExerciseIndex === 0}
-                  className="p-2 rounded-lg bg-neutral-800 text-gray-400 hover:text-white transition disabled:opacity-30 disabled:cursor-not-allowed"
+                  className="p-2 rounded-lg bg-neutral-800 text-gray-400 hover:text-white transition"
                 >
                   <ChevronLeft size={20} />
                 </button>
@@ -872,8 +889,8 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
           </div>
         </div>
 
-        {/* Stopwatch for Time-based exercises */}
-        {(currentExercise.name.toLowerCase().includes('планка') || currentExercise.reps.includes('с') || currentExercise.reps.includes('sec')) && (
+        {/* Stopwatch for Time-based exercises - use proper detection, not reps.includes('с') which matches any 'с' */}
+        {(isIsometricExercise(currentExercise) || String(currentExercise.reps).toLowerCase().includes('секунд') || String(currentExercise.reps).toLowerCase().includes('sec')) && (
           <div className="mt-4 flex justify-center">
             <Stopwatch />
           </div>
@@ -914,7 +931,11 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
               }}
               className="flex-grow py-4 bg-white text-black rounded-2xl font-bold hover:bg-gray-200 transition shadow-[0_0_20px_rgba(255,255,255,0.2)] text-lg"
             >
-              {currentExerciseIndex < completedExercises.length - 1 ? 'Дальше' : 'К незаполненным'}
+              {currentExerciseIndex < completedExercises.length - 1
+                ? 'Дальше'
+                : (completedExercises.some(ex => !isExerciseComplete(ex))
+                    ? 'К незаполненным'
+                    : 'В начало')}
             </button>
           )}
         </div>
