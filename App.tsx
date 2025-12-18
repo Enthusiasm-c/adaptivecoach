@@ -27,6 +27,8 @@ import {
   syncMesocycleWithLogs,
 } from './services/mesocycleService';
 import { runAutoMigration } from './services/migrationService';
+import { analyzeRecoverySignals, generateRecommendation, applyAutoregulationToProgram } from './services/autoregulation';
+import { syncWeightsFromLogs } from './utils/weightSync';
 
 declare global {
   interface Window {
@@ -459,12 +461,27 @@ const App: React.FC = () => {
       console.warn("Could not sync workout to server", e);
     }
 
-    // Immediate pain-based program adjustment (doesn't wait for 3-workout cycle)
-    if (log.feedback.pain.hasPain && trainingProgram) {
+    // Step 1: Sync weights from logs to program (ensures program reflects actual weights used)
+    let currentProgram = trainingProgram;
+    if (currentProgram) {
+      const syncedProgram = syncWeightsFromLogs(currentProgram, updatedLogs);
+      if (JSON.stringify(syncedProgram) !== JSON.stringify(currentProgram)) {
+        currentProgram = syncedProgram;
+        setTrainingProgram(syncedProgram);
+        try {
+          localStorage.setItem('trainingProgram', JSON.stringify(syncedProgram));
+        } catch (e) {
+          console.warn("Could not save synced program to localStorage", e);
+        }
+      }
+    }
+
+    // Step 2: Immediate pain-based program adjustment (doesn't wait for 3-workout cycle)
+    if (log.feedback.pain.hasPain && currentProgram) {
       const painDetails = log.feedback.pain.details || log.feedback.pain.location || 'не указано';
       try {
         const adjustedProgram = await adjustProgramForPain(
-          trainingProgram,
+          currentProgram,
           painDetails,
           log.completedExercises
         );
@@ -485,11 +502,39 @@ const App: React.FC = () => {
       }
     }
 
-    if (updatedLogs.length > 0 && updatedLogs.length % 3 === 0 && trainingProgram) {
+    // Step 3: Autoregulation - analyze recovery signals and adjust volume/weights
+    if (currentProgram && updatedLogs.length >= 2) {
+      const recoveryAnalysis = analyzeRecoverySignals(updatedLogs);
+      const recommendation = generateRecommendation(recoveryAnalysis);
+
+      // Apply autoregulation if needed (under-stimulated or under-recovered)
+      if (recommendation.volumeAdjustment.type !== 'maintain') {
+        const { program: autoregulatedProgram, recommendation: appliedRec } =
+          applyAutoregulationToProgram(currentProgram, updatedLogs);
+
+        currentProgram = autoregulatedProgram;
+        setTrainingProgram(autoregulatedProgram);
+        try {
+          localStorage.setItem('trainingProgram', JSON.stringify(autoregulatedProgram));
+        } catch (e) {
+          console.warn("Could not save autoregulated program to localStorage", e);
+        }
+
+        // Show relevant warning or suggestion
+        if (recommendation.warnings.length > 0) {
+          setToastMessage(recommendation.warnings[0]);
+        } else if (recommendation.suggestions.length > 0) {
+          setToastMessage(recommendation.suggestions[0]);
+        }
+      }
+    }
+
+    // Step 4: AI adaptation every 3 workouts (deeper analysis)
+    if (updatedLogs.length > 0 && updatedLogs.length % 3 === 0 && currentProgram) {
       setIsLoading(true); // Short loading for adaptation
       setError(null);
       try {
-        const adaptedProgram = await adaptPlan(trainingProgram, updatedLogs);
+        const adaptedProgram = await adaptPlan(currentProgram, updatedLogs);
         setTrainingProgram(adaptedProgram);
         try {
             localStorage.setItem('trainingProgram', JSON.stringify(adaptedProgram));
