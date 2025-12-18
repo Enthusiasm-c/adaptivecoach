@@ -15,13 +15,14 @@ import {
 } from '../utils/progressUtils';
 import { getTopImbalances } from '../utils/strengthAnalysisUtils';
 import { analyzePainPatterns, PainAnalysisResult } from '../services/geminiService';
-import { Dumbbell, Flame, TrendingUp, TrendingDown, Minus, Trophy, Battery, PieChart as PieIcon, Calendar, Crown, Star, Activity, HeartPulse, ChevronLeft, ChevronRight, Check, Target, BarChart2, X, Repeat, Timer, AlertTriangle } from 'lucide-react';
+import { Dumbbell, Flame, TrendingUp, TrendingDown, Minus, Trophy, Battery, PieChart as PieIcon, Calendar, Crown, Star, Activity, HeartPulse, ChevronLeft, ChevronRight, Check, Target, BarChart2, X, Repeat, Timer, AlertTriangle, Play, Info } from 'lucide-react';
 import { hapticFeedback } from '../utils/hapticUtils';
 import BlurredContent from './BlurredContent';
 import CalibrationCard from './CalibrationCard';
 import VolumeTrackingCard from './VolumeTrackingCard';
 import ImbalanceWarningCard from './ImbalanceWarningCard';
 import ImbalanceEducationModal from './ImbalanceEducationModal';
+import StrengthAnalysisView from './StrengthAnalysisView';
 import EmptyStateCard from './EmptyStateCard';
 import { WORKOUT_THRESHOLDS } from '../constants/thresholds';
 
@@ -32,11 +33,12 @@ interface ProgressViewProps {
     preferredDays?: number[];
     profile?: OnboardingProfile;
     onOpenPremium?: () => void;
+    onStartWorkout?: (sessionName: string) => void;
 }
 
 // Mock data generator removed - using real workout logs only
 
-const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProgram, preferredDays = [], profile, onOpenPremium }) => {
+const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProgram, preferredDays = [], profile, onOpenPremium, onStartWorkout }) => {
     // Use real workout logs directly
     const displayLogs = logs;
 
@@ -167,8 +169,13 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
     const [detectedImbalances, setDetectedImbalances] = React.useState<ImbalanceReport[]>([]);
     const [showImbalanceEducation, setShowImbalanceEducation] = React.useState(false);
     const [selectedImbalance, setSelectedImbalance] = React.useState<ImbalanceReport | null>(null);
+    const [showStrengthAnalysis, setShowStrengthAnalysis] = React.useState(false);
+    const [showVolumeInfo, setShowVolumeInfo] = React.useState(false);
 
     // Calculate imbalances when user has enough workout data
+    // Cache version to invalidate old data with bad translations
+    const IMBALANCE_CACHE_VERSION = 2;
+
     useEffect(() => {
         if (displayLogs.length < 5 || !profile) {
             setDetectedImbalances([]);
@@ -180,7 +187,8 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
             if (cached) {
                 const parsed = JSON.parse(cached);
                 const isStale = (Date.now() - parsed.timestamp) > 24 * 60 * 60 * 1000;
-                if (parsed.logCount === displayLogs.length && !isStale) {
+                const isValidVersion = parsed.version === IMBALANCE_CACHE_VERSION;
+                if (isValidVersion && parsed.logCount === displayLogs.length && !isStale) {
                     setDetectedImbalances(parsed.imbalances);
                     return;
                 }
@@ -190,6 +198,7 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
             setDetectedImbalances(imbalances);
 
             localStorage.setItem('imbalanceAnalysis', JSON.stringify({
+                version: IMBALANCE_CACHE_VERSION,
                 timestamp: Date.now(),
                 logCount: displayLogs.length,
                 imbalances
@@ -510,8 +519,9 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
                         setShowImbalanceEducation(true);
                     }}
                     onViewDetails={() => {
-                        // Scroll to strength analysis section or show premium modal
-                        if (!profile?.isPro) {
+                        if (profile?.isPro) {
+                            setShowStrengthAnalysis(true);
+                        } else {
                             onOpenPremium?.();
                         }
                     }}
@@ -742,6 +752,12 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
                         <div className="flex items-center gap-2 text-gray-300 font-bold text-sm">
                             <Activity size={16} className="text-emerald-400" />
                             Объем за неделю
+                            <button
+                                onClick={() => setShowVolumeInfo(true)}
+                                className="p-1 hover:bg-white/10 rounded-full transition-colors"
+                            >
+                                <Info size={14} className="text-gray-500" />
+                            </button>
                         </div>
                         {/* Trend Badge */}
                         <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-bold ${
@@ -1020,12 +1036,26 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
                             ))}
                         </div>
 
-                        <button
-                            onClick={() => setWorkoutToPreview(null)}
-                            className="w-full bg-neutral-700 text-white font-bold py-3 px-4 rounded-lg hover:bg-neutral-600 transition-all duration-300"
-                        >
-                            Закрыть
-                        </button>
+                        <div className="flex gap-2">
+                            {onStartWorkout && (
+                                <button
+                                    onClick={() => {
+                                        onStartWorkout(workoutToPreview.name);
+                                        setWorkoutToPreview(null);
+                                    }}
+                                    className="flex-1 bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-indigo-500 transition-all duration-300 flex items-center justify-center gap-2"
+                                >
+                                    <Play size={18} fill="currentColor" />
+                                    Начать сейчас
+                                </button>
+                            )}
+                            <button
+                                onClick={() => setWorkoutToPreview(null)}
+                                className={`${onStartWorkout ? 'flex-1' : 'w-full'} bg-neutral-700 text-white font-bold py-3 px-4 rounded-lg hover:bg-neutral-600 transition-all duration-300`}
+                            >
+                                Закрыть
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
@@ -1142,6 +1172,98 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
                     }}
                     isPro={profile?.isPro || false}
                 />
+            )}
+
+            {/* Strength Analysis Modal */}
+            {showStrengthAnalysis && profile && (
+                <div className="fixed inset-0 bg-black/90 z-50 overflow-y-auto">
+                    <div className="min-h-screen p-4">
+                        <div className="max-w-lg mx-auto">
+                            <button
+                                onClick={() => setShowStrengthAnalysis(false)}
+                                className="mb-4 flex items-center gap-2 text-gray-400 hover:text-white transition-colors"
+                            >
+                                <X size={20} />
+                                Закрыть
+                            </button>
+                            <StrengthAnalysisView
+                                profile={profile}
+                                logs={displayLogs}
+                                isPro={profile.isPro || false}
+                                onUpgrade={() => {
+                                    setShowStrengthAnalysis(false);
+                                    onOpenPremium?.();
+                                }}
+                            />
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Volume Info Modal */}
+            {showVolumeInfo && (
+                <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+                    <div className="bg-gray-800 rounded-2xl shadow-lg w-full max-w-md overflow-hidden animate-fade-in-up">
+                        <div className="p-4 border-b border-neutral-700 flex justify-between items-center">
+                            <div className="flex items-center gap-2">
+                                <Activity size={20} className="text-emerald-400" />
+                                <h2 className="text-lg font-bold text-white">Тренировочный объём</h2>
+                            </div>
+                            <button
+                                onClick={() => setShowVolumeInfo(false)}
+                                className="p-1 rounded-full hover:bg-gray-700 text-gray-400"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        <div className="p-4 space-y-4">
+                            <div className="bg-neutral-700/30 rounded-xl p-3">
+                                <h3 className="text-sm font-medium text-white mb-2">Что это?</h3>
+                                <p className="text-gray-300 text-sm">
+                                    Тренировочный объём — это общая нагрузка за тренировку:<br/>
+                                    <span className="text-emerald-400 font-medium">Вес × Подходы × Повторения</span>
+                                </p>
+                            </div>
+
+                            <div className="bg-neutral-700/30 rounded-xl p-3">
+                                <h3 className="text-sm font-medium text-white mb-2">Зачем отслеживать?</h3>
+                                <ul className="space-y-2 text-sm text-gray-300">
+                                    <li className="flex items-start gap-2">
+                                        <TrendingUp size={14} className="text-green-400 mt-0.5 flex-shrink-0" />
+                                        <span><strong>Прогрессия:</strong> Рост объёма = рост мышц и силы</span>
+                                    </li>
+                                    <li className="flex items-start gap-2">
+                                        <Target size={14} className="text-indigo-400 mt-0.5 flex-shrink-0" />
+                                        <span><strong>Контроль:</strong> Видно перетренированность или недогруз</span>
+                                    </li>
+                                    <li className="flex items-start gap-2">
+                                        <BarChart2 size={14} className="text-amber-400 mt-0.5 flex-shrink-0" />
+                                        <span><strong>Тренд:</strong> Сравнение недель показывает динамику</span>
+                                    </li>
+                                </ul>
+                            </div>
+
+                            <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-3">
+                                <div className="flex items-start gap-2">
+                                    <span className="text-lg">💡</span>
+                                    <p className="text-sm text-gray-300">
+                                        Стремись к <strong className="text-emerald-400">постепенному росту</strong> объёма на 5-10% в неделю. Резкие скачки могут привести к перетренированности.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="p-4 border-t border-neutral-700">
+                            <button
+                                onClick={() => setShowVolumeInfo(false)}
+                                className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-xl transition-all"
+                            >
+                                Понятно
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     );

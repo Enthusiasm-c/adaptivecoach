@@ -1,7 +1,8 @@
-import React from 'react';
-import { Calendar, TrendingUp, Zap, Coffee, RefreshCw, Info } from 'lucide-react';
+import React, { useState } from 'react';
+import { Calendar, TrendingUp, Zap, Coffee, RefreshCw, Info, ChevronRight } from 'lucide-react';
 import { MesocycleState, getMesocycleSummary, PHASE_DESCRIPTIONS } from '../services/mesocycleService';
 import { MesocyclePhase } from '../types/training';
+import MesocycleEducationModal from './MesocycleEducationModal';
 
 interface MesocycleIndicatorProps {
   mesocycleState: MesocycleState | null;
@@ -30,6 +31,8 @@ const PHASE_PROGRESS_COLORS: { [key in MesocyclePhase]: string } = {
 };
 
 const MesocycleIndicator: React.FC<MesocycleIndicatorProps> = ({ mesocycleState, compact = false }) => {
+  const [showModal, setShowModal] = useState(false);
+
   // Handle null state
   if (!mesocycleState) {
     return null;
@@ -50,12 +53,17 @@ const MesocycleIndicator: React.FC<MesocycleIndicatorProps> = ({ mesocycleState,
   }
 
   return (
-    <div className="bg-neutral-900/50 border border-white/5 rounded-2xl p-4 space-y-3">
+    <>
+    <button
+      onClick={() => setShowModal(true)}
+      className="w-full text-left bg-neutral-900/50 border border-white/5 rounded-2xl p-4 space-y-3 hover:bg-neutral-800/50 transition-colors cursor-pointer active:scale-[0.99]"
+    >
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Calendar size={16} className="text-gray-400" />
           <span className="text-sm font-medium text-gray-300">Мезоцикл</span>
+          <ChevronRight size={14} className="text-gray-500" />
         </div>
         <div className={`inline-flex items-center gap-2 px-2.5 py-1 rounded-full border ${PHASE_COLORS[phase]}`}>
           {PHASE_ICONS[phase]}
@@ -126,7 +134,18 @@ const MesocycleIndicator: React.FC<MesocycleIndicatorProps> = ({ mesocycleState,
           </div>
         </div>
       )}
-    </div>
+    </button>
+
+    {/* Education Modal */}
+    {showModal && (
+      <MesocycleEducationModal
+        currentPhase={phase}
+        currentWeek={weekNumber}
+        totalWeeks={totalWeeks}
+        onClose={() => setShowModal(false)}
+      />
+    )}
+    </>
   );
 };
 

@@ -14,7 +14,6 @@ import PremiumModal from './PremiumModal';
 import HardPaywall from './HardPaywall';
 import TrialBanner from './TrialBanner';
 import FirstWorkoutPaywall from './FirstWorkoutPaywall';
-import StreakMilestonePaywall from './StreakMilestonePaywall';
 import { calculateStreaks, calculateWorkoutVolume, calculateWeeklyProgress, getMuscleFocus, calculateLevel, pluralizeRu, calculateTotalVolume, formatKg } from '../utils/progressUtils';
 import { getDashboardInsight } from '../services/geminiService';
 import { hapticFeedback } from '../utils/hapticUtils';
@@ -60,7 +59,6 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
     }, [activeView]);
     const [shieldNotification, setShieldNotification] = useState<string | null>(null);
     const [showFirstWorkoutPaywall, setShowFirstWorkoutPaywall] = useState(false);
-    const [streakMilestone, setStreakMilestone] = useState<number | null>(null);
     const [isInputFocused, setIsInputFocused] = useState(false);
 
     // Calendar State (Removed calendarDate, isEditingSchedule, selectedDateToMove, scheduleOverrides)
@@ -245,25 +243,6 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
     const weeklyProgress = calculateWeeklyProgress(logs);
     const userLevel = calculateLevel(logs);
 
-    // Check for streak milestones
-    useEffect(() => {
-        if (workoutLimitStatus?.isPro || workoutLimitStatus?.isInTrial) return;
-
-        const milestones = [7, 30, 100];
-        const shownMilestones = JSON.parse(
-            localStorage.getItem('shownStreakMilestones') || '[]'
-        );
-
-        if (milestones.includes(currentStreak) &&
-            !shownMilestones.includes(currentStreak)) {
-            setStreakMilestone(currentStreak);
-            localStorage.setItem(
-                'shownStreakMilestones',
-                JSON.stringify([...shownMilestones, currentStreak])
-            );
-        }
-    }, [currentStreak, workoutLimitStatus?.isPro, workoutLimitStatus?.isInTrial]);
-
     // Calculate muscle focus based on the *next* workout, even if not today
     const muscleFocus = getMuscleFocus(nextWorkout);
 
@@ -420,7 +399,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
         }
 
         if (activeView === 'progress') {
-            return <ProgressView logs={logs} program={program} preferredDays={profile.preferredDays} profile={profile} onOpenPremium={() => setShowPremiumModal(true)} />;
+            return <ProgressView logs={logs} program={program} preferredDays={profile.preferredDays} profile={profile} onOpenPremium={() => setShowPremiumModal(true)} onStartWorkout={forceStartWorkout} />;
         }
 
         if (activeView === 'settings') {
@@ -824,7 +803,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
             </main>
 
             {/* Navigation Bar - hide when keyboard is visible */}
-            <nav className={`fixed bottom-6 left-1/2 -translate-x-1/2 bg-[#111]/90 backdrop-blur-xl border border-white/10 rounded-2xl px-2 py-1 flex items-center gap-2 shadow-2xl z-40 ${
+            <nav className={`fixed bottom-6 left-1/2 -translate-x-1/2 bg-[#111]/90 backdrop-blur-xl border border-white/10 rounded-[2rem] px-4 py-1.5 flex items-center gap-2 shadow-2xl z-40 ${
                 isInputFocused ? 'translate-y-full opacity-0 pointer-events-none transition-transform duration-200' : ''
             }`} style={{ touchAction: 'manipulation' }}>
                 <NavButton
@@ -930,18 +909,6 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
                             setWorkoutLimitStatus(status);
                             onUpdateProfile({ ...profile, isPro: status.isPro });
                         }).catch(console.error);
-                    }}
-                />
-            )}
-
-            {/* Streak Milestone Paywall */}
-            {streakMilestone && (
-                <StreakMilestonePaywall
-                    streakDays={streakMilestone}
-                    onClose={() => setStreakMilestone(null)}
-                    onUpgrade={() => {
-                        setStreakMilestone(null);
-                        setShowPremiumModal(true);
                     }}
                 />
             )}
