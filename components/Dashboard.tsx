@@ -1,14 +1,11 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { OnboardingProfile, TrainingProgram, WorkoutLog, WorkoutSession, ReadinessData, ActiveWorkoutState, TelegramUser, WorkoutLimitStatus, ImbalanceReport } from '../types';
+import React, { useState, useEffect } from 'react';
+import { OnboardingProfile, TrainingProgram, WorkoutLog, WorkoutSession, ReadinessData, ActiveWorkoutState, TelegramUser, WorkoutLimitStatus } from '../types';
 import WorkoutView from './WorkoutView';
 import ProgressView from './ProgressView';
 import SettingsView from './SettingsView';
 import SquadView from './SquadView';
 import ChatInputBar from './ChatInputBar';
 import MesocycleIndicator from './MesocycleIndicator';
-import ImbalanceWarningCard from './ImbalanceWarningCard';
-import ImbalanceEducationModal from './ImbalanceEducationModal';
-import { getTopImbalances } from '../utils/strengthAnalysisUtils';
 import { Dumbbell, Calendar as CalendarIcon, BarChart2, Settings, Play, ChevronRight, Info, Battery, Zap, Trophy, Users, Crown, Bot, MessageCircle, Flame, Activity, Clock, TrendingUp, Sparkles, MessageSquarePlus, HelpCircle, Coffee, Sun, Moon, Check, LayoutGrid, Shield, AlertTriangle } from 'lucide-react';
 import WorkoutPreviewModal from './WorkoutPreviewModal';
 import ReadinessModal from './ReadinessModal';
@@ -65,11 +62,6 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
     const [showFirstWorkoutPaywall, setShowFirstWorkoutPaywall] = useState(false);
     const [streakMilestone, setStreakMilestone] = useState<number | null>(null);
     const [isInputFocused, setIsInputFocused] = useState(false);
-
-    // Imbalance detection state
-    const [detectedImbalances, setDetectedImbalances] = useState<ImbalanceReport[]>([]);
-    const [showImbalanceEducation, setShowImbalanceEducation] = useState(false);
-    const [selectedImbalance, setSelectedImbalance] = useState<ImbalanceReport | null>(null);
 
     // Calendar State (Removed calendarDate, isEditingSchedule, selectedDateToMove, scheduleOverrides)
 
@@ -271,42 +263,6 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
             );
         }
     }, [currentStreak, workoutLimitStatus?.isPro, workoutLimitStatus?.isInTrial]);
-
-    // Calculate imbalances when user has enough workout data
-    useEffect(() => {
-        // Need at least 5 workouts for meaningful analysis
-        if (logs.length < 5) {
-            setDetectedImbalances([]);
-            return;
-        }
-
-        try {
-            // Check cache first
-            const cached = localStorage.getItem('imbalanceAnalysis');
-            if (cached) {
-                const parsed = JSON.parse(cached);
-                // Cache is valid for 24 hours or until logs count changes
-                const isStale = (Date.now() - parsed.timestamp) > 24 * 60 * 60 * 1000;
-                if (parsed.logCount === logs.length && !isStale) {
-                    setDetectedImbalances(parsed.imbalances);
-                    return;
-                }
-            }
-
-            const imbalances = getTopImbalances(logs, profile.weight, profile.gender, 2);
-            setDetectedImbalances(imbalances);
-
-            // Cache the result
-            localStorage.setItem('imbalanceAnalysis', JSON.stringify({
-                timestamp: Date.now(),
-                logCount: logs.length,
-                imbalances
-            }));
-        } catch (error) {
-            console.error('Failed to calculate imbalances:', error);
-            setDetectedImbalances([]);
-        }
-    }, [logs, profile.weight, profile.gender]);
 
     // Calculate muscle focus based on the *next* workout, even if not today
     const muscleFocus = getMuscleFocus(nextWorkout);
@@ -544,18 +500,10 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
                 <div className="col-span-2 grid grid-cols-3 gap-3">
                     {/* Streak */}
                     <div className="bg-neutral-900/50 border border-white/5 rounded-2xl p-3 flex flex-col items-center justify-center text-center gap-1 relative">
-                        <div className="flex items-center gap-1">
-                            <Flame size={20} className="text-orange-500" fill="currentColor" fillOpacity={0.2} />
-                            {/* Streak Shield Indicator */}
-                            {streakShieldAvailable && workoutLimitStatus?.isPro && (
-                                <Shield size={12} className="text-indigo-400" fill="currentColor" fillOpacity={0.3} />
-                            )}
-                        </div>
+                        <Flame size={20} className="text-orange-500" fill="currentColor" fillOpacity={0.2} />
                         <span className="text-xl font-black text-white leading-none">{currentStreak}</span>
                         <span className="text-[10px] text-gray-500 font-bold uppercase">
-                            {streakShieldAvailable && workoutLimitStatus?.isPro
-                                ? 'Защищён'
-                                : pluralizeRu(currentStreak, 'день подряд', 'дня подряд', 'дней подряд')}
+                            {pluralizeRu(currentStreak, 'день подряд', 'дня подряд', 'дней подряд')}
                         </span>
                     </div>
 
@@ -581,27 +529,6 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
                 {mesocycleState && (
                     <div className="col-span-2">
                         <MesocycleIndicator mesocycleState={mesocycleState} />
-                    </div>
-                )}
-
-                {/* Imbalance Warning Card */}
-                {detectedImbalances.length > 0 && (
-                    <div className="col-span-2">
-                        <ImbalanceWarningCard
-                            imbalances={detectedImbalances}
-                            onLearnMore={(imbalance) => {
-                                setSelectedImbalance(imbalance);
-                                setShowImbalanceEducation(true);
-                            }}
-                            onViewDetails={() => {
-                                if (workoutLimitStatus?.isPro) {
-                                    handleViewChange('progress');
-                                } else {
-                                    setShowPremiumModal(true);
-                                }
-                            }}
-                            isPro={workoutLimitStatus?.isPro || false}
-                        />
                     </div>
                 )}
 
@@ -1025,22 +952,6 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
                 />
             )}
 
-            {/* Imbalance Education Modal */}
-            {showImbalanceEducation && selectedImbalance && (
-                <ImbalanceEducationModal
-                    imbalance={selectedImbalance}
-                    onClose={() => {
-                        setShowImbalanceEducation(false);
-                        setSelectedImbalance(null);
-                    }}
-                    onUpgrade={() => {
-                        setShowImbalanceEducation(false);
-                        setSelectedImbalance(null);
-                        setShowPremiumModal(true);
-                    }}
-                    isPro={workoutLimitStatus?.isPro || false}
-                />
-            )}
         </div>
     );
 };

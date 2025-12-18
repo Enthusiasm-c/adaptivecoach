@@ -382,8 +382,8 @@ export const detectImbalances = (strengthAnalysis: StrengthAnalysis[]): Imbalanc
       imbalances.push({
         type: 'anterior_posterior',
         description: isHingeDominant
-          ? 'Задняя цепь (спина, ягодицы) доминирует над передней'
-          : 'Квадрицепсы значительно сильнее задней цепи',
+          ? 'Ягодицы и бицепс бедра сильнее квадрицепсов'
+          : 'Квадрицепсы сильнее ягодиц и бицепса бедра',
         severity: deviation > 0.35 ? 'severe' : 'moderate',
         recommendation: isHingeDominant
           ? 'Добавьте фронтальные приседания и leg press'
@@ -693,8 +693,8 @@ export const getImbalanceDisplay = (type: string, severity: string): {
   };
 
   const typeInfo: { [key: string]: { icon: string; title: string } } = {
-    push_pull: { icon: 'scale', title: 'Push/Pull' },
-    anterior_posterior: { icon: 'scale', title: 'Перед/Зад' },
+    push_pull: { icon: 'scale', title: 'Жим/Тяга' },
+    anterior_posterior: { icon: 'scale', title: 'Ноги' },
     ratio: { icon: 'scale', title: 'Верх/Низ' },
   };
 
