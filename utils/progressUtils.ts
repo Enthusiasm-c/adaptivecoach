@@ -63,14 +63,6 @@ export const calculateStreaks = (
 ): StreakResult => {
     if (logs.length === 0) return { currentStreak: 0, bestStreak: 0, streakProtected: false };
 
-    // Получаем уникальные недели с тренировками
-    const workoutWeeks = new Map<string, boolean>();
-    logs.forEach(l => {
-        const d = new Date(l.date);
-        const { year, week } = getISOWeek(d);
-        workoutWeeks.set(`${year}-W${week}`, true);
-    });
-
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const todayTime = today.getTime();
@@ -87,48 +79,71 @@ export const calculateStreaks = (
         }
     }
 
-    // Считаем недели подряд с тренировками (от текущей недели назад)
-    const { year: currentYear, week: currentWeek } = getISOWeek(today);
+    // Sort logs by date (newest first)
+    const sortedLogs = [...logs].sort((a, b) =>
+        new Date(b.date).getTime() - new Date(a.date).getTime()
+    );
 
-    // Генерируем список недель от текущей назад
-    let currentStreak = 0;
-    let checkDate = new Date(today);
+    // Get unique workout dates
+    const workoutDates = [...new Set(sortedLogs.map(l => {
+        const d = new Date(l.date);
+        d.setHours(0, 0, 0, 0);
+        return d.getTime();
+    }))].sort((a, b) => b - a); // Newest first
 
-    // Проверяем текущую неделю
-    const currentWeekKey = `${currentYear}-W${currentWeek}`;
-    const hasWorkoutThisWeek = workoutWeeks.has(currentWeekKey);
-
-    // Если на текущей неделе нет тренировки, проверяем прошлую
-    if (!hasWorkoutThisWeek) {
-        // Возвращаемся на прошлую неделю
-        checkDate.setDate(checkDate.getDate() - 7);
-        const { year: lastYear, week: lastWeek } = getISOWeek(checkDate);
-        const lastWeekKey = `${lastYear}-W${lastWeek}`;
-
-        if (!workoutWeeks.has(lastWeekKey)) {
-            // Две недели без тренировок - streak = 0
-            return { currentStreak: 0, bestStreak: calculateBestWeekStreak(logs), streakProtected };
-        }
+    if (workoutDates.length === 0) {
+        return { currentStreak: 0, bestStreak: 0, streakProtected };
     }
 
-    // Считаем недели подряд с тренировками
-    checkDate = hasWorkoutThisWeek ? new Date(today) : new Date(today.getTime() - 7 * oneDayMs);
+    // Check if the most recent workout was within the last 7 days
+    // (allowing for weekly workout schedules)
+    const lastWorkoutTime = workoutDates[0];
+    const daysSinceLastWorkout = Math.floor((todayTime - lastWorkoutTime) / oneDayMs);
 
-    for (let i = 0; i < 52; i++) { // Максимум год назад
-        const { year, week } = getISOWeek(checkDate);
-        const weekKey = `${year}-W${week}`;
+    if (daysSinceLastWorkout > 7) {
+        // More than a week since last workout - streak broken
+        return { currentStreak: 0, bestStreak: calculateBestStreak(workoutDates), streakProtected };
+    }
 
-        if (workoutWeeks.has(weekKey)) {
+    // Count consecutive workouts (allowing up to 4 days between workouts)
+    // This accommodates typical training schedules (e.g., Mon-Wed-Fri)
+    let currentStreak = 1;
+    for (let i = 1; i < workoutDates.length; i++) {
+        const gap = (workoutDates[i - 1] - workoutDates[i]) / oneDayMs;
+        if (gap <= 4) {
+            // Workouts within 4 days of each other count as consecutive
             currentStreak++;
-            checkDate.setDate(checkDate.getDate() - 7);
         } else {
             break;
         }
     }
 
-    const bestStreak = Math.max(currentStreak, calculateBestWeekStreak(logs));
+    const bestStreak = Math.max(currentStreak, calculateBestStreak(workoutDates));
 
     return { currentStreak, bestStreak, streakProtected };
+};
+
+/**
+ * Calculate best streak of consecutive workouts
+ */
+const calculateBestStreak = (workoutDates: number[]): number => {
+    if (workoutDates.length === 0) return 0;
+
+    const oneDayMs = 24 * 60 * 60 * 1000;
+    let bestStreak = 1;
+    let tempStreak = 1;
+
+    for (let i = 1; i < workoutDates.length; i++) {
+        const gap = (workoutDates[i - 1] - workoutDates[i]) / oneDayMs;
+        if (gap <= 4) {
+            tempStreak++;
+            bestStreak = Math.max(bestStreak, tempStreak);
+        } else {
+            tempStreak = 1;
+        }
+    }
+
+    return bestStreak;
 };
 
 /**

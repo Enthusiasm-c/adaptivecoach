@@ -503,7 +503,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
                         <Flame size={20} className="text-orange-500" fill="currentColor" fillOpacity={0.2} />
                         <span className="text-xl font-black text-white leading-none">{currentStreak}</span>
                         <span className="text-[10px] text-gray-500 font-bold uppercase">
-                            {pluralizeRu(currentStreak, 'день подряд', 'дня подряд', 'дней подряд')}
+                            {pluralizeRu(currentStreak, 'тренировка', 'тренировки', 'тренировок')}
                         </span>
                     </div>
 
