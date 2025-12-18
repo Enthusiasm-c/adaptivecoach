@@ -692,78 +692,72 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
                         </div>
                     </div>
                 ) : (
-                    /* REST DAY CARD */
+                    /* REST DAY CARD - Minimalist Design */
                     <div className="col-span-2 relative group mt-2">
-                        <div className="absolute inset-0 bg-gradient-to-r from-emerald-600 to-teal-600 rounded-[2rem] blur-xl opacity-20"></div>
-                        <div className="relative bg-[#111] border border-white/10 rounded-[2rem] p-6 overflow-hidden">
+                        <div className="absolute inset-0 bg-gradient-to-r from-emerald-600 to-teal-600 rounded-[2rem] blur-xl opacity-15"></div>
+                        <div className="relative bg-[#111] border border-white/10 rounded-[2rem] p-5 overflow-hidden">
 
-                            <div className="relative z-10">
-                                <div className="flex justify-between items-start mb-4">
-                                    <div>
-                                        <div className="flex items-center gap-2 mb-2">
-                                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 text-[10px] font-bold uppercase tracking-wider">
-                                                <Moon size={10} /> День Отдыха
-                                            </span>
-                                        </div>
-                                        <h2 className="text-3xl font-black text-white leading-tight mb-2">Восстановление</h2>
-                                        <p className="text-gray-400 text-sm mb-4">
-                                            Сегодня по плану отдых. Мышцы растут именно сейчас.
-                                        </p>
-                                    </div>
-                                    <div className="w-16 h-16 bg-emerald-500/10 rounded-full flex items-center justify-center">
-                                        <Coffee size={32} className="text-emerald-500" />
-                                    </div>
+                            {/* Header */}
+                            <div className="flex items-center gap-3 mb-4">
+                                <div className="w-10 h-10 rounded-xl bg-emerald-500/15 flex items-center justify-center">
+                                    <Moon size={18} className="text-emerald-400" />
                                 </div>
-
-                                <div className="flex gap-2 mb-6 overflow-x-auto no-scrollbar">
-                                    <div className="bg-neutral-900 border border-white/5 rounded-xl p-3 min-w-[120px]">
-                                        <Sun size={16} className="text-yellow-400 mb-2" />
-                                        <p className="text-xs font-bold text-white">Прогулка</p>
-                                        <p className="text-[10px] text-gray-500">30-40 мин</p>
-                                    </div>
-                                    <div className="bg-neutral-900 border border-white/5 rounded-xl p-3 min-w-[120px]">
-                                        <Activity size={16} className="text-blue-400 mb-2" />
-                                        <p className="text-xs font-bold text-white">Растяжка</p>
-                                        <p className="text-[10px] text-gray-500">Легкая йога</p>
-                                    </div>
+                                <div>
+                                    <h2 className="text-xl font-bold text-white">День восстановления</h2>
+                                    <p className="text-xs text-gray-500">Мышцы растут именно сейчас</p>
                                 </div>
-                                {/* Coach Insight */}
-                                <div className="mb-6 bg-neutral-900/50 border border-white/5 rounded-3xl overflow-hidden">
-                                    <div className="p-5">
-                                        <div className="flex items-center gap-3 mb-3">
-                                            <div className="w-10 h-10 rounded-xl bg-indigo-500/20 flex items-center justify-center">
-                                                <Bot size={20} className="text-indigo-400" />
-                                            </div>
-                                            <h3 className="font-bold text-lg text-white">Тренер на связи</h3>
-                                        </div>
-
-                                        <div className="bg-neutral-900/50 rounded-xl p-4 border border-white/5 relative">
-                                            {isInsightLoading ? (
-                                                <div className="space-y-2">
-                                                    <SkeletonLoader className="h-4 w-3/4" />
-                                                    <SkeletonLoader className="h-4 w-full" />
-                                                    <SkeletonLoader className="h-4 w-5/6" />
-                                                </div>
-                                            ) : (
-                                                <p className="text-gray-300 text-sm leading-relaxed">
-                                                    {insight || "Анализирую твой прогресс..."}
-                                                </p>
-                                            )}
-
-                                            <div className="absolute -bottom-3 -right-3 opacity-10">
-                                                <MessageCircle size={64} />
-                                            </div>
-                                        </div>
-
-                                    </div>
-                                </div>
-                                <button
-                                    onClick={() => initiateWorkoutStart(nextWorkout.name)}
-                                    className="w-full bg-neutral-800 text-gray-400 font-bold py-3 rounded-2xl flex items-center justify-center gap-2 hover:bg-neutral-700 hover:text-white transition active:scale-95 text-sm border border-white/5"
-                                >
-                                    <Play size={14} /> Начать "{nextWorkout.name}" досрочно
-                                </button>
                             </div>
+
+                            {/* Coach Message - Single clean block */}
+                            <div className="mb-4">
+                                <div className="flex items-start gap-3">
+                                    <div className="w-8 h-8 rounded-lg bg-indigo-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                        <Bot size={16} className="text-indigo-400" />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        {isInsightLoading ? (
+                                            <div className="space-y-2">
+                                                <SkeletonLoader className="h-4 w-3/4" />
+                                                <SkeletonLoader className="h-4 w-full" />
+                                            </div>
+                                        ) : (
+                                            <p className="text-gray-300 text-sm leading-relaxed">
+                                                {insight || "Отдыхай и восстанавливайся. Завтра продолжим!"}
+                                            </p>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Recovery tips - subtle inline */}
+                            <div className="flex items-center gap-4 mb-4 text-xs text-gray-500">
+                                <span className="flex items-center gap-1.5">
+                                    <Sun size={12} className="text-yellow-500/70" />
+                                    Прогулка 30 мин
+                                </span>
+                                <span className="flex items-center gap-1.5">
+                                    <Activity size={12} className="text-blue-500/70" />
+                                    Лёгкая растяжка
+                                </span>
+                            </div>
+
+                            {/* Integrated chat input */}
+                            <div className="mb-3">
+                                <ChatInputBar
+                                    onSendMessage={onSendMessage}
+                                    onFocusChange={setIsInputFocused}
+                                    placeholder="Спросить тренера..."
+                                    compact
+                                />
+                            </div>
+
+                            {/* Secondary action */}
+                            <button
+                                onClick={() => initiateWorkoutStart(nextWorkout.name)}
+                                className="w-full py-2.5 text-gray-500 text-sm flex items-center justify-center gap-1.5 hover:text-white transition"
+                            >
+                                <Play size={12} /> Начать тренировку досрочно
+                            </button>
                         </div>
                     </div>
                 )}
@@ -821,8 +815,8 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
             <main className="px-6 py-6 pb-24">
                 {renderContent()}
 
-                {/* Chat Input Bar - show only on 'today' view when no active workout */}
-                {activeView === 'today' && !activeWorkout && (
+                {/* Chat Input Bar - show only on workout day or after completing workout (not on rest day - it's embedded there) */}
+                {activeView === 'today' && !activeWorkout && (isTodayWorkoutDay || hasCompletedToday) && (
                     <div className="mt-4">
                         <ChatInputBar onSendMessage={onSendMessage} onFocusChange={setIsInputFocused} />
                     </div>
