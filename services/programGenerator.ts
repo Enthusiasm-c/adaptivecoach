@@ -64,6 +64,123 @@ function getDifficultyFromExperience(experience: ExperienceLevel): ExerciseDiffi
 }
 
 // ==========================================
+// INITIAL WEIGHT ESTIMATION
+// ==========================================
+
+/**
+ * Normalize exercise name for matching with known weights
+ */
+function normalizeExerciseNameForWeight(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/со штангой|штанги|с гантел\w*|гантел\w*/gi, '')
+    .replace(/на скамье|на тренажере|в тренажере/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
+ * Calculate initial weight for an exercise based on profile
+ * Uses known weights as reference points
+ */
+function calculateInitialWeight(
+  exercise: ExerciseDefinition,
+  profile: OnboardingProfile
+): number | undefined {
+  // For bodyweight exercises, no weight needed
+  if (exercise.equipment === 'bodyweight') {
+    return undefined;
+  }
+
+  const normalizedName = normalizeExerciseNameForWeight(exercise.name);
+  const normalizedNameEn = normalizeExerciseNameForWeight(exercise.nameEn);
+
+  // 1. Check if user has known weight for this exact exercise
+  if (profile.knownWeights && profile.knownWeights.length > 0) {
+    for (const kw of profile.knownWeights) {
+      const normalizedKnown = normalizeExerciseNameForWeight(kw.exercise);
+      if (
+        normalizedName.includes(normalizedKnown) ||
+        normalizedKnown.includes(normalizedName) ||
+        normalizedNameEn.includes(normalizedKnown) ||
+        normalizedKnown.includes(normalizedNameEn)
+      ) {
+        return kw.weight;
+      }
+    }
+
+    // 2. Estimate based on similar exercises
+    // If user knows bench press, estimate other pressing movements
+    const benchWeight = profile.knownWeights.find(
+      kw => kw.exercise.toLowerCase().includes('жим лежа') || kw.exercise.toLowerCase().includes('bench')
+    );
+    const squatWeight = profile.knownWeights.find(
+      kw => kw.exercise.toLowerCase().includes('присед') || kw.exercise.toLowerCase().includes('squat')
+    );
+
+    if (benchWeight && exercise.primaryMuscle === 'chest') {
+      // Other chest exercises: ~60-70% of bench
+      return Math.round(benchWeight.weight * 0.65 / 2.5) * 2.5;
+    }
+
+    if (benchWeight && exercise.primaryMuscle === 'shoulders') {
+      // Shoulder press: ~65% of bench
+      return Math.round(benchWeight.weight * 0.65 / 2.5) * 2.5;
+    }
+
+    if (benchWeight && exercise.primaryMuscle === 'triceps') {
+      // Triceps: ~30-40% of bench
+      return Math.round(benchWeight.weight * 0.35 / 2.5) * 2.5;
+    }
+
+    if (squatWeight && exercise.primaryMuscle === 'quads') {
+      // Leg press: ~150% of squat
+      if (exercise.nameEn.toLowerCase().includes('leg press')) {
+        return Math.round(squatWeight.weight * 1.5 / 5) * 5;
+      }
+      // Lunges: ~40% of squat
+      return Math.round(squatWeight.weight * 0.4 / 2.5) * 2.5;
+    }
+
+    if (squatWeight && exercise.primaryMuscle === 'hamstrings') {
+      // Romanian deadlift: ~70% of squat
+      return Math.round(squatWeight.weight * 0.7 / 2.5) * 2.5;
+    }
+  }
+
+  // 3. Default estimation based on gender and experience
+  const isMale = profile.gender === 'Мужчина';
+  const expMultiplier =
+    profile.experience === ExperienceLevel.Beginner ? 0.7 :
+    profile.experience === ExperienceLevel.Advanced ? 1.3 : 1.0;
+
+  // Base weights by muscle group (for average male intermediate)
+  const baseWeights: { [muscle: string]: number } = {
+    chest: 40,
+    back: 40,
+    shoulders: 20,
+    quads: 60,
+    hamstrings: 40,
+    glutes: 40,
+    biceps: 12,
+    triceps: 15,
+    calves: 40,
+    core: 0, // bodyweight
+  };
+
+  const baseWeight = baseWeights[exercise.primaryMuscle] || 20;
+  const genderFactor = isMale ? 1.0 : 0.6;
+
+  // Compound exercises are heavier
+  const compoundFactor = exercise.isCompound ? 1.0 : 0.5;
+
+  const estimatedWeight = baseWeight * genderFactor * expMultiplier * compoundFactor;
+
+  // Round to nearest 2.5kg
+  return Math.round(estimatedWeight / 2.5) * 2.5;
+}
+
+// ==========================================
 // VOLUME CALCULATION
 // ==========================================
 
@@ -375,6 +492,9 @@ export function convertToLegacyFormat(
           ? goalConfig.restTimeCompound
           : goalConfig.restTimeIsolation;
 
+        // Calculate initial weight based on profile
+        const weight = calculateInitialWeight(exerciseDef, profile);
+
         return {
           exerciseId: exerciseDef.id,
           name: exerciseDef.name,
@@ -382,6 +502,7 @@ export function convertToLegacyFormat(
           sets: slot.sets,
           reps,
           rest,
+          weight,
           description: exerciseDef.notes,
         };
       });

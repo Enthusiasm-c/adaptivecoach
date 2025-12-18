@@ -32,7 +32,9 @@ const FITCUBE_EQUIPMENT = `
 
 const PROXY_URL = import.meta.env.VITE_PROXY_URL || 'https://api.sensei.training';
 const CLIENT_API_KEY = import.meta.env.VITE_CLIENT_API_KEY || '9a361ff33289e0723fad20cbf91b263a6cea0d7cf29c44fe7bbe59dd91d2a50d';
-const GEMINI_MODEL = 'gemini-2.5-flash';
+// Gemini 3 Flash - released December 17, 2025
+// Note: If proxy doesn't support Gemini 3 yet, fallback to 'gemini-2.5-flash'
+const GEMINI_MODEL = 'gemini-3-flash-preview';
 
 // Export for diagnostics
 export const currentApiKey = CLIENT_API_KEY;
@@ -270,37 +272,128 @@ function buildInitialPrompt(profile: OnboardingProfile): string {
     `;
 }
 
+/**
+ * Extract structured exercise summary from logs for AI prompt
+ */
+function extractExerciseSummary(logs: WorkoutLog[]): string {
+    const exerciseData: Map<string, { weights: number[], rirs: number[], trend: string }> = new Map();
+
+    for (const log of logs) {
+        for (const ex of log.completedExercises) {
+            if (ex.isWarmup) continue;
+
+            const weights = ex.completedSets.map(s => s.weight || 0).filter(w => w > 0);
+            const rirs = ex.completedSets.map(s => s.rir).filter((r): r is number => r !== undefined);
+
+            if (!exerciseData.has(ex.name)) {
+                exerciseData.set(ex.name, { weights: [], rirs: [], trend: 'stable' });
+            }
+
+            const data = exerciseData.get(ex.name)!;
+            data.weights.push(...weights);
+            data.rirs.push(...rirs);
+        }
+    }
+
+    const lines: string[] = [];
+    for (const [name, data] of exerciseData) {
+        const maxWeight = data.weights.length > 0 ? Math.max(...data.weights) : 0;
+        const avgRir = data.rirs.length > 0
+            ? (data.rirs.reduce((a, b) => a + b, 0) / data.rirs.length).toFixed(1)
+            : 'N/A';
+
+        let suggestion = '';
+        const rirNum = parseFloat(avgRir);
+        if (!isNaN(rirNum)) {
+            if (rirNum >= 3) suggestion = '→ можно +2.5-5% веса';
+            else if (rirNum <= 0) suggestion = '→ сохранить или -5% веса';
+            else suggestion = '→ оптимально';
+        }
+
+        lines.push(`• ${name}: ${maxWeight}кг, RIR ${avgRir} ${suggestion}`);
+    }
+
+    return lines.length > 0 ? lines.join('\n    ') : 'Нет данных';
+}
+
+/**
+ * Extract pain reports from logs
+ */
+function extractPainReports(logs: WorkoutLog[]): string {
+    const painLogs = logs.filter(l => l.feedback?.pain?.hasPain);
+    if (painLogs.length === 0) return 'Жалоб на боль нет';
+
+    return painLogs.map(l => {
+        const location = l.feedback.pain.location || l.feedback.pain.details || 'не указано';
+        return `• ${new Date(l.date).toLocaleDateString('ru')}: ${location}`;
+    }).join('\n    ');
+}
+
 function buildAdaptationPrompt(currentProgram: TrainingProgram, logs: WorkoutLog[]): string {
     const recentLogs = logs.slice(-3);
-    return `
-    Ты эксперт "ИИ тренер". Адаптируй текущую программу пользователя на основе его последних тренировок.
-    Обращайся к пользователю на "Ты".
-    Используй принцип прогрессивной перегрузки.
-    Ответ должен быть JSON объектом (вся обновленная программа) на РУССКОМ языке.
-    Не забудь сохранить или обновить поле "description" для упражнений.
+    const exerciseSummary = extractExerciseSummary(recentLogs);
+    const painReports = extractPainReports(recentLogs);
 
-    Текущая программа:
+    // Calculate average pump quality
+    const pumpValues = recentLogs
+        .map(l => l.feedback?.pumpQuality)
+        .filter((v): v is number => v !== undefined);
+    const avgPump = pumpValues.length > 0
+        ? (pumpValues.reduce((a, b) => a + b, 0) / pumpValues.length).toFixed(1)
+        : 'N/A';
+
+    // Get performance trend
+    const trends = recentLogs
+        .map(l => l.feedback?.performanceTrend)
+        .filter((t): t is string => t !== undefined);
+    const dominantTrend = trends.length > 0
+        ? (trends.filter(t => t === 'improving').length >= 2 ? 'растёт'
+            : trends.filter(t => t === 'declining').length >= 2 ? 'падает'
+            : 'стабильно')
+        : 'неизвестно';
+
+    return `
+    Ты эксперт "ИИ тренер". Адаптируй программу на основе структурированного анализа тренировок.
+    Обращайся на "Ты". Ответ — JSON объект программы на РУССКОМ языке.
+
+    === АНАЛИЗ ПОСЛЕДНИХ ${recentLogs.length} ТРЕНИРОВОК ===
+
+    📊 ПРОГРЕСС ПО УПРАЖНЕНИЯМ (вес, средний RIR, рекомендация):
+    ${exerciseSummary}
+
+    💪 КАЧЕСТВО ПАМПА: ${avgPump}/5
+    📈 ТРЕНД ПРОИЗВОДИТЕЛЬНОСТИ: ${dominantTrend}
+
+    ⚠️ ОТЧЁТЫ О БОЛИ:
+    ${painReports}
+
+    === ТЕКУЩАЯ ПРОГРАММА ===
     ${JSON.stringify(currentProgram, null, 2)}
 
-    Последние логи (RIR - повторения в запасе):
-    ${JSON.stringify(recentLogs, null, 2)}
+    === ПРАВИЛА АДАПТАЦИИ ===
+    1. RIR-BASED PROGRESSION:
+       - RIR 3+ → Увеличь вес на 2.5-5%
+       - RIR 1-2 → Сохрани вес (оптимально)
+       - RIR 0 → Сохрани или снизь на 5%
 
-    Правила адаптации:
-    1. Запас повторений (RIR):
-        - RIR 3+: Слишком легко -> Увеличь вес на 2.5-5%.
-        - RIR 1-2: Оптимально -> Оставь вес или минимальный прогресс.
-        - RIR 0 (Отказ): Тяжело -> Снизь вес или оставь тот же.
-    2. ВАЖНО - Боль/Дискомфорт (приоритетное правило):
-       - Первичная боль: СНАЧАЛА снизь вес на 15-20% для упражнения на эту мышечную группу
-       - Повторная боль (в том же месте): Замени упражнение на более безопасный аналог
-       - Если RIR=0 и была боль: Снизь вес на 25% - вес точно слишком тяжелый
-       - Если RIR>2 и была боль: Проблема в технике, добавь разминочные подходы
-       - Боль в суставе: Замени на упражнение с меньшей амплитудой или свободным весом
-    3. Структура:
-       - Не меняй название дней без причины, корректируй нагрузку.
-    4. Если пользователь увеличил веса вручную в логах, обязательно обнови программу, чтобы следующий раз веса были актуальными.
+    2. ОБРАБОТКА БОЛИ (ПРИОРИТЕТ!):
+       - Любая боль → Снизь вес на 15-20%
+       - Повторная боль в том же месте → Замени упражнение
+       - Боль в суставе → Выбери упражнение с меньшей амплитудой
 
-    Сгенерируй адаптированную программу JSON на русском.
+    3. НИЗКИЙ ПАМП (< 2.5):
+       - Увеличь время под нагрузкой
+       - Добавь 1 подход если объём низкий
+
+    4. СИНХРОНИЗАЦИЯ ВЕСОВ:
+       - Если в логах использовался больший вес чем в программе,
+         обязательно обнови вес в программе до актуального!
+
+    5. СТРУКТУРА:
+       - Сохраняй названия дней
+       - Сохраняй поле "description" для упражнений
+
+    Сгенерируй адаптированную программу JSON.
     `;
 }
 

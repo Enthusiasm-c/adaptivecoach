@@ -110,14 +110,50 @@ const EXERCISE_MUSCLE_MAP: { [keyword: string]: { primary: string; secondary?: s
 };
 
 /**
+ * Normalize exercise name for matching
+ * Removes common prefixes, suffixes and normalizes variations
+ */
+function normalizeExerciseName(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/разминка:\s*/i, '')
+    .replace(/warm-?up:\s*/i, '')
+    .replace(/со штангой|штанги|с гантел\w*|гантел\w*/gi, '')
+    .replace(/на скамье|на тренажере|в тренажере/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
+ * Check if two exercise names match (fuzzy matching)
+ */
+function exerciseNamesMatch(name1: string, name2: string): boolean {
+  const n1 = normalizeExerciseName(name1);
+  const n2 = normalizeExerciseName(name2);
+
+  // Exact match after normalization
+  if (n1 === n2) return true;
+
+  // One contains the other (for partial matches)
+  if (n1.includes(n2) || n2.includes(n1)) return true;
+
+  // Check if main words match (at least 2 common words)
+  const words1 = n1.split(' ').filter(w => w.length > 2);
+  const words2 = n2.split(' ').filter(w => w.length > 2);
+  const commonWords = words1.filter(w => words2.some(w2 => w2.includes(w) || w.includes(w2)));
+
+  return commonWords.length >= 2;
+}
+
+/**
  * Get muscle groups for an exercise by name
  */
 function getMusclesForExercise(exerciseName: string): { primary: string; secondary: string[] } {
-  const nameLower = exerciseName.toLowerCase();
+  const nameLower = normalizeExerciseName(exerciseName);
 
-  // First, try to find in exercise database
+  // First, try to find in exercise database (fuzzy matching)
   const dbExercise = ALL_EXERCISES.find(e =>
-    e.name.toLowerCase() === nameLower || e.nameEn.toLowerCase() === nameLower
+    exerciseNamesMatch(e.name, exerciseName) || exerciseNamesMatch(e.nameEn, exerciseName)
   );
 
   if (dbExercise) {
@@ -170,10 +206,13 @@ export function calculateWeeklyVolume(
 ): WeeklyVolumeReport {
   const experience = convertExperienceLevel(experienceLevel);
 
-  // Get logs from current week
+  // Get logs from current week (Monday-based week)
   const now = new Date();
   const startOfWeek = new Date(now);
-  startOfWeek.setDate(now.getDate() - now.getDay());
+  // getDay() returns 0 for Sunday, 1 for Monday, etc.
+  // We want Monday as start, so: (day + 6) % 7 gives days since Monday
+  const daysSinceMonday = (now.getDay() + 6) % 7;
+  startOfWeek.setDate(now.getDate() - daysSinceMonday);
   startOfWeek.setHours(0, 0, 0, 0);
 
   const endOfWeek = new Date(startOfWeek);
@@ -193,6 +232,9 @@ export function calculateWeeklyVolume(
   // Count sets for each muscle
   weekLogs.forEach(log => {
     log.completedExercises.forEach(exercise => {
+      // Skip warmup exercises - they don't count towards training volume
+      if (exercise.isWarmup) return;
+
       const completedSets = exercise.completedSets?.length || exercise.sets || 0;
       const muscles = getMusclesForExercise(exercise.name);
 
