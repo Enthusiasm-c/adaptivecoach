@@ -1,6 +1,6 @@
 
 import React, { useMemo, useState, useEffect } from 'react';
-import { WorkoutLog, TrainingProgram, ReadinessData, WorkoutCompletion, OnboardingProfile, WorkoutSession } from '../types';
+import { WorkoutLog, TrainingProgram, ReadinessData, WorkoutCompletion, OnboardingProfile, WorkoutSession, ImbalanceReport } from '../types';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
     AreaChart, Area, Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
@@ -13,12 +13,15 @@ import {
     calculateWeekComparison, getNextScheduledDay, pluralizeRu,
     formatKg, calculateWeightProgression, WeightProgressionEntry
 } from '../utils/progressUtils';
+import { getTopImbalances } from '../utils/strengthAnalysisUtils';
 import { analyzePainPatterns, PainAnalysisResult } from '../services/geminiService';
 import { Dumbbell, Flame, TrendingUp, TrendingDown, Minus, Trophy, Battery, PieChart as PieIcon, Calendar, Crown, Star, Activity, HeartPulse, ChevronLeft, ChevronRight, Check, Target, BarChart2, X, Repeat, Timer, AlertTriangle } from 'lucide-react';
 import { hapticFeedback } from '../utils/hapticUtils';
 import BlurredContent from './BlurredContent';
 import CalibrationCard from './CalibrationCard';
 import VolumeTrackingCard from './VolumeTrackingCard';
+import ImbalanceWarningCard from './ImbalanceWarningCard';
+import ImbalanceEducationModal from './ImbalanceEducationModal';
 import EmptyStateCard from './EmptyStateCard';
 import { WORKOUT_THRESHOLDS } from '../constants/thresholds';
 
@@ -159,6 +162,43 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
     const [selectedDateToMove, setSelectedDateToMove] = React.useState<Date | null>(null);
     const [workoutToPreview, setWorkoutToPreview] = React.useState<WorkoutSession | null>(null);
     const [workoutLogToView, setWorkoutLogToView] = React.useState<WorkoutLog | null>(null);
+
+    // --- Imbalance Detection ---
+    const [detectedImbalances, setDetectedImbalances] = React.useState<ImbalanceReport[]>([]);
+    const [showImbalanceEducation, setShowImbalanceEducation] = React.useState(false);
+    const [selectedImbalance, setSelectedImbalance] = React.useState<ImbalanceReport | null>(null);
+
+    // Calculate imbalances when user has enough workout data
+    useEffect(() => {
+        if (displayLogs.length < 5 || !profile) {
+            setDetectedImbalances([]);
+            return;
+        }
+
+        try {
+            const cached = localStorage.getItem('imbalanceAnalysis');
+            if (cached) {
+                const parsed = JSON.parse(cached);
+                const isStale = (Date.now() - parsed.timestamp) > 24 * 60 * 60 * 1000;
+                if (parsed.logCount === displayLogs.length && !isStale) {
+                    setDetectedImbalances(parsed.imbalances);
+                    return;
+                }
+            }
+
+            const imbalances = getTopImbalances(displayLogs, profile.weight, profile.gender, 3);
+            setDetectedImbalances(imbalances);
+
+            localStorage.setItem('imbalanceAnalysis', JSON.stringify({
+                timestamp: Date.now(),
+                logCount: displayLogs.length,
+                imbalances
+            }));
+        } catch (error) {
+            console.error('Failed to calculate imbalances:', error);
+            setDetectedImbalances([]);
+        }
+    }, [displayLogs, profile?.weight, profile?.gender]);
 
     // Get workout for specific date based on preferredDays rotation
     // Helper: get start of week (Monday) for a given date
@@ -460,6 +500,24 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
 
             {/* Calibration Card - shows progress toward strength analysis */}
             <CalibrationCard logs={displayLogs} />
+
+            {/* Imbalance Warning Card */}
+            {detectedImbalances.length > 0 && (
+                <ImbalanceWarningCard
+                    imbalances={detectedImbalances}
+                    onLearnMore={(imbalance) => {
+                        setSelectedImbalance(imbalance);
+                        setShowImbalanceEducation(true);
+                    }}
+                    onViewDetails={() => {
+                        // Scroll to strength analysis section or show premium modal
+                        if (!profile?.isPro) {
+                            onOpenPremium?.();
+                        }
+                    }}
+                    isPro={profile?.isPro || false}
+                />
+            )}
 
             {/* Volume Tracking by Muscle Group */}
             <VolumeTrackingCard
@@ -1068,6 +1126,23 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
                     </div>
                 );
             })()}
+
+            {/* Imbalance Education Modal */}
+            {showImbalanceEducation && selectedImbalance && (
+                <ImbalanceEducationModal
+                    imbalance={selectedImbalance}
+                    onClose={() => {
+                        setShowImbalanceEducation(false);
+                        setSelectedImbalance(null);
+                    }}
+                    onUpgrade={() => {
+                        setShowImbalanceEducation(false);
+                        setSelectedImbalance(null);
+                        onOpenPremium?.();
+                    }}
+                    isPro={profile?.isPro || false}
+                />
+            )}
         </div>
     );
 };
