@@ -18,6 +18,15 @@ const PUMP_LABELS: { [key: number]: string } = {
   5: 'Отличный',
 };
 
+// Soreness labels (muscle soreness/DOMS)
+const SORENESS_LABELS: { [key: number]: string } = {
+  1: 'Свежий',
+  2: 'Чуть чувствую',
+  3: 'Умеренно',
+  4: 'Больно',
+  5: 'Очень больно',
+};
+
 interface InitialPain {
   hasPain: boolean;
   location?: string;
@@ -38,6 +47,7 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({ onSubmit, onClose, initia
 
   // Autoregulation fields
   const [pumpQuality, setPumpQuality] = useState<1 | 2 | 3 | 4 | 5 | undefined>(undefined);
+  const [soreness24h, setSoreness24h] = useState<1 | 2 | 3 | 4 | 5 | undefined>(undefined);
 
   const handleSubmit = () => {
     onSubmit({
@@ -48,6 +58,7 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({ onSubmit, onClose, initia
         details: hasPain ? painDetails : undefined,
       },
       pumpQuality,
+      soreness24h,
     });
   };
 
@@ -91,6 +102,35 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({ onSubmit, onClose, initia
           {pumpQuality && (
             <p className="text-xs text-gray-400 text-center animate-fade-in">
               {PUMP_LABELS[pumpQuality]}
+            </p>
+          )}
+        </div>
+
+        {/* Muscle Soreness (Autoregulation) */}
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <span className="text-red-400">💪</span>
+            <label className="font-medium">Мышечная болезненность?</label>
+          </div>
+          <p className="text-xs text-gray-500">Как себя чувствуют мышцы с прошлой тренировки</p>
+          <div className="flex gap-1.5">
+            {([1, 2, 3, 4, 5] as const).map(level => (
+              <button
+                key={level}
+                onClick={() => setSoreness24h(level)}
+                className={`flex-1 py-2.5 rounded-lg text-xs font-medium transition ${
+                  soreness24h === level
+                    ? 'bg-red-500 text-white'
+                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                }`}
+              >
+                {level}
+              </button>
+            ))}
+          </div>
+          {soreness24h && (
+            <p className="text-xs text-gray-400 text-center animate-fade-in">
+              {SORENESS_LABELS[soreness24h]}
             </p>
           )}
         </div>

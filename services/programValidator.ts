@@ -398,6 +398,98 @@ export function getMissingMuscles(program: TrainingProgram): string[] {
 }
 
 /**
+ * Structural validation of program without profile
+ * Checks basic structure: sessions exist, exercises valid, required fields present
+ * Use this for validating AI responses where profile may not be available
+ */
+export function validateProgramStructure(program: TrainingProgram): ValidationResult {
+  const issues: ValidationIssue[] = [];
+  const suggestions: string[] = [];
+
+  // Check basic structure
+  if (!program || typeof program !== 'object') {
+    return {
+      isValid: false,
+      score: 0,
+      issues: [{ severity: 'error', type: 'missing_muscle', message: 'Программа отсутствует или невалидна' }],
+      suggestions: ['Сгенерируйте программу заново'],
+    };
+  }
+
+  if (!Array.isArray(program.sessions) || program.sessions.length === 0) {
+    return {
+      isValid: false,
+      score: 0,
+      issues: [{ severity: 'error', type: 'missing_muscle', message: 'Нет тренировочных сессий' }],
+      suggestions: ['Добавьте хотя бы одну тренировочную сессию'],
+    };
+  }
+
+  let totalExercises = 0;
+
+  for (const session of program.sessions) {
+    if (!Array.isArray(session.exercises)) {
+      issues.push({
+        severity: 'error',
+        type: 'missing_muscle',
+        message: `Сессия "${session.name || 'без названия'}" не содержит упражнений`,
+      });
+      continue;
+    }
+
+    for (const exercise of session.exercises) {
+      totalExercises++;
+
+      // Check required fields
+      if (!exercise.name || typeof exercise.name !== 'string') {
+        issues.push({
+          severity: 'error',
+          type: 'missing_muscle',
+          message: 'Упражнение без названия',
+        });
+      }
+
+      if (!exercise.sets || exercise.sets < 1) {
+        issues.push({
+          severity: 'warning',
+          type: 'low_volume',
+          message: `${exercise.name || 'Упражнение'}: некорректное количество подходов`,
+        });
+      }
+
+      if (!exercise.reps || (typeof exercise.reps !== 'string' && typeof exercise.reps !== 'number')) {
+        issues.push({
+          severity: 'warning',
+          type: 'low_volume',
+          message: `${exercise.name || 'Упражнение'}: не указаны повторения`,
+        });
+      }
+    }
+  }
+
+  if (totalExercises === 0) {
+    return {
+      isValid: false,
+      score: 0,
+      issues: [{ severity: 'error', type: 'missing_muscle', message: 'Программа не содержит упражнений' }],
+      suggestions: ['Добавьте упражнения в программу'],
+    };
+  }
+
+  // Calculate score based on errors
+  const errorCount = issues.filter(i => i.severity === 'error').length;
+  const warningCount = issues.filter(i => i.severity === 'warning').length;
+  const score = Math.max(0, 100 - (errorCount * 25) - (warningCount * 5));
+
+  return {
+    isValid: errorCount === 0,
+    score,
+    issues,
+    suggestions,
+  };
+}
+
+/**
  * Get summary report for UI display
  */
 export function getValidationSummary(result: ValidationResult): {

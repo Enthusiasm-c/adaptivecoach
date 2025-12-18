@@ -283,8 +283,8 @@ export async function migrateToNewSystem(
       };
     }
 
-    // 4. Convert to legacy format for TrainingProgram
-    const newProgram = convertToLegacyFormat(generationResult, profile);
+    // 4. Convert to legacy format for TrainingProgram (with logs for E1RM-based weights)
+    const newProgram = convertToLegacyFormat(generationResult, profile, logs);
 
     // 5. Apply personal records to new program (preserve strength gains)
     const programWithPRs = applyPersonalRecordsToProgram(newProgram, personalRecords);

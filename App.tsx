@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { OnboardingProfile, TrainingProgram, WorkoutLog, ChatMessage, TelegramUser } from './types';
 import Onboarding from './components/Onboarding';
 import Dashboard from './components/Dashboard';
@@ -27,8 +27,10 @@ import {
   syncMesocycleWithLogs,
 } from './services/mesocycleService';
 import { runAutoMigration } from './services/migrationService';
-import { analyzeRecoverySignals, generateRecommendation, applyAutoregulationToProgram } from './services/autoregulation';
+import { applyAutoregulationToProgram, AutoregulationRecommendation } from './services/autoregulation';
 import { syncWeightsFromLogs } from './utils/weightSync';
+import { getOrchestrator, AIPriority } from './services/aiOrchestrator';
+import { createReactTransaction } from './services/stateTransaction';
 
 declare global {
   interface Window {
@@ -425,40 +427,55 @@ const App: React.FC = () => {
     }
   }, []);
 
-  const handleWorkoutComplete = useCallback(async (log: WorkoutLog) => {
-    const updatedLogs = [...workoutLogs, log];
-    setWorkoutLogs(updatedLogs);
-    try {
-      localStorage.setItem('workoutLogs', JSON.stringify(updatedLogs));
-    } catch (e) {
-        console.warn("Could not save workout logs to localStorage", e);
+  // Helper to format autoregulation message for user understanding
+  const formatAutoregulationMessage = (rec: AutoregulationRecommendation): string | null => {
+    if (rec.volumeAdjustment.type === 'maintain') return null;
+
+    const direction = rec.volumeAdjustment.type === 'increase' ? 'Увеличил' : 'Снизил';
+    const weightPercent = Math.abs(rec.volumeAdjustment.weightChange);
+    const setsChange = Math.abs(rec.volumeAdjustment.setsChange);
+
+    let adjustmentText = '';
+    if (weightPercent > 0 && setsChange > 0) {
+      adjustmentText = `вес на ${weightPercent}% и ${setsChange > 0 ? '+' : '-'}${setsChange} подход${setsChange === 1 ? '' : 'а'}`;
+    } else if (weightPercent > 0) {
+      adjustmentText = `вес на ${weightPercent}%`;
+    } else if (setsChange > 0) {
+      adjustmentText = `${setsChange} подход${setsChange === 1 ? '' : 'а'}`;
+    } else {
+      adjustmentText = 'нагрузку';
     }
+
+    // Use the reason from volumeAdjustment or fallback
+    let reason = rec.volumeAdjustment.reason;
+    if (!reason && rec.warnings.length > 0) {
+      reason = rec.warnings[0];
+    } else if (!reason && rec.volumeAdjustment.type === 'decrease') {
+      reason = 'Обнаружены признаки накопленной усталости';
+    } else if (!reason) {
+      reason = 'Ты готов к большей нагрузке!';
+    }
+
+    return `${direction} ${adjustmentText}. ${reason}`;
+  };
+
+  const handleWorkoutComplete = useCallback(async (log: WorkoutLog) => {
+    // Create transaction for atomic state updates
+    const tx = createReactTransaction('workout_complete', {
+      setTrainingProgram,
+      setWorkoutLogs,
+      setMesocycleState,
+    });
+
+    const updatedLogs = [...workoutLogs, log];
+
+    // Stage all changes to transaction first
+    tx.set('workoutLogs', updatedLogs, workoutLogs);
 
     // Update mesocycle state with workout
     if (mesocycleState) {
       const newMesoState = recordWorkoutInMesocycle(mesocycleState, log);
-      setMesocycleState(newMesoState);
-      saveMesocycleState(newMesoState);
-    }
-
-    // Sync workout to server (for social features)
-    try {
-      const syncResult = await apiService.workouts.sync({
-        sessionId: log.sessionId,
-        date: log.date,
-        startTime: log.startTime ? new Date(log.startTime).toISOString() : undefined,
-        duration: log.duration,
-        completedExercises: log.completedExercises,
-        feedback: log.feedback,
-      });
-
-      // Show toast for new badges
-      if (syncResult.newBadges && syncResult.newBadges.length > 0) {
-        const badgeNames = syncResult.newBadges.map(b => `${b.icon} ${b.name_ru}`).join(', ');
-        setToastMessage(`Новые достижения: ${badgeNames}`);
-      }
-    } catch (e) {
-      console.warn("Could not sync workout to server", e);
+      tx.set('mesocycleState', newMesoState, mesocycleState);
     }
 
     // Step 1: Sync weights from logs to program (ensures program reflects actual weights used)
@@ -467,51 +484,82 @@ const App: React.FC = () => {
       const syncedProgram = syncWeightsFromLogs(currentProgram, updatedLogs);
       if (JSON.stringify(syncedProgram) !== JSON.stringify(currentProgram)) {
         currentProgram = syncedProgram;
-        setTrainingProgram(syncedProgram);
-        try {
-          localStorage.setItem('trainingProgram', JSON.stringify(syncedProgram));
-        } catch (e) {
-          console.warn("Could not save synced program to localStorage", e);
-        }
+        tx.set('trainingProgram', syncedProgram, trainingProgram);
       }
     }
 
-    // Step 2: Immediate pain-based program adjustment (doesn't wait for 3-workout cycle)
+    // Commit base changes atomically before AI operations
+    const baseCommit = await tx.commit();
+    if (!baseCommit.success) {
+      console.error('[handleWorkoutComplete] Base commit failed:', baseCommit.error);
+      setError('Не удалось сохранить тренировку');
+      return;
+    }
+
+    // Sync workout to server (for social features) - non-critical, don't block
+    apiService.workouts.sync({
+      sessionId: log.sessionId,
+      date: log.date,
+      startTime: log.startTime ? new Date(log.startTime).toISOString() : undefined,
+      duration: log.duration,
+      completedExercises: log.completedExercises,
+      feedback: log.feedback,
+    }).then(syncResult => {
+      if (syncResult.newBadges && syncResult.newBadges.length > 0) {
+        const badgeNames = syncResult.newBadges.map(b => `${b.icon} ${b.name_ru}`).join(', ');
+        setToastMessage(`Новые достижения: ${badgeNames}`);
+      }
+    }).catch(e => console.warn("Could not sync workout to server", e));
+
+    // Get orchestrator for AI operations
+    const orchestrator = getOrchestrator();
+
+    // Store current valid program as fallback
+    if (currentProgram) {
+      orchestrator.setLastValidProgram(currentProgram);
+    }
+
+    // Step 2: Immediate pain-based program adjustment (CRITICAL priority)
     if (log.feedback.pain.hasPain && currentProgram) {
       const painDetails = log.feedback.pain.details || log.feedback.pain.location || 'не указано';
-      try {
-        const adjustedProgram = await adjustProgramForPain(
-          currentProgram,
-          painDetails,
-          log.completedExercises
-        );
-        if (adjustedProgram) {
-          setTrainingProgram(adjustedProgram);
-          try {
-            localStorage.setItem('trainingProgram', JSON.stringify(adjustedProgram));
-          } catch (e) {
-            console.warn("Could not save adjusted program to localStorage", e);
-          }
-          // Human-friendly message about what changed
-          const painLocation = painDetails !== 'не указано' ? ` (${painDetails})` : '';
-          setToastMessage(`Понял тебя${painLocation}! Снизил веса и адаптировал упражнения 💪`);
-          return; // Skip regular adaptation since we just adjusted
+
+      const painResult = await orchestrator.execute(
+        'adjustForPain',
+        AIPriority.CRITICAL,
+        { program: currentProgram, painDetails, exercises: log.completedExercises },
+        async (data) => {
+          const adjusted = await adjustProgramForPain(
+            data.program,
+            data.painDetails,
+            data.exercises
+          );
+          return adjusted;
         }
-      } catch (e) {
-        console.error("Failed to adjust program for pain:", e);
+      );
+
+      if (painResult.success && painResult.data) {
+        const adjustedProgram = painResult.data as TrainingProgram;
+        setTrainingProgram(adjustedProgram);
+        try {
+          localStorage.setItem('trainingProgram', JSON.stringify(adjustedProgram));
+        } catch (e) {
+          console.warn("Could not save adjusted program to localStorage", e);
+        }
+        const painLocation = painDetails !== 'не указано' ? ` (${painDetails})` : '';
+        setToastMessage(`Понял тебя${painLocation}! Снизил веса и адаптировал упражнения 💪`);
+        return; // Skip regular adaptation since we just adjusted
+      } else if (!painResult.success) {
+        console.warn('[handleWorkoutComplete] Pain adjustment failed:', painResult.error);
       }
     }
 
     // Step 3: Autoregulation - analyze recovery signals and adjust volume/weights
+    // Uses readiness data (sleep, stress, soreness) for smarter adjustments
     if (currentProgram && updatedLogs.length >= 2) {
-      const recoveryAnalysis = analyzeRecoverySignals(updatedLogs);
-      const recommendation = generateRecommendation(recoveryAnalysis);
+      const { program: autoregulatedProgram, recommendation } =
+        applyAutoregulationToProgram(currentProgram, updatedLogs);
 
-      // Apply autoregulation if needed (under-stimulated or under-recovered)
       if (recommendation.volumeAdjustment.type !== 'maintain') {
-        const { program: autoregulatedProgram, recommendation: appliedRec } =
-          applyAutoregulationToProgram(currentProgram, updatedLogs);
-
         currentProgram = autoregulatedProgram;
         setTrainingProgram(autoregulatedProgram);
         try {
@@ -520,35 +568,54 @@ const App: React.FC = () => {
           console.warn("Could not save autoregulated program to localStorage", e);
         }
 
-        // Show relevant warning or suggestion
-        if (recommendation.warnings.length > 0) {
-          setToastMessage(recommendation.warnings[0]);
-        } else if (recommendation.suggestions.length > 0) {
-          setToastMessage(recommendation.suggestions[0]);
+        const adjustmentMessage = formatAutoregulationMessage(recommendation);
+        if (adjustmentMessage) {
+          setToastMessage(adjustmentMessage);
+        }
+      }
+
+      // Show warnings even if no volume adjustment (e.g. low readiness suggestions)
+      if (recommendation.warnings.length > 0 || recommendation.suggestions.length > 0) {
+        const message = recommendation.warnings[0] || recommendation.suggestions[0];
+        if (message && !toastMessage) {
+          setToastMessage(message);
         }
       }
     }
 
-    // Step 4: AI adaptation every 3 workouts (deeper analysis)
+    // Step 4: AI adaptation every 3 workouts (HIGH priority, uses orchestrator)
     if (updatedLogs.length > 0 && updatedLogs.length % 3 === 0 && currentProgram) {
-      setIsLoading(true); // Short loading for adaptation
+      setIsLoading(true);
       setError(null);
-      try {
-        const adaptedProgram = await adaptPlan(currentProgram, updatedLogs);
+
+      const adaptResult = await orchestrator.execute(
+        'adaptPlan',
+        AIPriority.HIGH,
+        { program: currentProgram, logs: updatedLogs, profile: onboardingProfile },
+        async (data) => {
+          const syncedProgram = syncWeightsFromLogs(data.program, data.logs);
+          const adapted = await adaptPlan(syncedProgram, data.logs, data.profile || undefined);
+          return adapted;
+        }
+      );
+
+      setIsLoading(false);
+
+      if (adaptResult.success && adaptResult.data) {
+        const adaptedProgram = adaptResult.data as TrainingProgram;
         setTrainingProgram(adaptedProgram);
         try {
-            localStorage.setItem('trainingProgram', JSON.stringify(adaptedProgram));
+          localStorage.setItem('trainingProgram', JSON.stringify(adaptedProgram));
         } catch (e) {
-            console.warn("Could not save adapted program to localStorage", e);
+          console.warn("Could not save adapted program to localStorage", e);
         }
         setToastMessage("Программа адаптирована под твой прогресс!");
-      } catch (e) {
-        console.error(e);
-      } finally {
-        setIsLoading(false);
+      } else if (!adaptResult.success) {
+        console.warn('[handleWorkoutComplete] AI adaptation failed:', adaptResult.error);
+        // Don't show error to user - program remains unchanged (fallback worked)
       }
     }
-  }, [workoutLogs, trainingProgram, mesocycleState]);
+  }, [workoutLogs, trainingProgram, mesocycleState, onboardingProfile]);
   
   const handleChatbotSend = async (message: string) => {
     if (!trainingProgram) return;
@@ -623,6 +690,13 @@ const App: React.FC = () => {
     localStorage.removeItem('chatMessages');
     clearMesocycleState();
   };
+
+  // Apply mesocycle volume multiplier to program for display
+  // This ensures UI shows adjusted sets based on current mesocycle phase
+  const displayProgram = useMemo(() => {
+    if (!trainingProgram || !mesocycleState) return trainingProgram;
+    return getProgramForCurrentPhase(trainingProgram, mesocycleState);
+  }, [trainingProgram, mesocycleState]);
 
   if (error && !trainingProgram) {
       return (
@@ -743,7 +817,7 @@ const App: React.FC = () => {
             <>
             <Dashboard
                 profile={onboardingProfile}
-                program={trainingProgram}
+                program={displayProgram}
                 logs={workoutLogs}
                 telegramUser={telegramUser}
                 mesocycleState={mesocycleState}

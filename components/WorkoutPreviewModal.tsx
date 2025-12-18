@@ -1,15 +1,25 @@
 
 import React from 'react';
-import { WorkoutSession } from '../types';
-import { X, Dumbbell, Repeat, Timer, CalendarCheck } from 'lucide-react';
+import { WorkoutSession, WorkoutLog } from '../types';
+import { ExperienceLevel } from '../types/training';
+import { X, Repeat, Timer, CalendarCheck } from 'lucide-react';
+import SessionMusclePreview from './SessionMusclePreview';
 
 interface WorkoutPreviewModalProps {
   session: WorkoutSession;
   onClose: () => void;
   onStart: () => void;
+  logs?: WorkoutLog[];
+  experienceLevel?: ExperienceLevel;
 }
 
-const WorkoutPreviewModal: React.FC<WorkoutPreviewModalProps> = ({ session, onClose, onStart }) => {
+const WorkoutPreviewModal: React.FC<WorkoutPreviewModalProps> = ({
+  session,
+  onClose,
+  onStart,
+  logs = [],
+  experienceLevel = ExperienceLevel.Intermediate,
+}) => {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
       <div className="bg-gray-800 rounded-2xl shadow-lg p-6 w-full max-w-md space-y-4 text-white animate-fade-in-up flex flex-col max-h-[90vh]">
@@ -19,6 +29,14 @@ const WorkoutPreviewModal: React.FC<WorkoutPreviewModalProps> = ({ session, onCl
             <X size={20} />
           </button>
         </div>
+
+        {/* Target Muscles Preview */}
+        <SessionMusclePreview
+          session={session}
+          logs={logs}
+          experienceLevel={experienceLevel}
+          showProgress={logs.length > 0}
+        />
 
         <div className="flex-grow overflow-y-auto pr-2 space-y-3">
           {session.exercises.map((ex, index) => (

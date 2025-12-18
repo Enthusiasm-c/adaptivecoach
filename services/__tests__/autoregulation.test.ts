@@ -5,10 +5,12 @@ import {
   applyVolumeAdjustment,
   applyAutoregulationToProgram,
   getStatusMessage,
+  calculateReadinessScore,
+  getAverageReadiness,
   RecoveryAnalysis,
   VolumeAdjustment,
 } from '../autoregulation';
-import { WorkoutLog, WorkoutSession, TrainingProgram, WorkoutCompletion } from '../../types';
+import { WorkoutLog, WorkoutSession, TrainingProgram, WorkoutCompletion, ReadinessData } from '../../types';
 
 // ==========================================
 // HELPER FACTORIES
@@ -473,5 +475,232 @@ describe('getStatusMessage', () => {
     const message = getStatusMessage(analysis);
     expect(message.color).toBe('red');
     expect(message.title).toContain('Недовосстановление');
+  });
+});
+
+// ==========================================
+// calculateReadinessScore
+// ==========================================
+
+describe('calculateReadinessScore', () => {
+  it('returns 3 (neutral) for undefined readiness', () => {
+    const score = calculateReadinessScore(undefined);
+    expect(score).toBe(3);
+  });
+
+  it('calculates weighted average correctly', () => {
+    const readiness: ReadinessData = {
+      sleep: 5, // Weight 0.35
+      food: 5,  // Weight 0.20
+      stress: 5, // Weight 0.20 (5 = low stress = good)
+      soreness: 5, // Weight 0.25 (5 = fresh = good)
+      score: 5,
+      status: 'Green',
+    };
+
+    const score = calculateReadinessScore(readiness);
+    // 5*0.35 + 5*0.20 + 5*0.20 + 5*0.25 = 1.75 + 1.0 + 1.0 + 1.25 = 5.0
+    expect(score).toBe(5);
+  });
+
+  it('returns low score for poor readiness', () => {
+    const readiness: ReadinessData = {
+      sleep: 1,
+      food: 1,
+      stress: 1, // 1 = high stress = bad
+      soreness: 1, // 1 = very sore = bad
+      score: 1,
+      status: 'Red',
+    };
+
+    const score = calculateReadinessScore(readiness);
+    expect(score).toBe(1);
+  });
+
+  it('calculates mixed readiness correctly', () => {
+    const readiness: ReadinessData = {
+      sleep: 5,  // 5*0.35 = 1.75
+      food: 3,   // 3*0.20 = 0.60
+      stress: 2, // 2*0.20 = 0.40
+      soreness: 4, // 4*0.25 = 1.00
+      score: 3.5,
+      status: 'Yellow',
+    };
+
+    const score = calculateReadinessScore(readiness);
+    // 1.75 + 0.60 + 0.40 + 1.00 = 3.75
+    expect(score).toBe(3.75);
+  });
+});
+
+// ==========================================
+// getAverageReadiness
+// ==========================================
+
+describe('getAverageReadiness', () => {
+  it('returns 3 (neutral) for empty logs', () => {
+    const avg = getAverageReadiness([]);
+    expect(avg).toBe(3);
+  });
+
+  it('calculates average from multiple logs', () => {
+    const highReadiness: ReadinessData = {
+      sleep: 5, food: 5, stress: 5, soreness: 5, score: 5, status: 'Green',
+    };
+    const lowReadiness: ReadinessData = {
+      sleep: 1, food: 1, stress: 1, soreness: 1, score: 1, status: 'Red',
+    };
+
+    const logs = [
+      createWorkoutLog({ feedback: { completion: WorkoutCompletion.Yes, pain: { hasPain: false }, readiness: highReadiness } }),
+      createWorkoutLog({ feedback: { completion: WorkoutCompletion.Yes, pain: { hasPain: false }, readiness: lowReadiness } }),
+    ];
+
+    const avg = getAverageReadiness(logs);
+    // (5 + 1) / 2 = 3
+    expect(avg).toBe(3);
+  });
+
+  it('respects window size', () => {
+    const highReadiness: ReadinessData = {
+      sleep: 5, food: 5, stress: 5, soreness: 5, score: 5, status: 'Green',
+    };
+    const lowReadiness: ReadinessData = {
+      sleep: 1, food: 1, stress: 1, soreness: 1, score: 1, status: 'Red',
+    };
+
+    const logs = [
+      createWorkoutLog({ feedback: { completion: WorkoutCompletion.Yes, pain: { hasPain: false }, readiness: highReadiness } }),
+      createWorkoutLog({ feedback: { completion: WorkoutCompletion.Yes, pain: { hasPain: false }, readiness: lowReadiness } }),
+      createWorkoutLog({ feedback: { completion: WorkoutCompletion.Yes, pain: { hasPain: false }, readiness: lowReadiness } }),
+    ];
+
+    // Only last 2 logs
+    const avg = getAverageReadiness(logs, 2);
+    // (1 + 1) / 2 = 1
+    expect(avg).toBe(1);
+  });
+});
+
+// ==========================================
+// applyAutoregulationToProgram with Readiness
+// ==========================================
+
+describe('applyAutoregulationToProgram with readiness', () => {
+  it('reduces weight for low readiness even if analysis says maintain', () => {
+    const program = createProgram([
+      createSession([{ name: 'Bench', sets: 4, weight: 100 }]),
+    ]);
+
+    const lowReadiness: ReadinessData = {
+      sleep: 1, food: 2, stress: 1, soreness: 1, score: 1.25, status: 'Red',
+    };
+
+    const logs = [
+      createWorkoutLog({ feedback: { completion: WorkoutCompletion.Yes, pain: { hasPain: false }, pumpQuality: 4, performanceTrend: 'stable', readiness: lowReadiness } }),
+      createWorkoutLog({ feedback: { completion: WorkoutCompletion.Yes, pain: { hasPain: false }, pumpQuality: 4, performanceTrend: 'stable', readiness: lowReadiness } }),
+      createWorkoutLog({ feedback: { completion: WorkoutCompletion.Yes, pain: { hasPain: false }, pumpQuality: 4, performanceTrend: 'stable', readiness: lowReadiness } }),
+    ];
+
+    const result = applyAutoregulationToProgram(program, logs);
+
+    // Should decrease due to low readiness
+    expect(result.recommendation.volumeAdjustment.type).toBe('decrease');
+    expect(result.recommendation.warnings.some(w => w.includes('готовности'))).toBe(true);
+    // Weight should be reduced by 10%
+    expect(result.program.sessions[0].exercises[0].weight).toBe(90);
+  });
+
+  it('suggests extra effort for high readiness with optimal recovery', () => {
+    const program = createProgram([
+      createSession([{ name: 'Bench', sets: 4, weight: 100 }]),
+    ]);
+
+    const highReadiness: ReadinessData = {
+      sleep: 5, food: 4, stress: 4, soreness: 5, score: 4.5, status: 'Green',
+    };
+
+    const logs = [
+      createWorkoutLog({ feedback: { completion: WorkoutCompletion.Yes, pain: { hasPain: false }, pumpQuality: 4, performanceTrend: 'improving', readiness: highReadiness } }),
+      createWorkoutLog({ feedback: { completion: WorkoutCompletion.Yes, pain: { hasPain: false }, pumpQuality: 4, performanceTrend: 'improving', readiness: highReadiness } }),
+      createWorkoutLog({ feedback: { completion: WorkoutCompletion.Yes, pain: { hasPain: false }, pumpQuality: 4, performanceTrend: 'improving', readiness: highReadiness } }),
+    ];
+
+    const result = applyAutoregulationToProgram(program, logs);
+
+    // Should suggest pushing harder
+    expect(result.recommendation.suggestions.some(s => s.includes('готовность') || s.includes('добавить'))).toBe(true);
+  });
+
+  it('suggests light workout for very low single-day readiness', () => {
+    const program = createProgram([
+      createSession([{ name: 'Bench', sets: 4, weight: 100 }]),
+    ]);
+
+    const veryLowReadiness: ReadinessData = {
+      sleep: 1, food: 1, stress: 1, soreness: 1, score: 1, status: 'Red',
+    };
+
+    const logs = [
+      createWorkoutLog({ feedback: { completion: WorkoutCompletion.Yes, pain: { hasPain: false }, pumpQuality: 4, performanceTrend: 'stable' } }),
+      createWorkoutLog({ feedback: { completion: WorkoutCompletion.Yes, pain: { hasPain: false }, pumpQuality: 4, performanceTrend: 'stable' } }),
+      createWorkoutLog({ feedback: { completion: WorkoutCompletion.Yes, pain: { hasPain: false }, pumpQuality: 4, performanceTrend: 'stable', readiness: veryLowReadiness } }),
+    ];
+
+    const result = applyAutoregulationToProgram(program, logs);
+
+    // Should suggest light workout
+    expect(result.recommendation.suggestions.some(s => s.includes('лёгк') || s.includes('отдых'))).toBe(true);
+  });
+});
+
+// ==========================================
+// analyzeRecoverySignals with soreness24h
+// ==========================================
+
+describe('analyzeRecoverySignals with soreness24h', () => {
+  it('calculates average soreness from feedback data', () => {
+    const logs = [
+      createWorkoutLog({ feedback: { completion: WorkoutCompletion.Yes, pain: { hasPain: false }, soreness24h: 4 } }),
+      createWorkoutLog({ feedback: { completion: WorkoutCompletion.Yes, pain: { hasPain: false }, soreness24h: 5 } }),
+      createWorkoutLog({ feedback: { completion: WorkoutCompletion.Yes, pain: { hasPain: false }, soreness24h: 3 } }),
+    ];
+
+    const result = analyzeRecoverySignals(logs);
+    // (4 + 5 + 3) / 3 = 4
+    expect(result.avgSoreness).toBe(4);
+  });
+
+  it('counts consecutive high soreness workouts', () => {
+    const logs = [
+      createWorkoutLog({ feedback: { completion: WorkoutCompletion.Yes, pain: { hasPain: false }, soreness24h: 2 } }),
+      createWorkoutLog({ feedback: { completion: WorkoutCompletion.Yes, pain: { hasPain: false }, soreness24h: 4 } }),
+      createWorkoutLog({ feedback: { completion: WorkoutCompletion.Yes, pain: { hasPain: false }, soreness24h: 5 } }),
+    ];
+
+    const result = analyzeRecoverySignals(logs);
+    // Last 2 workouts have soreness >= 4
+    expect(result.consecutiveHighSorenessWorkouts).toBe(2);
+  });
+
+  it('detects under_recovered from high consecutive soreness', () => {
+    const logs = [
+      createWorkoutLog({ feedback: { completion: WorkoutCompletion.Yes, pain: { hasPain: false }, soreness24h: 4, pumpQuality: 4 } }),
+      createWorkoutLog({ feedback: { completion: WorkoutCompletion.Yes, pain: { hasPain: false }, soreness24h: 5, pumpQuality: 4 } }),
+    ];
+
+    const result = analyzeRecoverySignals(logs);
+    // 2 consecutive high soreness should trigger under_recovered
+    expect(result.overallStatus).toBe('under_recovered');
+  });
+
+  it('defaults to neutral soreness when no data collected', () => {
+    const logs = [
+      createWorkoutLog({ feedback: { completion: WorkoutCompletion.Yes, pain: { hasPain: false }, pumpQuality: 4 } }),
+    ];
+
+    const result = analyzeRecoverySignals(logs);
+    expect(result.avgSoreness).toBe(3);
+    expect(result.consecutiveHighSorenessWorkouts).toBe(0);
   });
 });

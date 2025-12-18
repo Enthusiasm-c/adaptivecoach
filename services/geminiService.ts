@@ -5,7 +5,9 @@ import { calculateStreaks, calculateLevel, calculateWeekComparison, calculateWor
 
 // Import new scientific training system
 import { generateProgram, convertToLegacyFormat } from './programGenerator';
-import { validateProgram, getValidationSummary, getMissingMuscles } from './programValidator';
+import { validateProgram, validateProgramStructure, getValidationSummary, getMissingMuscles, ValidationResult } from './programValidator';
+import { calculateWeeklyVolume, WeeklyVolumeReport } from './volumeTracker';
+import { getOrchestrator, AIPriority } from './aiOrchestrator';
 
 // ФИТКУБ equipment description for AI prompts
 const FITCUBE_EQUIPMENT = `
@@ -111,6 +113,120 @@ function extractFunctionCall(response: GeminiResponse): { name: string; args: an
         return part.functionCall;
     }
     return null;
+}
+
+// ============================================
+// VALIDATION PIPELINE
+// ============================================
+
+/**
+ * Validate AI-generated program structure
+ * This ensures we never apply a broken program to user state
+ */
+function validateAIProgram(program: TrainingProgram, context: string): ValidationResult {
+    // Use structural validation (doesn't require profile)
+    const validation = validateProgramStructure(program);
+
+    if (!validation.isValid) {
+        const summary = getValidationSummary(validation);
+        console.error(`[AI Validation] ${context} - Invalid program:`, summary);
+
+        // Track failed validation in orchestrator
+        const orchestrator = getOrchestrator();
+        console.warn(`[AI Validation] Program validation failed. Orchestrator history:`,
+            orchestrator.getHistory().slice(-3));
+    } else {
+        console.log(`[AI Validation] ${context} - Program validated successfully`);
+    }
+
+    return validation;
+}
+
+/**
+ * Parse and validate AI response, with fallback
+ */
+function parseAndValidateProgram(
+    jsonText: string,
+    fallbackProgram: TrainingProgram,
+    context: string
+): { program: TrainingProgram; wasValid: boolean } {
+    try {
+        const parsed = JSON.parse(jsonText) as TrainingProgram;
+        const validation = validateAIProgram(parsed, context);
+
+        if (validation.isValid) {
+            return { program: parsed, wasValid: true };
+        }
+
+        // Try to fix minor issues
+        const fixed = attemptAutoFix(parsed, validation);
+        if (fixed) {
+            const revalidation = validateAIProgram(fixed, `${context} (auto-fixed)`);
+            if (revalidation.isValid) {
+                console.log(`[AI Validation] ${context} - Auto-fix successful`);
+                return { program: fixed, wasValid: true };
+            }
+        }
+
+        console.warn(`[AI Validation] ${context} - Using fallback program`);
+        return { program: fallbackProgram, wasValid: false };
+
+    } catch (parseError) {
+        console.error(`[AI Validation] ${context} - JSON parse error:`, parseError);
+        return { program: fallbackProgram, wasValid: false };
+    }
+}
+
+/**
+ * Attempt to auto-fix common validation issues
+ */
+function attemptAutoFix(program: TrainingProgram, validation: ValidationResult): TrainingProgram | null {
+    try {
+        const fixed = JSON.parse(JSON.stringify(program)) as TrainingProgram;
+        let hadFixes = false;
+
+        // Fix missing sessions array
+        if (!fixed.sessions || !Array.isArray(fixed.sessions)) {
+            return null; // Can't fix this
+        }
+
+        for (const session of fixed.sessions) {
+            if (!session.exercises || !Array.isArray(session.exercises)) {
+                continue;
+            }
+
+            for (const exercise of session.exercises) {
+                // Fix missing exerciseType
+                if (!exercise.exerciseType) {
+                    exercise.exerciseType = 'strength';
+                    hadFixes = true;
+                }
+
+                // Fix missing sets (default to 3)
+                if (!exercise.sets || exercise.sets < 1) {
+                    exercise.sets = 3;
+                    hadFixes = true;
+                }
+
+                // Fix missing reps
+                if (!exercise.reps) {
+                    exercise.reps = '10';
+                    hadFixes = true;
+                }
+
+                // Fix negative weight
+                if (exercise.weight && exercise.weight < 0) {
+                    exercise.weight = 0;
+                    hadFixes = true;
+                }
+            }
+        }
+
+        return hadFixes ? fixed : null;
+
+    } catch {
+        return null;
+    }
 }
 
 // ============================================
@@ -329,15 +445,50 @@ function extractPainReports(logs: WorkoutLog[]): string {
     }).join('\n    ');
 }
 
-function buildAdaptationPrompt(currentProgram: TrainingProgram, logs: WorkoutLog[]): string {
-    const recentLogs = logs.slice(-3);
+/**
+ * Format volume report for AI prompt
+ */
+function formatVolumeReport(report: WeeklyVolumeReport): string {
+    if (report.muscles.length === 0) return 'Недостаточно данных для анализа объёма';
+
+    const lines: string[] = [];
+
+    // Summary alerts
+    if (report.undertrainedMuscles.length > 0) {
+        lines.push(`⚠️ НЕДОСТАТОЧНО НАГРУЗКИ: ${report.undertrainedMuscles.join(', ')}`);
+    }
+    if (report.overtrainedMuscles.length > 0) {
+        lines.push(`🔴 ПЕРЕТРЕНИРОВКА: ${report.overtrainedMuscles.join(', ')}`);
+    }
+
+    // Details by muscle
+    for (const m of report.muscles) {
+        const statusIcon = m.status === 'under' ? '📉' : m.status === 'over' ? '📈' : '✅';
+        lines.push(`${statusIcon} ${m.muscleNameRu}: ${m.totalSets} сетов (${m.percentOfOptimal}% от оптимума, цель: ${m.targetMin}-${m.targetMax})`);
+    }
+
+    return lines.join('\n    ');
+}
+
+function buildAdaptationPrompt(
+    currentProgram: TrainingProgram,
+    logs: WorkoutLog[],
+    profile?: OnboardingProfile
+): string {
+    // Use more logs for better volume analysis
+    const recentLogs = logs.slice(-6);
     const exerciseSummary = extractExerciseSummary(recentLogs);
     const painReports = extractPainReports(recentLogs);
+
+    // Calculate volume report for AI
+    const experienceLevel = profile?.experience || 'Любитель (6-24 месяцев)';
+    const volumeReport = calculateWeeklyVolume(recentLogs, experienceLevel as any);
+    const volumeSection = formatVolumeReport(volumeReport);
 
     // Calculate average pump quality
     const pumpValues = recentLogs
         .map(l => l.feedback?.pumpQuality)
-        .filter((v): v is number => v !== undefined);
+        .filter((v): v is NonNullable<typeof v> => v !== undefined);
     const avgPump = pumpValues.length > 0
         ? (pumpValues.reduce((a, b) => a + b, 0) / pumpValues.length).toFixed(1)
         : 'N/A';
@@ -345,7 +496,7 @@ function buildAdaptationPrompt(currentProgram: TrainingProgram, logs: WorkoutLog
     // Get performance trend
     const trends = recentLogs
         .map(l => l.feedback?.performanceTrend)
-        .filter((t): t is string => t !== undefined);
+        .filter((t): t is NonNullable<typeof t> => t !== undefined);
     const dominantTrend = trends.length > 0
         ? (trends.filter(t => t === 'improving').length >= 2 ? 'растёт'
             : trends.filter(t => t === 'declining').length >= 2 ? 'падает'
@@ -363,6 +514,9 @@ function buildAdaptationPrompt(currentProgram: TrainingProgram, logs: WorkoutLog
 
     💪 КАЧЕСТВО ПАМПА: ${avgPump}/5
     📈 ТРЕНД ПРОИЗВОДИТЕЛЬНОСТИ: ${dominantTrend}
+
+    === АНАЛИЗ ОБЪЁМА ПО ГРУППАМ МЫШЦ ===
+    ${volumeSection}
 
     ⚠️ ОТЧЁТЫ О БОЛИ:
     ${painReports}
@@ -385,11 +539,16 @@ function buildAdaptationPrompt(currentProgram: TrainingProgram, logs: WorkoutLog
        - Увеличь время под нагрузкой
        - Добавь 1 подход если объём низкий
 
-    4. СИНХРОНИЗАЦИЯ ВЕСОВ:
+    4. КОРРЕКЦИЯ ОБЪЁМА ПО МЫШЦАМ:
+       - Если мышца показывает "НЕДОСТАТОЧНО" → добавь 1-2 подхода упражнений на эту мышцу
+       - Если мышца показывает "ПЕРЕТРЕНИРОВКА" → убери 1-2 подхода или упражнение
+       - Следи за балансом: грудь/спина, бицепс/трицепс, квадрицепс/бицепс бедра
+
+    5. СИНХРОНИЗАЦИЯ ВЕСОВ:
        - Если в логах использовался больший вес чем в программе,
          обязательно обнови вес в программе до актуального!
 
-    5. СТРУКТУРА:
+    6. СТРУКТУРА:
        - Сохраняй названия дней
        - Сохраняй поле "description" для упражнений
 
@@ -774,8 +933,12 @@ export const generateInitialPlanLegacy = async (profile: OnboardingProfile): Pro
 };
 
 
-export const adaptPlan = async (currentProgram: TrainingProgram, logs: WorkoutLog[]): Promise<TrainingProgram> => {
-    const prompt = buildAdaptationPrompt(currentProgram, logs);
+export const adaptPlan = async (
+    currentProgram: TrainingProgram,
+    logs: WorkoutLog[],
+    profile?: OnboardingProfile
+): Promise<TrainingProgram> => {
+    const prompt = buildAdaptationPrompt(currentProgram, logs, profile);
 
     const response = await callGeminiProxy(`/v1beta/models/${GEMINI_MODEL}:generateContent`, {
         contents: prompt,
@@ -786,7 +949,20 @@ export const adaptPlan = async (currentProgram: TrainingProgram, logs: WorkoutLo
     });
 
     const jsonText = extractText(response);
-    return JSON.parse(jsonText) as TrainingProgram;
+
+    // Validate AI response with fallback to current program
+    const { program, wasValid } = parseAndValidateProgram(jsonText, currentProgram, 'adaptPlan');
+
+    if (!wasValid) {
+        console.warn('[adaptPlan] AI returned invalid program, using current program');
+    }
+
+    // Store valid program in orchestrator for fallback
+    if (wasValid) {
+        getOrchestrator().setLastValidProgram(program);
+    }
+
+    return program;
 };
 
 // Internal helper to actually rewrite the JSON
@@ -802,7 +978,21 @@ const modifyPlanWithInstructions = async (currentProgram: TrainingProgram, reaso
     });
 
     const jsonText = extractText(response);
-    return JSON.parse(jsonText) as TrainingProgram;
+
+    // Validate AI response with fallback to current program
+    const { program, wasValid } = parseAndValidateProgram(jsonText, currentProgram, `modifyPlan: ${reason.slice(0, 50)}`);
+
+    if (!wasValid) {
+        console.warn('[modifyPlanWithInstructions] AI returned invalid program, using current program');
+        // Don't throw - return fallback instead of breaking
+    }
+
+    // Store valid program in orchestrator for fallback
+    if (wasValid) {
+        getOrchestrator().setLastValidProgram(program);
+    }
+
+    return program;
 };
 
 export const getCoachFeedback = async (

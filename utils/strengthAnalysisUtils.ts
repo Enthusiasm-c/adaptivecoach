@@ -106,6 +106,47 @@ export const calculateE1RM = (weight: number, reps: number): number => {
 };
 
 /**
+ * Get best lift (highest E1RM) for a specific exercise from workout logs
+ * Used for suggesting weights based on actual performance history
+ */
+export function getBestLiftForExercise(
+  exerciseName: string,
+  logs: WorkoutLog[]
+): { weight: number; reps: number; e1rm: number } | null {
+  const normalizedTarget = exerciseName.toLowerCase();
+
+  let bestE1rm = 0;
+  let bestLift: { weight: number; reps: number; e1rm: number } | null = null;
+
+  for (const log of logs) {
+    for (const ex of log.completedExercises) {
+      // Skip warmup exercises
+      if (ex.isWarmup) continue;
+
+      const normalizedName = ex.name.toLowerCase();
+      // Fuzzy match - check if names contain each other
+      if (normalizedName.includes(normalizedTarget) ||
+          normalizedTarget.includes(normalizedName) ||
+          // Also try to match by removing common suffixes
+          normalizedName.replace(/\s*(со штангой|с гантел\w*|на тренажере|в кроссовере)\s*/gi, '').includes(normalizedTarget.replace(/\s*(со штангой|с гантел\w*|на тренажере|в кроссовере)\s*/gi, ''))) {
+
+        for (const set of ex.completedSets) {
+          if (set.weight && set.reps && set.reps > 0) {
+            const e1rm = calculateE1RM(set.weight, set.reps);
+            if (e1rm > bestE1rm) {
+              bestE1rm = e1rm;
+              bestLift = { weight: set.weight, reps: set.reps, e1rm };
+            }
+          }
+        }
+      }
+    }
+  }
+
+  return bestLift;
+}
+
+/**
  * Calculate relative strength (e1rm / bodyweight)
  */
 export const calculateRelativeStrength = (e1rm: number, bodyweight: number): number => {
@@ -603,6 +644,64 @@ export const generateStrengthInsights = (
     overallLevel,
     lastUpdated: new Date().toISOString(),
   };
+};
+
+/**
+ * Get top N imbalances for dashboard display
+ * Filters out minor imbalances and sorts by severity
+ */
+export const getTopImbalances = (
+  logs: WorkoutLog[],
+  bodyweight: number,
+  gender: Gender,
+  maxCount: number = 2
+): ImbalanceReport[] => {
+  if (logs.length < 5) return []; // Need minimum data
+
+  const strengthAnalysis = analyzeStrength(logs, bodyweight, gender);
+  const imbalances = detectImbalances(strengthAnalysis);
+
+  // Severity order for sorting
+  const severityOrder = (severity: 'minor' | 'moderate' | 'severe'): number => {
+    switch (severity) {
+      case 'severe': return 3;
+      case 'moderate': return 2;
+      case 'minor': return 1;
+      default: return 0;
+    }
+  };
+
+  return imbalances
+    .filter(i => i.severity !== 'minor')
+    .sort((a, b) => severityOrder(b.severity) - severityOrder(a.severity))
+    .slice(0, maxCount);
+};
+
+/**
+ * Get imbalance icon and color for UI
+ */
+export const getImbalanceDisplay = (type: string, severity: string): {
+  icon: string;
+  color: string;
+  bgColor: string;
+  title: string;
+} => {
+  const severityColors = {
+    severe: { color: 'text-red-400', bgColor: 'bg-red-500/10' },
+    moderate: { color: 'text-amber-400', bgColor: 'bg-amber-500/10' },
+    minor: { color: 'text-gray-400', bgColor: 'bg-gray-500/10' },
+  };
+
+  const typeInfo: { [key: string]: { icon: string; title: string } } = {
+    push_pull: { icon: 'scale', title: 'Push/Pull' },
+    anterior_posterior: { icon: 'scale', title: 'Перед/Зад' },
+    ratio: { icon: 'scale', title: 'Верх/Низ' },
+  };
+
+  const colors = severityColors[severity as keyof typeof severityColors] || severityColors.minor;
+  const info = typeInfo[type] || { icon: 'alert-triangle', title: 'Дисбаланс' };
+
+  return { ...colors, ...info };
 };
 
 // === LEVEL LABELS ===

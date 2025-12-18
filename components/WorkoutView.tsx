@@ -817,61 +817,79 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
                     <div className="w-6 text-center font-mono text-gray-500 text-sm">#{setIndex + 1}</div>
 
                     {exerciseNeedsWeight(currentExercise) && (
-                      <div className={`flex-1 flex items-center justify-center gap-1 rounded-lg py-1 px-1 ${
+                      <div className={`flex-1 flex flex-col items-center justify-center rounded-lg py-1 px-2 ${
                         attemptedFinish && getSetErrors(currentExercise, set).weight
                           ? 'bg-red-500/10 border border-red-500/30'
                           : 'bg-neutral-800/50'
                       }`}>
-                        <button
-                          onClick={() => adjustValue(currentExerciseIndex, setIndex, 'weight', -1)}
-                          className="w-8 h-8 flex items-center justify-center rounded-lg bg-neutral-700 hover:bg-neutral-600 text-white transition active:scale-95"
-                        >
-                          <Minus size={16} />
-                        </button>
-                        <div className="flex flex-col items-center min-w-[40px]">
-                          <span className="font-mono font-bold text-white text-sm">
-                            {set.weight ?? currentExercise.weight ?? '—'}
-                          </span>
-                          <span className="text-[9px] text-gray-500">
-                            {isPairedDumbbellExercise(currentExercise) ? 'кг×2' : 'кг'}
-                          </span>
-                        </div>
-                        <button
-                          onClick={() => adjustValue(currentExerciseIndex, setIndex, 'weight', 1)}
-                          className="w-8 h-8 flex items-center justify-center rounded-lg bg-neutral-700 hover:bg-neutral-600 text-white transition active:scale-95"
-                        >
-                          <Plus size={16} />
-                        </button>
+                        <input
+                          type="text"
+                          inputMode="decimal"
+                          pattern="[0-9]*[.,]?[0-9]*"
+                          value={set.weight ?? currentExercise.weight ?? ''}
+                          onChange={(e) => {
+                            const value = e.target.value.replace(',', '.');
+                            if (value === '' || value === '.') {
+                              handleValueChange(currentExerciseIndex, setIndex, 'weight', NaN);
+                            } else {
+                              const numValue = parseFloat(value);
+                              if (!isNaN(numValue) && numValue >= 0) {
+                                handleValueChange(currentExerciseIndex, setIndex, 'weight', numValue);
+                              }
+                            }
+                          }}
+                          onFocus={(e) => e.target.select()}
+                          className="w-full h-8 bg-transparent text-center font-mono font-bold text-white text-sm outline-none"
+                          placeholder="—"
+                        />
+                        <span className="text-[9px] text-gray-500">
+                          {isPairedDumbbellExercise(currentExercise) ? 'кг×2' : 'кг'}
+                        </span>
                       </div>
                     )}
 
-                    <div className={`flex-1 flex items-center justify-center gap-1 rounded-lg py-1 px-1 ${
+                    <div className={`flex-1 flex flex-col items-center justify-center rounded-lg py-1 px-2 ${
                         attemptedFinish && getSetErrors(currentExercise, set).reps
                           ? 'bg-red-500/10 border border-red-500/30'
                           : 'bg-neutral-800/50'
                       }`}>
-                        <button
-                          onClick={() => adjustValue(currentExerciseIndex, setIndex, 'reps', -1)}
-                          className="w-8 h-8 flex items-center justify-center rounded-lg bg-neutral-700 hover:bg-neutral-600 text-white transition active:scale-95"
-                        >
-                          <Minus size={16} />
-                        </button>
-                        <div className="flex flex-col items-center min-w-[32px]">
-                          <span className="font-mono font-bold text-white text-sm">
-                            {set.reps ?? (parseInt(String(currentExercise.reps).split('-')[0].replace(/[^\d]/g, '')) || '—')}
-                          </span>
-                          <span className="text-[9px] text-gray-500">повт</span>
-                        </div>
-                        <button
-                          onClick={() => adjustValue(currentExerciseIndex, setIndex, 'reps', 1)}
-                          className="w-8 h-8 flex items-center justify-center rounded-lg bg-neutral-700 hover:bg-neutral-600 text-white transition active:scale-95"
-                        >
-                          <Plus size={16} />
-                        </button>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          value={set.reps ?? (parseInt(String(currentExercise.reps).split('-')[0].replace(/[^\d]/g, '')) || '')}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            if (value === '') {
+                              handleValueChange(currentExerciseIndex, setIndex, 'reps', NaN);
+                            } else {
+                              const numValue = parseInt(value, 10);
+                              if (!isNaN(numValue) && numValue >= 0) {
+                                handleValueChange(currentExerciseIndex, setIndex, 'reps', numValue);
+                              }
+                            }
+                          }}
+                          onFocus={(e) => e.target.select()}
+                          className="w-full h-8 bg-transparent text-center font-mono font-bold text-white text-sm outline-none"
+                          placeholder="—"
+                        />
+                        <span className="text-[9px] text-gray-500">повт</span>
                       </div>
 
-                    {/* RIR - Hidden for now to fix layout */}
-                    {/* TODO: Re-enable RIR when we have better mobile layout */}
+                    {/* RIR Selection - Compact dropdown */}
+                    <select
+                      value={set.rir ?? ''}
+                      onChange={(e) => handleValueChange(currentExerciseIndex, setIndex, 'rir',
+                        e.target.value === '' ? 0 : Number(e.target.value))}
+                      className="w-14 h-10 rounded-lg bg-neutral-800 text-white text-xs text-center border border-white/10 appearance-none cursor-pointer px-1"
+                      style={{ backgroundImage: 'none' }}
+                    >
+                      <option value="">RIR</option>
+                      <option value="0">0</option>
+                      <option value="1">1</option>
+                      <option value="2">2</option>
+                      <option value="3">3+</option>
+                    </select>
 
                     <button
                       onClick={() => toggleSetComplete(currentExerciseIndex, setIndex)}

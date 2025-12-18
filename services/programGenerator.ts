@@ -12,7 +12,8 @@
  * - RP Strength methodology
  */
 
-import { OnboardingProfile, ExperienceLevel, Goal, Location, TrainingProgram, WorkoutSession, Exercise } from '../types';
+import { OnboardingProfile, ExperienceLevel, Goal, Location, TrainingProgram, WorkoutSession, Exercise, WorkoutLog } from '../types';
+import { getBestLiftForExercise } from '../utils/strengthAnalysisUtils';
 import {
   SplitTemplate,
   WorkoutTemplate,
@@ -80,22 +81,45 @@ function normalizeExerciseNameForWeight(name: string): string {
 }
 
 /**
- * Calculate initial weight for an exercise based on profile
- * Uses known weights as reference points
+ * Calculate initial weight for an exercise based on profile and workout history
+ * Priority: 1) Logs (E1RM-based), 2) Profile known weights, 3) Estimated defaults
  */
 function calculateInitialWeight(
   exercise: ExerciseDefinition,
-  profile: OnboardingProfile
+  profile: OnboardingProfile,
+  logs?: WorkoutLog[]
 ): number | undefined {
   // For bodyweight exercises, no weight needed
   if (exercise.equipment === 'bodyweight') {
     return undefined;
   }
 
+  // NEW: First check workout history for actual performance data
+  if (logs && logs.length > 0) {
+    const bestLift = getBestLiftForExercise(exercise.name, logs);
+    if (bestLift && bestLift.e1rm > 0) {
+      // Use 80% of E1RM for working sets (typical 8-10 rep range)
+      const workingWeight = Math.round(bestLift.e1rm * 0.8 / 2.5) * 2.5;
+      // Ensure minimum reasonable weight
+      if (workingWeight >= 2.5) {
+        return workingWeight;
+      }
+    }
+
+    // Also try English name
+    const bestLiftEn = getBestLiftForExercise(exercise.nameEn, logs);
+    if (bestLiftEn && bestLiftEn.e1rm > 0) {
+      const workingWeight = Math.round(bestLiftEn.e1rm * 0.8 / 2.5) * 2.5;
+      if (workingWeight >= 2.5) {
+        return workingWeight;
+      }
+    }
+  }
+
   const normalizedName = normalizeExerciseNameForWeight(exercise.name);
   const normalizedNameEn = normalizeExerciseNameForWeight(exercise.nameEn);
 
-  // 1. Check if user has known weight for this exact exercise
+  // 2. Check if user has known weight for this exact exercise (from onboarding)
   if (profile.knownWeights && profile.knownWeights.length > 0) {
     for (const kw of profile.knownWeights) {
       const normalizedKnown = normalizeExerciseNameForWeight(kw.exercise);
@@ -454,10 +478,12 @@ function validateMuscleGroupCoverage(
 /**
  * Convert new program format to existing TrainingProgram type
  * This allows gradual migration while maintaining backwards compatibility
+ * @param logs - Optional workout logs to use for E1RM-based weight suggestions
  */
 export function convertToLegacyFormat(
   result: ProgramGenerationResult,
-  profile: OnboardingProfile
+  profile: OnboardingProfile,
+  logs?: WorkoutLog[]
 ): TrainingProgram {
   const goalConfig = GOAL_CONFIGS[profile.goals.primary];
 
@@ -492,8 +518,8 @@ export function convertToLegacyFormat(
           ? goalConfig.restTimeCompound
           : goalConfig.restTimeIsolation;
 
-        // Calculate initial weight based on profile
-        const weight = calculateInitialWeight(exerciseDef, profile);
+        // Calculate initial weight based on profile and workout history
+        const weight = calculateInitialWeight(exerciseDef, profile, logs);
 
         return {
           exerciseId: exerciseDef.id,

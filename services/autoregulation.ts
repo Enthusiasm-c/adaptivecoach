@@ -13,7 +13,7 @@
  * - Pain → substitute exercise + reduce weight
  */
 
-import { WorkoutLog, WorkoutFeedback, TrainingProgram, WorkoutSession, Exercise } from '../types';
+import { WorkoutLog, WorkoutFeedback, TrainingProgram, WorkoutSession, Exercise, ReadinessData } from '../types';
 
 // ==========================================
 // TYPES
@@ -76,9 +76,14 @@ export function analyzeRecoverySignals(logs: WorkoutLog[], windowSize: number = 
     ? pumpValues.reduce((a, b) => a + b, 0) / pumpValues.length
     : 3;
 
-  // Note: soreness24h would be collected separately (next day)
-  // For now, we'll use a default
-  const avgSoreness = 3;
+  // Calculate average soreness from collected data
+  const sorenessValues = recentLogs
+    .map(log => log.feedback.soreness24h)
+    .filter((v): v is 1 | 2 | 3 | 4 | 5 => v !== undefined);
+
+  const avgSoreness = sorenessValues.length > 0
+    ? sorenessValues.reduce((a, b) => a + b, 0) / sorenessValues.length
+    : 3; // Default to 3 (neutral) if no data collected yet
 
   // Analyze performance trend from recent logs
   const performanceTrends = recentLogs
@@ -97,8 +102,17 @@ export function analyzeRecoverySignals(logs: WorkoutLog[], windowSize: number = 
     }
   }
 
-  // Count consecutive high soreness (would need soreness24h data)
-  const consecutiveHighSorenessWorkouts = 0;
+  // Count consecutive high soreness (4-5 = painful)
+  let consecutiveHighSorenessWorkouts = 0;
+  for (let i = recentLogs.length - 1; i >= 0; i--) {
+    const soreness = recentLogs[i].feedback.soreness24h;
+    if (soreness !== undefined && soreness >= 4) {
+      consecutiveHighSorenessWorkouts++;
+    } else if (soreness !== undefined) {
+      break; // Stop counting when we hit non-high soreness
+    }
+    // If undefined, continue checking older logs
+  }
 
   // Check for pain
   const painReported = recentLogs.some(log => log.feedback.pain.hasPain);
@@ -151,6 +165,58 @@ function getOverallTrend(trends: ('improving' | 'stable' | 'declining')[]): 'imp
   }
 
   return 'stable';
+}
+
+/**
+ * Calculate readiness score from feedback data
+ * Uses weighted average of sleep, food, stress, and soreness
+ * Returns 1-5 scale (1 = low readiness, 5 = high readiness)
+ */
+export function calculateReadinessScore(readiness: ReadinessData | undefined): number {
+  if (!readiness) {
+    return 3; // Default to neutral if no data
+  }
+
+  // ReadinessData scales:
+  // sleep: 1-5 (higher = better)
+  // food: 1-5 (higher = better)
+  // stress: 1-5 (1 = high stress, 5 = low stress, so higher = better)
+  // soreness: 1-5 (1 = very sore, 5 = fresh, so higher = better)
+
+  const weights = {
+    sleep: 0.35,    // Sleep is most important for recovery
+    food: 0.20,     // Nutrition matters
+    stress: 0.20,   // Mental stress affects recovery
+    soreness: 0.25, // Physical readiness
+  };
+
+  return (
+    readiness.sleep * weights.sleep +
+    readiness.food * weights.food +
+    readiness.stress * weights.stress +
+    readiness.soreness * weights.soreness
+  );
+}
+
+/**
+ * Get average readiness from recent logs
+ */
+export function getAverageReadiness(logs: WorkoutLog[], windowSize: number = 3): number {
+  const recentLogs = logs.slice(-windowSize);
+
+  if (recentLogs.length === 0) {
+    return 3; // Neutral default
+  }
+
+  const readinessScores = recentLogs
+    .map(log => calculateReadinessScore(log.feedback.readiness))
+    .filter(score => score !== 3 || recentLogs.some(l => l.feedback.readiness)); // Only count real data
+
+  if (readinessScores.length === 0) {
+    return 3;
+  }
+
+  return readinessScores.reduce((a, b) => a + b, 0) / readinessScores.length;
 }
 
 // ==========================================
@@ -258,14 +324,60 @@ export function applyVolumeAdjustment(
 
 /**
  * Apply autoregulation to entire program based on recent logs
+ * Now includes readiness-based adjustments
  */
 export function applyAutoregulationToProgram(
   program: TrainingProgram,
   logs: WorkoutLog[]
 ): { program: TrainingProgram; recommendation: AutoregulationRecommendation } {
   const analysis = analyzeRecoverySignals(logs);
-  const recommendation = generateRecommendation(analysis);
+  let recommendation = generateRecommendation(analysis);
 
+  // Get readiness from most recent log
+  const lastLog = logs[logs.length - 1];
+  const readinessScore = lastLog ? calculateReadinessScore(lastLog.feedback.readiness) : 3;
+  const avgReadiness = getAverageReadiness(logs);
+
+  // Low readiness override: reduce volume even if analysis says "maintain"
+  if (avgReadiness < 2.5 && recommendation.volumeAdjustment.type !== 'decrease') {
+    recommendation = {
+      ...recommendation,
+      volumeAdjustment: {
+        type: 'decrease',
+        setsChange: 0,
+        weightChange: -10, // Reduce weight by 10%
+        reason: 'Низкая готовность к нагрузке. Снижаем интенсивность.',
+      },
+      warnings: [
+        ...recommendation.warnings,
+        'Твои показатели готовности низкие. Обрати внимание на сон и восстановление.',
+      ],
+    };
+  }
+
+  // Very low readiness: suggest skipping workout
+  if (readinessScore < 2) {
+    recommendation = {
+      ...recommendation,
+      suggestions: [
+        ...recommendation.suggestions,
+        'Рассмотри лёгкую тренировку или активный отдых сегодня.',
+      ],
+    };
+  }
+
+  // High readiness + good recovery: can push harder
+  if (avgReadiness >= 4 && analysis.overallStatus === 'optimal' && analysis.performanceTrend === 'improving') {
+    recommendation = {
+      ...recommendation,
+      suggestions: [
+        ...recommendation.suggestions,
+        'Отличная готовность! Можешь добавить вес или подходы.',
+      ],
+    };
+  }
+
+  // If no adjustment needed, return original program
   if (recommendation.volumeAdjustment.type === 'maintain') {
     return { program, recommendation };
   }
