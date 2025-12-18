@@ -531,7 +531,7 @@ const SquadView: React.FC<SquadViewProps> = ({ telegramUser, logs = [], isPro = 
                             </button>
                         </div>
 
-                        <div className="p-5 flex-1 overflow-y-auto">
+                        <div className="p-5 pb-32 flex-1 overflow-y-auto">
                             <p className="text-sm text-gray-400 mb-4">
                                 Введите Telegram username для поиска
                             </p>

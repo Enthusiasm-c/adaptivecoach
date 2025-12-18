@@ -11,7 +11,7 @@ interface CoachFeedbackModalProps {
 
 const CoachFeedbackModal: React.FC<CoachFeedbackModalProps> = ({ isLoading, feedback, onClose }) => {
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4 pb-28">
       <div className="bg-gray-800 rounded-2xl shadow-lg p-6 w-full max-w-md space-y-6 text-white animate-fade-in-up">
         <div className="text-center space-y-4">
           <Bot className="mx-auto text-indigo-400" size={48} />

@@ -99,7 +99,7 @@ const BadgesView: React.FC<BadgesViewProps> = ({ onClose }) => {
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-6">
+        <div className="flex-1 overflow-y-auto p-4 pb-32 space-y-6">
           {loading ? (
             <div className="flex items-center justify-center h-full">
               <Loader2 className="animate-spin text-indigo-500" size={32} />

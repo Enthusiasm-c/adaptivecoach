@@ -95,7 +95,7 @@ const MesocycleEducationModal: React.FC<MesocycleEducationModalProps> = ({
   const phases: MesocyclePhase[] = ['intro', 'accumulation', 'overreaching', 'deload'];
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4 pb-28">
       <div className="bg-gray-800 rounded-2xl shadow-lg w-full max-w-md max-h-[90vh] overflow-hidden flex flex-col animate-fade-in-up">
         {/* Header */}
         <div className="p-4 border-b border-neutral-700 flex justify-between items-center">
@@ -203,7 +203,7 @@ const MesocycleEducationModal: React.FC<MesocycleEducationModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-neutral-700">
+        <div className="p-4 pb-6 border-t border-neutral-700">
           <button
             onClick={onClose}
             className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-xl transition-all"

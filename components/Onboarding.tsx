@@ -568,9 +568,9 @@ const InjuryStep = ({ profile, updateProfile }: any) => (
         <div className="grid grid-cols-2 gap-4">
             <button
                 onClick={() => updateProfile('hasInjuries', false)}
-                className={`p-6 rounded-3xl border-2 transition-all duration-200 ${!profile.hasInjuries ? 'border-emerald-500 bg-emerald-500/10' : 'border-neutral-800 bg-neutral-900 grayscale opacity-60 hover:opacity-100'}`}
+                className={`p-6 rounded-3xl border-2 transition-all duration-200 ${!profile.hasInjuries ? 'border-green-500 bg-green-500/10' : 'border-neutral-800 bg-neutral-900 grayscale opacity-60 hover:opacity-100'}`}
             >
-                <span className={`block text-2xl font-black mb-1 ${!profile.hasInjuries ? 'text-emerald-400' : 'text-gray-400'}`}>Нет</span>
+                <span className={`block text-2xl font-black mb-1 ${!profile.hasInjuries ? 'text-green-400' : 'text-gray-400'}`}>Нет</span>
                 <span className="text-xs text-gray-500 font-bold uppercase">Здоров</span>
             </button>
             <button

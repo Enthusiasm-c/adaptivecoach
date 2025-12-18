@@ -21,7 +21,7 @@ const WorkoutPreviewModal: React.FC<WorkoutPreviewModalProps> = ({
   experienceLevel = ExperienceLevel.Intermediate,
 }) => {
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4 pb-28">
       <div className="bg-gray-800 rounded-2xl shadow-lg p-6 w-full max-w-md space-y-4 text-white animate-fade-in-up flex flex-col max-h-[90vh]">
         <div className="flex justify-between items-center">
           <h2 className="text-xl font-bold text-indigo-300">{session.name}</h2>

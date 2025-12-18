@@ -39,7 +39,7 @@ const PostOnboardingPaywall: React.FC<PostOnboardingPaywallProps> = ({
             <div className="w-full max-w-sm">
                 {/* Success Header */}
                 <div className="text-center mb-8">
-                    <div className="w-20 h-20 mx-auto mb-4 bg-gradient-to-br from-green-500/20 to-emerald-500/20 rounded-full flex items-center justify-center border border-green-500/30">
+                    <div className="w-20 h-20 mx-auto mb-4 bg-gradient-to-br from-green-500/20 to-green-400/20 rounded-full flex items-center justify-center border border-green-500/30">
                         <Check size={40} className="text-green-400" />
                     </div>
                     <h1 className="text-2xl font-black text-white mb-2">

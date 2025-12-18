@@ -498,7 +498,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
 
                     {/* Total Volume */}
                     <div className="bg-neutral-900/50 border border-white/5 rounded-2xl p-3 flex flex-col items-center justify-center text-center gap-1">
-                        <Dumbbell size={20} className="text-emerald-500 mb-1" />
+                        <Dumbbell size={20} className="text-green-500 mb-1" />
                         <span className="text-lg font-black text-white leading-none">{formatKg(totalVolume)}</span>
                         <span className="text-[10px] text-gray-500 font-bold uppercase">Всего</span>
                     </div>
@@ -595,7 +595,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
                 ) : hasCompletedToday && todaysWorkout ? (
                     /* COMPLETED WORKOUT CARD */
                     <div className="col-span-2 relative group mt-2">
-                        <div className="absolute inset-0 bg-gradient-to-r from-green-600 to-emerald-600 rounded-[2rem] blur-xl opacity-20"></div>
+                        <div className="absolute inset-0 bg-gradient-to-r from-green-600 to-green-500 rounded-[2rem] blur-xl opacity-20"></div>
                         <div className="relative bg-[#111] border border-white/10 rounded-[2rem] p-6 overflow-hidden">
 
                             <div className="relative z-10">
@@ -673,13 +673,13 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
                 ) : (
                     /* REST DAY CARD - Minimalist Design */
                     <div className="col-span-2 relative group mt-2">
-                        <div className="absolute inset-0 bg-gradient-to-r from-emerald-600 to-teal-600 rounded-[2rem] blur-xl opacity-15"></div>
+                        <div className="absolute inset-0 bg-gradient-to-r from-green-600 to-teal-600 rounded-[2rem] blur-xl opacity-15"></div>
                         <div className="relative bg-[#111] border border-white/10 rounded-[2rem] p-5 overflow-hidden">
 
                             {/* Header */}
                             <div className="flex items-center gap-3 mb-4">
-                                <div className="w-10 h-10 rounded-xl bg-emerald-500/15 flex items-center justify-center">
-                                    <Moon size={18} className="text-emerald-400" />
+                                <div className="w-10 h-10 rounded-xl bg-green-500/15 flex items-center justify-center">
+                                    <Moon size={18} className="text-green-400" />
                                 </div>
                                 <div>
                                     <h2 className="text-xl font-bold text-white">День восстановления</h2>
@@ -751,7 +751,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
     };
 
     return (
-        <div className="min-h-screen pb-24 relative overflow-hidden">
+        <div className="min-h-screen pb-32 relative overflow-hidden">
             {/* Shield Notification */}
             {shieldNotification && (
                 <div className="fixed top-4 left-4 right-4 z-50 animate-slide-down">
@@ -791,7 +791,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
             </header>
 
             {/* Main Content */}
-            <main className="px-6 py-6 pb-24">
+            <main className="px-6 py-6 pb-32">
                 {renderContent()}
 
                 {/* Chat Input Bar - show only on workout day or after completing workout (not on rest day - it's embedded there) */}

@@ -87,7 +87,7 @@ const RestTimer: React.FC<RestTimerProps> = ({ initialSeconds, isOpen, onClose }
                 <div className="flex items-center gap-2">
                      <button 
                         onClick={toggleTimer}
-                        className={`w-10 h-10 rounded-full flex items-center justify-center ${isActive ? 'bg-yellow-500 text-black' : 'bg-emerald-500 text-black'} transition`}
+                        className={`w-10 h-10 rounded-full flex items-center justify-center ${isActive ? 'bg-yellow-500 text-black' : 'bg-green-500 text-black'} transition`}
                     >
                         {isActive ? <Pause size={16} fill="currentColor" /> : <Play size={16} fill="currentColor" />}
                     </button>

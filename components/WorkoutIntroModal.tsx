@@ -108,7 +108,7 @@ const WorkoutIntroModal: React.FC<WorkoutIntroModalProps> = ({
 
                 {/* Goal tip */}
                 <div className="flex items-center gap-3 bg-neutral-900/50 border border-white/5 rounded-xl p-4 max-w-sm">
-                    <Target size={20} className="text-emerald-400 flex-shrink-0" />
+                    <Target size={20} className="text-green-400 flex-shrink-0" />
                     <div className="text-left">
                         <p className="text-xs text-gray-500 font-bold uppercase mb-1">Твоя цель: {profile.goals?.primary}</p>
                         <p className="text-gray-300 text-sm">{getGoalTip()}</p>

@@ -71,7 +71,7 @@ const FirstWorkoutPaywall: React.FC<FirstWorkoutPaywallProps> = ({
 
                 {/* Header */}
                 <div className="pt-8 pb-6 px-6 text-center">
-                    <div className="w-20 h-20 mx-auto mb-4 bg-gradient-to-br from-green-500/20 to-emerald-500/20 rounded-full flex items-center justify-center border border-green-500/30 animate-bounce-slow">
+                    <div className="w-20 h-20 mx-auto mb-4 bg-gradient-to-br from-green-500/20 to-green-400/20 rounded-full flex items-center justify-center border border-green-500/30 animate-bounce-slow">
                         <Trophy size={40} className="text-green-400" />
                     </div>
 

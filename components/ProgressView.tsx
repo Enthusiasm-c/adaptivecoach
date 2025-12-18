@@ -750,7 +750,7 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
                 <div className="bg-neutral-900 border border-white/5 rounded-3xl p-5 shadow-lg">
                     <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center gap-2 text-gray-300 font-bold text-sm">
-                            <Activity size={16} className="text-emerald-400" />
+                            <Activity size={16} className="text-green-400" />
                             Объем за неделю
                             <button
                                 onClick={() => setShowVolumeInfo(true)}
@@ -1012,7 +1012,7 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
 
             {/* Workout Preview Modal (for planned days) */}
             {workoutToPreview && (
-                <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+                <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4 pb-28">
                     <div className="bg-gray-800 rounded-2xl shadow-lg p-6 w-full max-w-md space-y-4 text-white animate-fade-in-up flex flex-col max-h-[90vh]">
                         <div className="flex justify-between items-center">
                             <div>
@@ -1086,7 +1086,7 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
                 }, 0);
 
                 return (
-                    <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+                    <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4 pb-28">
                         <div className="bg-gray-800 rounded-2xl shadow-lg p-6 w-full max-w-md space-y-4 text-white animate-fade-in-up flex flex-col max-h-[90vh]">
                             <div className="flex justify-between items-center">
                                 <div>
@@ -1202,11 +1202,11 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
 
             {/* Volume Info Modal */}
             {showVolumeInfo && (
-                <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+                <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4 pb-28">
                     <div className="bg-gray-800 rounded-2xl shadow-lg w-full max-w-md overflow-hidden animate-fade-in-up">
                         <div className="p-4 border-b border-neutral-700 flex justify-between items-center">
                             <div className="flex items-center gap-2">
-                                <Activity size={20} className="text-emerald-400" />
+                                <Activity size={20} className="text-green-400" />
                                 <h2 className="text-lg font-bold text-white">Тренировочный объём</h2>
                             </div>
                             <button
@@ -1222,7 +1222,7 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
                                 <h3 className="text-sm font-medium text-white mb-2">Что это?</h3>
                                 <p className="text-gray-300 text-sm">
                                     Тренировочный объём — это общая нагрузка за тренировку:<br/>
-                                    <span className="text-emerald-400 font-medium">Вес × Подходы × Повторения</span>
+                                    <span className="text-green-400 font-medium">Вес × Подходы × Повторения</span>
                                 </p>
                             </div>
 
@@ -1244,11 +1244,11 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
                                 </ul>
                             </div>
 
-                            <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-3">
+                            <div className="bg-green-500/10 border border-green-500/20 rounded-xl p-3">
                                 <div className="flex items-start gap-2">
                                     <span className="text-lg">💡</span>
                                     <p className="text-sm text-gray-300">
-                                        Стремись к <strong className="text-emerald-400">постепенному росту</strong> объёма на 5-10% в неделю. Резкие скачки могут привести к перетренированности.
+                                        Стремись к <strong className="text-green-400">постепенному росту</strong> объёма на 5-10% в неделю. Резкие скачки могут привести к перетренированности.
                                     </p>
                                 </div>
                             </div>

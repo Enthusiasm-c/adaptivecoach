@@ -119,7 +119,7 @@ const VolumeProgressBar: React.FC<VolumeProgressBarProps> = ({ progress }) => {
     ? 'bg-amber-500'
     : isUnder
     ? 'bg-yellow-500'
-    : 'bg-emerald-500';
+    : 'bg-green-500';
 
   return (
     <div className="flex items-center gap-2">

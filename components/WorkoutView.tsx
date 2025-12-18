@@ -815,7 +815,7 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
               <div className="space-y-3">
                 {currentExercise.completedSets.map((set, setIndex) => (
                   <div key={setIndex} className={`flex items-center gap-2 p-3 rounded-xl transition-all ${set.isCompleted
-                    ? 'bg-emerald-500/10 border border-emerald-500/20'
+                    ? 'bg-green-500/10 border border-green-500/20'
                     : 'bg-neutral-900/50 border border-white/5'
                     }`}>
                     <div className="w-6 text-center font-mono text-gray-500 text-sm">#{setIndex + 1}</div>
@@ -942,7 +942,7 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
                     <button
                       onClick={() => toggleSetComplete(currentExerciseIndex, setIndex)}
                       className={`w-10 h-10 rounded-lg flex items-center justify-center transition-all active:scale-95 ${set.isCompleted
-                        ? 'bg-emerald-500 text-white shadow-[0_0_15px_rgba(16,185,129,0.3)]'
+                        ? 'bg-green-500 text-white shadow-[0_0_15px_rgba(34,197,94,0.3)]'
                         : 'bg-neutral-800 text-gray-400 hover:bg-neutral-700'
                         }`}
                     >
@@ -975,7 +975,7 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
           </button>
 
           {canFinish ? (
-            <button onClick={finishWorkout} className="flex-grow py-4 bg-emerald-500 text-white rounded-2xl font-bold hover:bg-emerald-400 transition shadow-[0_0_20px_rgba(16,185,129,0.4)] text-lg">
+            <button onClick={finishWorkout} className="flex-grow py-4 bg-green-500 text-white rounded-2xl font-bold hover:bg-green-400 transition shadow-[0_0_20px_rgba(34,197,94,0.4)] text-lg">
               Закончить
             </button>
           ) : (
@@ -1052,7 +1052,7 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
 
       {/* RIR Info Modal */}
       {showRirInfo && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" onClick={() => setShowRirInfo(false)}>
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4 pb-28" onClick={() => setShowRirInfo(false)}>
           <div className="bg-neutral-900 rounded-2xl p-6 max-w-sm w-full border border-white/10 space-y-4" onClick={e => e.stopPropagation()}>
             <div className="flex justify-between items-center">
               <h3 className="text-lg font-bold text-white">Что такое RIR?</h3>
@@ -1078,8 +1078,8 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
                 <span className="text-yellow-500 font-bold w-8">2</span>
                 <span className="text-gray-300">Мог бы сделать ещё 2 повтора</span>
               </div>
-              <div className="flex items-center gap-3 bg-emerald-500/10 p-3 rounded-xl">
-                <span className="text-emerald-500 font-bold w-8">3+</span>
+              <div className="flex items-center gap-3 bg-green-500/10 p-3 rounded-xl">
+                <span className="text-green-500 font-bold w-8">3+</span>
                 <span className="text-gray-300">Легко — мог бы сделать 3+ повтора</span>
               </div>
             </div>

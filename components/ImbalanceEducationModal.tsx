@@ -25,7 +25,7 @@ const ImbalanceEducationModal: React.FC<ImbalanceEducationModalProps> = ({
   const content = getEducationalContent(imbalance.type);
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4 pb-28">
       <div className="bg-gray-800 rounded-2xl shadow-lg w-full max-w-md max-h-[90vh] overflow-hidden flex flex-col animate-fade-in-up">
         {/* Header */}
         <div className="p-4 border-b border-neutral-700 flex justify-between items-center">
@@ -61,14 +61,14 @@ const ImbalanceEducationModal: React.FC<ImbalanceEducationModalProps> = ({
           </Section>
 
           {/* How to fix */}
-          <Section title="Как исправить?" icon={<Target size={14} className="text-emerald-400" />}>
+          <Section title="Как исправить?" icon={<Target size={14} className="text-green-400" />}>
             <p className="text-gray-300 text-sm mb-2">{content.howToFix}</p>
             {content.exercises.length > 0 && (
               <div className="flex flex-wrap gap-2 mt-2">
                 {content.exercises.map((ex, i) => (
                   <span
                     key={i}
-                    className="px-2 py-1 rounded-full text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
+                    className="px-2 py-1 rounded-full text-xs bg-green-500/20 text-green-300 border border-green-500/30"
                   >
                     {ex}
                   </span>

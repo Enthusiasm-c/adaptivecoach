@@ -91,7 +91,7 @@ const ReadinessModal: React.FC<ReadinessModalProps> = ({ onConfirm, onCancel }) 
 
         <div className="space-y-8">
             {renderQuestionBlock("Как ты спал?", <Battery size={18}/>, sleep, setSleep, 'sleep', "text-indigo-400")}
-            {renderQuestionBlock("Как питание?", <Utensils size={18}/>, food, setFood, 'food', "text-emerald-400")}
+            {renderQuestionBlock("Как питание?", <Utensils size={18}/>, food, setFood, 'food', "text-green-400")}
             {renderQuestionBlock("Уровень стресса?", <Brain size={18}/>, stress, setStress, 'stress', "text-violet-400")}
             {renderQuestionBlock("Болят мышцы?", <Activity size={18}/>, soreness, setSoreness, 'soreness', "text-rose-400")}
         </div>
