@@ -53,6 +53,10 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
   // RIR Info Modal
   const [showRirInfo, setShowRirInfo] = useState(false);
 
+  // Track which inputs are being edited (to allow empty values during editing)
+  const [editingInput, setEditingInput] = useState<{ exIndex: number; setIndex: number; field: 'weight' | 'reps' } | null>(null);
+  const [editingValue, setEditingValue] = useState<string>('');
+
   // Bug fix: track attempted finish to highlight incomplete fields
   const [attemptedFinish, setAttemptedFinish] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -826,9 +830,25 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
                           type="text"
                           inputMode="decimal"
                           pattern="[0-9]*[.,]?[0-9]*"
-                          value={set.weight ?? currentExercise.weight ?? ''}
+                          value={
+                            editingInput?.exIndex === currentExerciseIndex &&
+                            editingInput?.setIndex === setIndex &&
+                            editingInput?.field === 'weight'
+                              ? editingValue
+                              : (set.weight ?? currentExercise.weight ?? '')
+                          }
                           onChange={(e) => {
                             const value = e.target.value.replace(',', '.');
+                            setEditingValue(value);
+                          }}
+                          onFocus={(e) => {
+                            const currentVal = set.weight ?? currentExercise.weight ?? '';
+                            setEditingInput({ exIndex: currentExerciseIndex, setIndex, field: 'weight' });
+                            setEditingValue(String(currentVal));
+                            e.target.select();
+                          }}
+                          onBlur={() => {
+                            const value = editingValue;
                             if (value === '' || value === '.') {
                               handleValueChange(currentExerciseIndex, setIndex, 'weight', NaN);
                             } else {
@@ -837,8 +857,9 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
                                 handleValueChange(currentExerciseIndex, setIndex, 'weight', numValue);
                               }
                             }
+                            setEditingInput(null);
+                            setEditingValue('');
                           }}
-                          onFocus={(e) => e.target.select()}
                           className="w-full h-8 bg-transparent text-center font-mono font-bold text-white text-sm outline-none"
                           placeholder="—"
                         />
@@ -857,9 +878,25 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
                           type="text"
                           inputMode="numeric"
                           pattern="[0-9]*"
-                          value={set.reps ?? (parseInt(String(currentExercise.reps).split('-')[0].replace(/[^\d]/g, '')) || '')}
+                          value={
+                            editingInput?.exIndex === currentExerciseIndex &&
+                            editingInput?.setIndex === setIndex &&
+                            editingInput?.field === 'reps'
+                              ? editingValue
+                              : (set.reps ?? (parseInt(String(currentExercise.reps).split('-')[0].replace(/[^\d]/g, '')) || ''))
+                          }
                           onChange={(e) => {
                             const value = e.target.value;
+                            setEditingValue(value);
+                          }}
+                          onFocus={(e) => {
+                            const currentVal = set.reps ?? (parseInt(String(currentExercise.reps).split('-')[0].replace(/[^\d]/g, '')) || '');
+                            setEditingInput({ exIndex: currentExerciseIndex, setIndex, field: 'reps' });
+                            setEditingValue(String(currentVal));
+                            e.target.select();
+                          }}
+                          onBlur={() => {
+                            const value = editingValue;
                             if (value === '') {
                               handleValueChange(currentExerciseIndex, setIndex, 'reps', NaN);
                             } else {
@@ -868,28 +905,39 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
                                 handleValueChange(currentExerciseIndex, setIndex, 'reps', numValue);
                               }
                             }
+                            setEditingInput(null);
+                            setEditingValue('');
                           }}
-                          onFocus={(e) => e.target.select()}
                           className="w-full h-8 bg-transparent text-center font-mono font-bold text-white text-sm outline-none"
                           placeholder="—"
                         />
                         <span className="text-[9px] text-gray-500">повт</span>
                       </div>
 
-                    {/* RIR Selection - Compact dropdown */}
-                    <select
-                      value={set.rir ?? ''}
-                      onChange={(e) => handleValueChange(currentExerciseIndex, setIndex, 'rir',
-                        e.target.value === '' ? 0 : Number(e.target.value))}
-                      className="w-14 h-10 rounded-lg bg-neutral-800 text-white text-xs text-center border border-white/10 appearance-none cursor-pointer px-1"
-                      style={{ backgroundImage: 'none' }}
-                    >
-                      <option value="">RIR</option>
-                      <option value="0">0</option>
-                      <option value="1">1</option>
-                      <option value="2">2</option>
-                      <option value="3">3+</option>
-                    </select>
+                    {/* RIR Selection with Info button */}
+                    <div className="flex items-center gap-1">
+                      <select
+                        value={set.rir ?? ''}
+                        onChange={(e) => handleValueChange(currentExerciseIndex, setIndex, 'rir',
+                          e.target.value === '' ? 0 : Number(e.target.value))}
+                        className="w-14 h-10 rounded-lg bg-neutral-800 text-white text-xs text-center border border-white/10 appearance-none cursor-pointer px-1"
+                        style={{ backgroundImage: 'none' }}
+                      >
+                        <option value="">RIR</option>
+                        <option value="0">0</option>
+                        <option value="1">1</option>
+                        <option value="2">2</option>
+                        <option value="3">3+</option>
+                      </select>
+                      {setIndex === 0 && (
+                        <button
+                          onClick={() => setShowRirInfo(true)}
+                          className="w-6 h-6 flex items-center justify-center text-gray-500 hover:text-indigo-400"
+                        >
+                          <Info size={14} />
+                        </button>
+                      )}
+                    </div>
 
                     <button
                       onClick={() => toggleSetComplete(currentExerciseIndex, setIndex)}
