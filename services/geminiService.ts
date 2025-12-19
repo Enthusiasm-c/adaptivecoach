@@ -35,7 +35,6 @@ const FITCUBE_EQUIPMENT = `
 const PROXY_URL = import.meta.env.VITE_PROXY_URL || 'https://api.sensei.training';
 const CLIENT_API_KEY = import.meta.env.VITE_CLIENT_API_KEY || '9a361ff33289e0723fad20cbf91b263a6cea0d7cf29c44fe7bbe59dd91d2a50d';
 // Gemini 3 Flash - released December 17, 2025
-// Note: If proxy doesn't support Gemini 3 yet, fallback to 'gemini-2.5-flash'
 const GEMINI_MODEL = 'gemini-3-flash-preview';
 
 // Export for diagnostics
@@ -80,21 +79,39 @@ async function callGeminiProxy(endpoint: string, body: GenerateContentRequest): 
         normalizedBody.contents = [{ role: 'user', parts: [{ text: body.contents }] }];
     }
 
-    const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-API-Key': CLIENT_API_KEY
-        },
-        body: JSON.stringify(normalizedBody)
-    });
+    try {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-API-Key': CLIENT_API_KEY
+            },
+            body: JSON.stringify(normalizedBody)
+        });
 
-    if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Proxy error ${response.status}: ${errorText}`);
+        if (!response.ok) {
+            const errorText = await response.text();
+            // Parse error for better diagnostics
+            if (response.status === 404) {
+                throw new Error(`MODEL_NOT_FOUND: Model ${GEMINI_MODEL} may not be available`);
+            }
+            if (response.status === 401 || response.status === 403) {
+                throw new Error(`AUTH_ERROR: API key invalid or expired`);
+            }
+            if (response.status >= 500) {
+                throw new Error(`SERVER_ERROR: Proxy server error (${response.status})`);
+            }
+            throw new Error(`PROXY_ERROR: ${response.status} - ${errorText}`);
+        }
+
+        return response.json();
+    } catch (error) {
+        // Network errors (no connection, timeout, etc.)
+        if (error instanceof TypeError && error.message.includes('fetch')) {
+            throw new Error(`NETWORK_ERROR: Cannot connect to server. Check internet connection.`);
+        }
+        throw error;
     }
-
-    return response.json();
 }
 
 /**

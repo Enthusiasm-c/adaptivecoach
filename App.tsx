@@ -398,26 +398,24 @@ const App: React.FC = () => {
       }
     } catch (e: any) {
       console.error(e);
-      const errorMsg = e.toString().toLowerCase();
-      
-      // Check specifically for location/region errors common with Google AI
-      const isLocationError = errorMsg.includes('location') || errorMsg.includes('region') || errorMsg.includes('supported');
-      
-      if (isLocationError) {
-          setError('Доступ ограничен регионом');
-          setErrorDetails('Google Gemini не работает в вашей стране (РФ). Пожалуйста, включите VPN (США/Европа) и попробуйте снова.');
-      } else if (errorMsg.includes('400') || errorMsg.includes('api key') || e.message?.includes('API key')) {
-          const key = currentApiKey;
-          const isKeyMissing = !key || key.includes('UNUSED');
+      const errorMsg = e.message || e.toString();
 
-          if (isKeyMissing) {
-             setError('API Ключ не найден');
-             setErrorDetails(`Платформа не видит ключ (VITE_API_KEY).`);
-          } else {
-             // General API error, likely VPN or Key restriction
-             setError('Ошибка соединения с AI');
-             setErrorDetails(`Не удается связаться с Google. Если вы в РФ - включите VPN.`);
-          }
+      // Parse structured errors from callGeminiProxy
+      if (errorMsg.includes('MODEL_NOT_FOUND')) {
+          setError('AI модель недоступна');
+          setErrorDetails('Модель временно недоступна. Попробуйте позже.');
+      } else if (errorMsg.includes('NETWORK_ERROR') || errorMsg.includes('Failed to fetch')) {
+          setError('Нет соединения');
+          setErrorDetails('Проверьте подключение к интернету.');
+      } else if (errorMsg.includes('AUTH_ERROR')) {
+          setError('Ошибка авторизации');
+          setErrorDetails('Перезапустите приложение или обратитесь в поддержку.');
+      } else if (errorMsg.includes('SERVER_ERROR')) {
+          setError('Сервер недоступен');
+          setErrorDetails('Сервер временно недоступен. Повторите через минуту.');
+      } else if (errorMsg.toLowerCase().includes('location') || errorMsg.toLowerCase().includes('region')) {
+          setError('Ограничение региона');
+          setErrorDetails('AI сервис недоступен в вашем регионе. Попробуйте VPN.');
       } else {
           setError('Ошибка генерации');
           setErrorDetails('Проверьте интернет или повторите позже.');
@@ -635,7 +633,20 @@ const App: React.FC = () => {
 
     } catch (e) {
       console.error(e);
-      setChatMessages([...newMessages, { role: 'assistant', text: "Ошибка сети. Проверь VPN (если ты в РФ) или соединение." }]);
+      const errorMessage = e instanceof Error ? e.message : String(e);
+      let userFriendlyMessage = "Произошла ошибка. Попробуй позже.";
+
+      if (errorMessage.includes('MODEL_NOT_FOUND')) {
+        userFriendlyMessage = "AI модель временно недоступна. Попробуй через несколько минут.";
+      } else if (errorMessage.includes('NETWORK_ERROR') || errorMessage.includes('Failed to fetch')) {
+        userFriendlyMessage = "Нет соединения с сервером. Проверь интернет.";
+      } else if (errorMessage.includes('AUTH_ERROR')) {
+        userFriendlyMessage = "Ошибка авторизации. Перезапусти приложение.";
+      } else if (errorMessage.includes('SERVER_ERROR')) {
+        userFriendlyMessage = "Сервер временно недоступен. Попробуй через минуту.";
+      }
+
+      setChatMessages([...newMessages, { role: 'assistant', text: userFriendlyMessage }]);
     } finally {
       setIsChatbotLoading(false);
     }
