@@ -36,7 +36,8 @@ const PROXY_URL = import.meta.env.VITE_PROXY_URL || 'https://api.sensei.training
 const CLIENT_API_KEY = import.meta.env.VITE_CLIENT_API_KEY || '9a361ff33289e0723fad20cbf91b263a6cea0d7cf29c44fe7bbe59dd91d2a50d';
 // Gemini 3 Flash - released December 17, 2025
 // Note: If proxy doesn't support Gemini 3 yet, fallback to 'gemini-2.5-flash'
-const GEMINI_MODEL = 'gemini-3-flash-preview';
+// gemini-2.0-flash is faster (2-5 sec) vs gemini-3-flash-preview (15-25 sec)
+const GEMINI_MODEL = 'gemini-2.0-flash';
 
 // Export for diagnostics
 export const currentApiKey = CLIENT_API_KEY;
