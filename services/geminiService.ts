@@ -63,7 +63,11 @@ interface GenerateContentRequest {
 interface GeminiResponse {
     candidates?: {
         content?: {
-            parts?: { text?: string; functionCall?: { name: string; args: any } }[];
+            parts?: {
+                text?: string;
+                functionCall?: { name: string; args: any };
+                thoughtSignature?: string;
+            }[];
         };
     }[];
 }
@@ -105,12 +109,15 @@ function extractText(response: GeminiResponse): string {
 }
 
 /**
- * Extract function call from Gemini response
+ * Extract function call from Gemini response (with thoughtSignature for Gemini 3)
  */
-function extractFunctionCall(response: GeminiResponse): { name: string; args: any } | null {
+function extractFunctionCall(response: GeminiResponse): { name: string; args: any; thoughtSignature?: string } | null {
     const part = response.candidates?.[0]?.content?.parts?.[0];
     if (part?.functionCall) {
-        return part.functionCall;
+        return {
+            ...part.functionCall,
+            thoughtSignature: part.thoughtSignature
+        };
     }
     return null;
 }
@@ -1153,11 +1160,18 @@ export const getChatbotResponse = async (history: ChatMessage[], currentProgram:
         const updatedProgram = await modifyPlanWithInstructions(currentProgram, args.reason, args.instructions);
 
         // Return a response indicating success + the new object
-        // Send tool result back for acknowledgment
+        // Send tool result back for acknowledgment (include thoughtSignature for Gemini 3)
+        const modelPart: any = {
+            functionCall: { name: functionCall.name, args: functionCall.args }
+        };
+        if (functionCall.thoughtSignature) {
+            modelPart.thoughtSignature = functionCall.thoughtSignature;
+        }
+
         const toolResultResponse = await callGeminiProxy(`/v1beta/models/${GEMINI_MODEL}:generateContent`, {
             contents: [
                 ...contents,
-                { role: 'model', parts: [{ functionCall: functionCall }] },
+                { role: 'model', parts: [modelPart] },
                 { role: 'user', parts: [{ functionResponse: { name: 'update_workout_plan', response: { result: 'Program updated successfully.' } } }] }
             ],
             systemInstruction: { parts: [{ text: systemInstruction }] },
