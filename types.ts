@@ -198,6 +198,7 @@ export interface ActiveWorkoutState {
   completedExercises: CompletedExercise[];
   startTime: number;
   readiness: ReadinessData | null;
+  lastActivityTime: number; // Timestamp of last user activity for timeout detection
 }
 
 export interface ChatMessage {

@@ -602,6 +602,42 @@ function detectNewPRs(currentLog: WorkoutLog, allLogs: WorkoutLog[]): { exercise
     return prs;
 }
 
+// Helper: detect exercises where user did fewer reps than target
+function detectIncompleteExercises(log: WorkoutLog): { exercise: string, targetReps: number, actualReps: number, deficit: number }[] {
+    const incomplete: { exercise: string, targetReps: number, actualReps: number, deficit: number }[] = [];
+
+    for (const ex of log.completedExercises) {
+        // Skip warmup exercises
+        if (ex.isWarmup) continue;
+
+        // Parse target reps from exercise (could be "8-12", "10", "45 секунд", etc.)
+        const repsStr = String(ex.reps || '0');
+        const targetReps = parseInt(repsStr.split('-')[0].replace(/[^\d]/g, '')) || 0;
+
+        // Skip if no clear target reps
+        if (targetReps === 0) continue;
+
+        // Check each set for significant under-performance
+        for (const set of ex.completedSets) {
+            if (set.reps < targetReps && set.reps > 0) {
+                const deficit = targetReps - set.reps;
+                // Report if deficit is >= 2 reps or >= 20% of target
+                if (deficit >= 2 || (deficit / targetReps) >= 0.2) {
+                    incomplete.push({
+                        exercise: ex.name,
+                        targetReps,
+                        actualReps: set.reps,
+                        deficit
+                    });
+                    break; // Only report once per exercise
+                }
+            }
+        }
+    }
+
+    return incomplete;
+}
+
 // Helper: compare two workouts by volume
 function compareWorkoutVolumes(prev: WorkoutLog, current: WorkoutLog): { diff: number, prevVolume: number, currentVolume: number } {
     const prevVolume = prev.completedExercises?.reduce((sum, ex) =>
@@ -637,6 +673,9 @@ function buildCoachFeedbackPrompt(profile: OnboardingProfile, log: WorkoutLog, a
     // Detect PRs
     const newPRs = detectNewPRs(log, allLogs);
 
+    // Detect incomplete exercises (user did fewer reps than target)
+    const incompleteExercises = detectIncompleteExercises(log);
+
     // Volume comparison with previous same workout
     let volumeComparison = '';
     if (previousSameWorkout) {
@@ -658,6 +697,12 @@ ${newPRs.map(pr => `- ${pr.exercise}: ${pr.weight}кг (было ${pr.previousBe
 - ${volumeComparison}
 ` : '(Это первая тренировка такого типа)';
 
+    // Build incomplete exercises section
+    const incompleteSection = incompleteExercises.length > 0 ? `
+⚠️ НЕ ДОРАБОТАЛ ПОВТОРЕНИЯ:
+${incompleteExercises.map(ie => `- ${ie.exercise}: сделал ${ie.actualReps} из ${ie.targetReps} (недобрал ${ie.deficit})`).join('\n')}
+` : '';
+
     return `
 Ты "ИИ тренер" Sensei. Пользователь закончил тренировку. Дай персональный комментарий (3-5 предложений).
 
@@ -667,8 +712,7 @@ ${newPRs.map(pr => `- ${pr.exercise}: ${pr.weight}кг (было ${pr.previousBe
 - Стрик: ${currentStreak} ${currentStreak === 1 ? 'день' : currentStreak < 5 ? 'дня' : 'дней'} подряд
 - Уровень: ${userLevel.level} (${userLevel.title})
 - Объём за неделю: ${Math.round(weekComparison.currentWeekVolume / 1000)}т ${weekComparison.changePercent !== 0 ? `(${weekComparison.changePercent > 0 ? '+' : ''}${weekComparison.changePercent}% к прошлой неделе)` : ''}
-${prsSection}
-${comparisonSection}
+${prsSection}${incompleteSection}${comparisonSection}
 ═══════════════════════════════════════
 
 ТЕКУЩАЯ ТРЕНИРОВКА:
@@ -687,7 +731,8 @@ ${exerciseSummary}
 2. Если стрик — упомяни количество ТРЕНИРОВОК подряд (не дней!), это важно для мотивации.
 3. Сравни с прошлой такой же тренировкой (прогресс/регресс по объёму).
 4. Если была боль — посчитай конкретное снижение веса (-15%) и напиши РЕАЛЬНЫЕ ЦИФРЫ. Пример: "Снизим вес жима с 80кг до 68кг (-15%)". НЕ используй переменные X, Y, Z — только конкретные числа из контекста!
-5. Используй КОНКРЕТНЫЕ цифры из контекста — не общие фразы!
+5. Если НЕ ДОРАБОТАЛ ПОВТОРЕНИЯ — отметь это! Пользователь перегрузился. Пример: "В жиме не хватило 3 повтора — снизь вес на 5%". Конкретная рекомендация!
+6. Используй КОНКРЕТНЫЕ цифры из контекста — не общие фразы!
 
 СТИЛЬ:
 - 3-5 предложений максимум

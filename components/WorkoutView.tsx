@@ -18,16 +18,17 @@ interface WorkoutViewProps {
   profile: OnboardingProfile;
   readiness: ReadinessData | null;
   logs: WorkoutLog[];
-  initialState?: { completedExercises: CompletedExercise[], startTime: number };
+  initialState?: { completedExercises: CompletedExercise[], startTime: number, lastActivityTime?: number };
   onFinish: (log: WorkoutLog) => void;
   onBack: () => void;
-  onProgress?: (state: { completedExercises: CompletedExercise[], startTime: number }) => void;
+  onProgress?: (state: { completedExercises: CompletedExercise[], startTime: number, lastActivityTime: number }) => void;
 }
 
 const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, logs, initialState, onFinish, onBack, onProgress }) => {
   const [currentSession, setCurrentSession] = useState<WorkoutSession>(session);
   const [completedExercises, setCompletedExercises] = useState<CompletedExercise[]>([]);
   const startTimeRef = useRef<number>(initialState?.startTime || Date.now());
+  const lastActivityRef = useRef<number>(initialState?.lastActivityTime || Date.now());
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
@@ -158,7 +159,8 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
     if (completedExercises.length > 0 && onProgress) {
       onProgress({
         completedExercises,
-        startTime: startTimeRef.current
+        startTime: startTimeRef.current,
+        lastActivityTime: lastActivityRef.current
       });
     }
   }, [completedExercises, onProgress]);
@@ -216,6 +218,8 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
   }, [currentExerciseIndex, completedExercises.length]);
 
   const handleValueChange = (exIndex: number, setIndex: number, field: 'reps' | 'weight' | 'rir', value: number) => {
+    // Update activity timestamp for timeout detection
+    lastActivityRef.current = Date.now();
     const newExercises = [...completedExercises];
     if (isNaN(value)) {
       (newExercises[exIndex].completedSets[setIndex] as any)[field] = undefined;
@@ -249,6 +253,8 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
   };
 
   const toggleSetComplete = (exIndex: number, setIndex: number) => {
+    // Update activity timestamp for timeout detection
+    lastActivityRef.current = Date.now();
     const newExercises = [...completedExercises];
     const set = newExercises[exIndex].completedSets[setIndex];
     set.isCompleted = !set.isCompleted;
@@ -722,7 +728,11 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
                   </div>
                   <div>
                     <h3 className="font-bold text-lg text-white leading-tight">{currentExercise.name}</h3>
-                    <p className="text-xs text-gray-400 mt-0.5">{currentExercise.sets} подхода × {formatReps(currentExercise.reps)}</p>
+                    {!isCardioExercise(currentExercise) ? (
+                      <p className="text-xs text-gray-400 mt-0.5">{currentExercise.sets} подхода × {formatReps(currentExercise.reps)}</p>
+                    ) : (
+                      <p className="text-xs text-gray-400 mt-0.5">{formatReps(currentExercise.reps)}</p>
+                    )}
                   </div>
                 </div>
                 <button
@@ -914,30 +924,34 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
                         <span className="text-[9px] text-gray-500">повт</span>
                       </div>
 
-                    {/* RIR Selection with Info button */}
-                    <div className="flex items-center gap-1">
-                      <select
-                        value={set.rir ?? ''}
-                        onChange={(e) => handleValueChange(currentExerciseIndex, setIndex, 'rir',
-                          e.target.value === '' ? 0 : Number(e.target.value))}
-                        className="w-14 h-10 rounded-lg bg-neutral-800 text-white text-xs text-center border border-white/10 appearance-none cursor-pointer px-1"
-                        style={{ backgroundImage: 'none' }}
-                      >
-                        <option value="">RIR</option>
-                        <option value="0">0</option>
-                        <option value="1">1</option>
-                        <option value="2">2</option>
-                        <option value="3">3+</option>
-                      </select>
-                      {setIndex === 0 && (
-                        <button
-                          onClick={() => setShowRirInfo(true)}
-                          className="w-6 h-6 flex items-center justify-center text-gray-500 hover:text-indigo-400"
+                    {/* RIR Selection with Info button - hidden for warmup and cardio */}
+                    {!currentExercise.isWarmup && !isCardioExercise(currentExercise) && (
+                      <div className="flex items-center gap-1">
+                        <select
+                          value={set.rir ?? ''}
+                          onChange={(e) => handleValueChange(currentExerciseIndex, setIndex, 'rir',
+                            e.target.value === '' ? 0 : Number(e.target.value))}
+                          className="w-14 h-10 rounded-lg bg-neutral-800 text-white text-xs text-center border border-white/10 appearance-none cursor-pointer px-1"
+                          style={{ backgroundImage: 'none' }}
                         >
-                          <Info size={14} />
-                        </button>
-                      )}
-                    </div>
+                          <option value="">RIR</option>
+                          <option value="0">0</option>
+                          <option value="1">1</option>
+                          <option value="2">2</option>
+                          <option value="3">3+</option>
+                        </select>
+                        {setIndex === 0 ? (
+                          <button
+                            onClick={() => setShowRirInfo(true)}
+                            className="w-6 h-6 flex items-center justify-center text-gray-500 hover:text-indigo-400"
+                          >
+                            <Info size={14} />
+                          </button>
+                        ) : (
+                          <div className="w-6 h-6" /> /* Placeholder for alignment */
+                        )}
+                      </div>
+                    )}
 
                     <button
                       onClick={() => toggleSetComplete(currentExerciseIndex, setIndex)}

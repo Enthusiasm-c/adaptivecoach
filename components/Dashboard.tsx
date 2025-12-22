@@ -47,6 +47,10 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
     const [pendingSessionName, setPendingSessionName] = useState<string | null>(null);
     const [currentReadiness, setCurrentReadiness] = useState<ReadinessData | null>(null);
     const [restoredState, setRestoredState] = useState<ActiveWorkoutState | null>(null);
+    const [staleWorkoutState, setStaleWorkoutState] = useState<ActiveWorkoutState | null>(null);
+
+    // Workout timeout constant (20 minutes)
+    const STALE_TIMEOUT_MS = 20 * 60 * 1000;
 
     // Monetization state
     const [showHardPaywall, setShowHardPaywall] = useState(false);
@@ -123,9 +127,18 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
                         localStorage.removeItem('activeWorkoutState');
                         console.log('Cleared old pre-filled workout state (migration)');
                     } else {
-                        setRestoredState(parsedState);
-                        setActiveWorkout(parsedState.session.name);
-                        setCurrentReadiness(parsedState.readiness);
+                        // Check for stale workout (no activity for 20+ minutes)
+                        const lastActivity = parsedState.lastActivityTime || parsedState.startTime;
+                        const isStale = Date.now() - lastActivity > STALE_TIMEOUT_MS;
+
+                        if (isStale) {
+                            // Show dialog to continue or close
+                            setStaleWorkoutState(parsedState);
+                        } else {
+                            setRestoredState(parsedState);
+                            setActiveWorkout(parsedState.session.name);
+                            setCurrentReadiness(parsedState.readiness);
+                        }
                     }
                 } else {
                     localStorage.removeItem('activeWorkoutState');
@@ -295,14 +308,16 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
                     logs={logs}
                     initialState={restoredState && restoredState.session.name === workout.name ? {
                         completedExercises: restoredState.completedExercises,
-                        startTime: restoredState.startTime
+                        startTime: restoredState.startTime,
+                        lastActivityTime: restoredState.lastActivityTime
                     } : undefined}
                     onProgress={(state) => {
                         const activeState: ActiveWorkoutState = {
                             session: workout,
                             completedExercises: state.completedExercises,
                             startTime: state.startTime,
-                            readiness: currentReadiness
+                            readiness: currentReadiness,
+                            lastActivityTime: state.lastActivityTime
                         };
                         localStorage.setItem('activeWorkoutState', JSON.stringify(activeState));
                     }}
@@ -911,6 +926,63 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
                         }).catch(console.error);
                     }}
                 />
+            )}
+
+            {/* Stale Workout Dialog - shown when workout was inactive for 20+ min */}
+            {staleWorkoutState && (
+                <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 pb-28">
+                    <div className="bg-neutral-900 rounded-2xl p-6 max-w-sm w-full border border-white/10 space-y-4 animate-slide-up">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-amber-500/20 flex items-center justify-center">
+                                <AlertTriangle size={20} className="text-amber-400" />
+                            </div>
+                            <h3 className="text-lg font-bold text-white">Тренировка не завершена</h3>
+                        </div>
+
+                        <p className="text-gray-400 text-sm">
+                            Прошло более 20 минут с последней активности. Хочешь продолжить тренировку или начать заново?
+                        </p>
+
+                        <div className="bg-neutral-800/50 rounded-xl p-3 text-sm text-gray-500">
+                            <span className="text-gray-300 font-medium">{staleWorkoutState.session.name}</span>
+                            <br />
+                            Выполнено упражнений: {staleWorkoutState.completedExercises.filter(ex =>
+                                ex.completedSets.some(s => s.isCompleted)
+                            ).length} из {staleWorkoutState.completedExercises.length}
+                        </div>
+
+                        <div className="flex gap-3 pt-2">
+                            <button
+                                onClick={() => {
+                                    localStorage.removeItem('activeWorkoutState');
+                                    setStaleWorkoutState(null);
+                                    hapticFeedback.impactOccurred('light');
+                                }}
+                                className="flex-1 py-3 bg-neutral-800 text-gray-400 rounded-xl font-bold hover:bg-neutral-700 transition"
+                            >
+                                Закрыть
+                            </button>
+                            <button
+                                onClick={() => {
+                                    // Continue workout with updated lastActivityTime
+                                    const updatedState = {
+                                        ...staleWorkoutState,
+                                        lastActivityTime: Date.now()
+                                    };
+                                    localStorage.setItem('activeWorkoutState', JSON.stringify(updatedState));
+                                    setRestoredState(updatedState);
+                                    setActiveWorkout(staleWorkoutState.session.name);
+                                    setCurrentReadiness(staleWorkoutState.readiness);
+                                    setStaleWorkoutState(null);
+                                    hapticFeedback.notificationOccurred('success');
+                                }}
+                                className="flex-1 py-3 bg-indigo-500 text-white rounded-xl font-bold hover:bg-indigo-400 transition"
+                            >
+                                Продолжить
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
 
         </div>
