@@ -4,7 +4,7 @@ import { WorkoutLog, TrainingProgram, ReadinessData, WorkoutCompletion, Onboardi
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
     AreaChart, Area, Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
-    LineChart, Line, PieChart, Pie, Cell, Legend
+    LineChart, Line, PieChart, Pie, Cell, Legend, ReferenceLine
 } from 'recharts';
 import {
     calculateStreaks, calculateTotalVolume, calculateWeeklyVolume,
@@ -537,125 +537,58 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
             />
 
             {/* Pain Diary Section */}
-            {painLogs.length > 0 && (
-                <div className="bg-neutral-900 border border-white/5 rounded-3xl p-5 shadow-lg">
-                    <h3 className="font-bold text-white mb-4 flex items-center gap-2">
-                        <AlertTriangle size={18} className="text-red-400" />
-                        Дневник боли
+            {/* Body Status Monitor (Pain Diary Redesign) */}
+            <div className="bg-neutral-900 border border-white/5 rounded-3xl p-5 shadow-lg relative overflow-hidden">
+                <div className="flex items-center justify-between mb-4 relative z-10">
+                    <h3 className="font-display font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                        <Activity size={16} className={painLogs.length > 0 ? "text-orange-500" : "text-green-500"} />
+                        Статус тела
                     </h3>
-
-                    <div className="space-y-3">
-                        {painLogs.slice(0, 5).map((log, idx) => {
-                            // Get max weight for each exercise
-                            const exerciseWeights = log.completedExercises.slice(0, 3).map(ex => ({
-                                name: ex.name,
-                                maxWeight: ex.completedSets?.length > 0
-                                    ? Math.max(...ex.completedSets.map(s => s.weight || 0))
-                                    : 0
-                            })).filter(e => e.maxWeight > 0);
-
-                            // Extract pain location from details if location not specified
-                            const getPainLocation = () => {
-                                if (log.feedback?.pain?.location) return log.feedback.pain.location;
-                                const details = log.feedback?.pain?.details || '';
-                                // Try to extract body part from details
-                                const bodyParts = ['плечо', 'колено', 'спина', 'поясница', 'шея', 'локоть', 'запястье', 'бедро', 'голень', 'стопа', 'кисть', 'грудь', 'живот'];
-                                const found = bodyParts.find(part => details.toLowerCase().includes(part));
-                                if (found) return found.charAt(0).toUpperCase() + found.slice(1);
-                                return details.slice(0, 30) || 'Боль';
-                            };
-
-                            return (
-                                <div key={`${log.date}-${idx}`} className="bg-neutral-800 rounded-xl p-3">
-                                    <div className="flex justify-between text-sm mb-1">
-                                        <span className="text-red-400 font-medium">
-                                            {getPainLocation()}
-                                        </span>
-                                        <span className="text-gray-500">
-                                            {new Date(log.date).toLocaleDateString('ru-RU', {
-                                                day: 'numeric',
-                                                month: 'short'
-                                            })}
-                                        </span>
-                                    </div>
-                                    <p className="text-xs text-gray-400 mb-2">{log.sessionId}</p>
-                                    {log.feedback?.pain?.details && (
-                                        <p className="text-xs text-gray-500 mb-2 italic">
-                                            "{log.feedback.pain.details}"
-                                        </p>
-                                    )}
-                                    {/* Show exercises + weights from that workout */}
-                                    {exerciseWeights.length > 0 && (
-                                        <div className="flex flex-wrap gap-1">
-                                            {exerciseWeights.map(ex => (
-                                                <span key={ex.name} className="text-[10px] bg-neutral-700 px-2 py-0.5 rounded">
-                                                    {ex.name.length > 15 ? ex.name.slice(0, 15) + '...' : ex.name}: {ex.maxWeight}кг
-                                                </span>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                            );
-                        })}
+                    <div className={`px-3 py-1 rounded-full text-xs font-bold ${painLogs.length === 0 ? 'bg-green-500/20 text-green-400' : 'bg-orange-500/20 text-orange-400'}`}>
+                        {painLogs.length === 0 ? 'OPTIMIZED' : 'RECOVERY NEEDED'}
                     </div>
+                </div>
 
-                    {/* AI Pain Analysis */}
-                    {painAnalysisLoading && (
-                        <div className="mt-4 bg-red-500/10 border border-red-500/20 rounded-xl p-3">
-                            <p className="text-red-300 text-sm font-bold mb-2">Анализирую паттерны...</p>
-                            <div className="animate-pulse h-4 bg-red-500/20 rounded w-3/4"></div>
+                {painLogs.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-8 text-center">
+                        <div className="w-16 h-16 bg-green-500/10 rounded-full flex items-center justify-center mb-3">
+                            <Check size={32} className="text-green-500" />
                         </div>
-                    )}
-
-                    {painAnalysis && painAnalysis.zones.length > 0 && (
-                        <div className="mt-4 bg-red-500/10 border border-red-500/20 rounded-xl p-3 space-y-3">
-                            {/* Zones */}
-                            <div>
-                                <p className="text-red-300 text-sm font-bold mb-2">Проблемные зоны:</p>
-                                <div className="flex flex-wrap gap-2">
-                                    {painAnalysis.zones.map((zone, idx) => (
-                                        <span
-                                            key={idx}
-                                            className={`px-2 py-1 rounded-full text-xs font-medium ${zone.severity === 'high'
-                                                ? 'bg-red-600/30 text-red-200'
-                                                : zone.severity === 'medium'
-                                                    ? 'bg-orange-500/30 text-orange-200'
-                                                    : 'bg-yellow-500/30 text-yellow-200'
-                                                }`}
-                                        >
-                                            {zone.bodyPart}: {zone.count}×
-                                        </span>
-                                    ))}
-                                </div>
+                        <p className="text-gray-400 text-sm">Болей не зафиксировано.</p>
+                        <p className="text-gray-600 text-xs">Тренировочный процесс оптимален.</p>
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Status Visualization */}
+                        <div className="bg-neutral-800/50 rounded-2xl p-4 flex flex-col items-center justify-center relative">
+                            {/* Body Silhouette Placeholder / Status Ring */}
+                            <div className="relative w-24 h-24 flex items-center justify-center mb-2">
+                                <div className="absolute inset-0 border-4 border-orange-500/20 rounded-full animate-pulse"></div>
+                                <div className="absolute inset-2 border-4 border-orange-500/40 rounded-full"></div>
+                                <div className="text-2xl font-display font-black text-white">{painLogs.length}</div>
                             </div>
+                            <p className="text-xs text-orange-400 font-medium">Активных зон</p>
+                        </div>
 
-                            {/* Patterns */}
-                            {painAnalysis.patterns.length > 0 && (
-                                <div>
-                                    <p className="text-red-300 text-xs font-medium mb-1">Паттерны:</p>
-                                    <ul className="text-xs text-gray-400 space-y-1">
-                                        {painAnalysis.patterns.map((pattern, idx) => (
-                                            <li key={idx} className="flex items-start gap-1">
-                                                <span className="text-red-400">•</span>
-                                                {pattern}
-                                            </li>
-                                        ))}
-                                    </ul>
+                        {/* Active Zones List */}
+                        <div className="space-y-2">
+                            {Object.entries(painByLocation).slice(0, 3).map(([location, logs]) => (
+                                <div key={location} className="flex items-center justify-between bg-neutral-800 rounded-lg p-2 px-3">
+                                    <span className="text-sm text-gray-300">{location}</span>
+                                    <span className="text-xs font-bold text-orange-400">{(logs as any[]).length} записей</span>
                                 </div>
-                            )}
-
-                            {/* Recommendation */}
-                            {painAnalysis.recommendation && (
-                                <div className="pt-2 border-t border-red-500/20">
-                                    <p className="text-xs text-red-200 italic">
-                                        💡 {painAnalysis.recommendation}
+                            ))}
+                            {painAnalysis && (
+                                <div className="mt-2 p-2 bg-orange-500/10 border border-orange-500/10 rounded-lg">
+                                    <p className="text-[10px] text-orange-300 leading-tight">
+                                        AI: {painAnalysis.recommendation || "Рекомендуется снизить нагрузку на проблемные зоны."}
                                     </p>
                                 </div>
                             )}
                         </div>
-                    )}
-                </div>
-            )}
+                    </div>
+                )}
+            </div>
 
             {/* Enhanced Stats Grid */}
             <div className="grid grid-cols-2 gap-3">
@@ -705,14 +638,27 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
                     onUnlock={onOpenPremium || (() => { })}
                     isPro={profile?.isPro || false}
                 >
-                    <div className="bg-neutral-900 border border-white/5 rounded-3xl p-5 shadow-lg">
-                        <div className="flex items-center gap-2 mb-4 text-gray-400 font-bold text-xs">
+                    <div className="bg-neutral-900 border border-white/5 rounded-3xl p-5 shadow-lg relative overflow-hidden">
+                        {/* Background Decoration */}
+                        <div className="absolute top-0 right-0 w-full h-full bg-gradient-to-b from-indigo-500/5 to-transparent pointer-events-none"></div>
+
+                        <div className="flex items-center gap-2 mb-4 text-gray-400 font-bold text-xs relative z-10">
                             <TrendingUp size={14} className="text-indigo-400" />
                             Динамика силы (e1RM)
                         </div>
-                        <div className="h-56 -ml-2">
+                        <div className="h-56 -ml-2 relative z-10">
                             <ResponsiveContainer width="100%" height="100%">
-                                <LineChart data={strengthData.data} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+                                <AreaChart data={strengthData.data} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+                                    <defs>
+                                        <linearGradient id="colorEx0" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
+                                            <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                                        </linearGradient>
+                                        <linearGradient id="colorEx1" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
+                                            <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                                        </linearGradient>
+                                    </defs>
                                     <CartesianGrid stroke={chartTheme.grid} vertical={false} strokeDasharray="3 3" />
                                     <XAxis
                                         dataKey="date"
@@ -737,15 +683,43 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
                                     />
                                     <Legend wrapperStyle={{ fontSize: '10px', paddingTop: '15px', fontFamily: 'var(--font-display)', opacity: 0.7 }} iconType="circle" />
                                     {strengthData.exercises[0] && (
-                                        <Line type="monotone" dataKey="ex0" name={strengthData.exercises[0]} stroke="#6366f1" strokeWidth={3} dot={false} connectNulls />
+                                        <Area
+                                            type="monotone"
+                                            dataKey="ex0"
+                                            name={strengthData.exercises[0]}
+                                            stroke="#6366f1"
+                                            fillOpacity={1}
+                                            fill="url(#colorEx0)"
+                                            strokeWidth={3}
+                                            dot={false}
+                                        />
                                     )}
                                     {strengthData.exercises[1] && (
-                                        <Line type="monotone" dataKey="ex1" name={strengthData.exercises[1]} stroke="#10b981" strokeWidth={3} dot={false} connectNulls />
+                                        <Area
+                                            type="monotone"
+                                            dataKey="ex1"
+                                            name={strengthData.exercises[1]}
+                                            stroke="#10b981"
+                                            fillOpacity={1}
+                                            fill="url(#colorEx1)"
+                                            strokeWidth={3}
+                                            dot={false}
+                                        />
                                     )}
                                     {strengthData.exercises[2] && (
-                                        <Line type="monotone" dataKey="ex2" name={strengthData.exercises[2]} stroke="#f59e0b" strokeWidth={3} dot={false} connectNulls />
+                                        <Area
+                                            type="monotone"
+                                            dataKey="ex2"
+                                            name={strengthData.exercises[2]}
+                                            stroke="#f59e0b"
+                                            fillOpacity={0.1}
+                                            fill="#f59e0b"
+                                            strokeWidth={3}
+                                            strokeDasharray="5 5"
+                                            dot={false}
+                                        />
                                     )}
-                                </LineChart>
+                                </AreaChart>
                             </ResponsiveContainer>
                         </div>
                     </div>
@@ -808,6 +782,12 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
                         <div className="h-40 -ml-2">
                             <ResponsiveContainer width="100%" height="100%">
                                 <BarChart data={weeklyVolumeData} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
+                                    <defs>
+                                        <linearGradient id="volumeGradient" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="0%" stopColor="#10b981" stopOpacity={1} />
+                                            <stop offset="100%" stopColor="#059669" stopOpacity={0.6} />
+                                        </linearGradient>
+                                    </defs>
                                     <CartesianGrid stroke={chartTheme.grid} vertical={false} strokeDasharray="3 3" />
                                     <XAxis
                                         dataKey="name"
@@ -832,7 +812,7 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
                                     />
                                     <Bar
                                         dataKey="volume"
-                                        fill="#10b981"
+                                        fill="url(#volumeGradient)"
                                         radius={[4, 4, 0, 0]}
                                         barSize={24}
                                     />
@@ -850,40 +830,45 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
                     />
                 )}
 
-                {/* Split Distribution Pie */}
-                {logs.length >= WORKOUT_THRESHOLDS.VOLUME_DISTRIBUTION && volumeDistData.length > 0 ? (
+                {/* Symmetry Radar Chart */}
+                {logs.length >= 5 ? (
                     <div className="bg-neutral-900 border border-white/5 rounded-3xl p-5 shadow-lg">
-                        <div className="flex items-center gap-2 mb-2 text-gray-400 font-bold text-xs">
-                            <PieIcon size={14} className="text-pink-400" />
-                            Акцент нагрузки
+                        <div className="flex items-center gap-2 mb-2 text-gray-400 font-bold text-xs uppercase tracking-wider">
+                            <Target size={14} className="text-indigo-400" />
+                            Баланс Нагрузки
                         </div>
-                        <div className="h-48 flex items-center justify-center">
+                        <div className="h-64 flex items-center justify-center -ml-4">
                             <ResponsiveContainer width="100%" height="100%">
-                                <PieChart>
-                                    <Pie
-                                        data={volumeDistData}
-                                        innerRadius={40}
-                                        outerRadius={70}
-                                        paddingAngle={5}
-                                        dataKey="value"
-                                    >
-                                        {volumeDistData.map((entry, index) => (
-                                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} stroke="rgba(0,0,0,0)" />
-                                        ))}
-                                    </Pie>
-                                    <Tooltip contentStyle={{ backgroundColor: '#171717', border: '1px solid #333', borderRadius: '8px', color: '#fff' }} />
-                                    <Legend iconType="circle" layout="vertical" verticalAlign="middle" align="right" wrapperStyle={{ fontSize: '10px', color: '#a3a3a3' }} />
-                                </PieChart>
+                                <RadarChart cx="50%" cy="50%" outerRadius="70%" data={movementData}>
+                                    <PolarGrid gridType="polygon" stroke="#262626" />
+                                    <PolarAngleAxis dataKey="subject" tick={{ fill: '#737373', fontSize: 10, fontFamily: 'var(--font-display)' }} />
+                                    <PolarRadiusAxis angle={30} domain={[0, 'auto']} tick={false} axisLine={false} />
+                                    <Radar
+                                        name="Ваша статистика"
+                                        dataKey="A"
+                                        stroke="#6366f1"
+                                        strokeWidth={2}
+                                        fill="#6366f1"
+                                        fillOpacity={0.4}
+                                    />
+                                    <Tooltip
+                                        contentStyle={{ backgroundColor: '#0a0a0a', border: '1px solid #333', borderRadius: '4px', color: '#fff', fontSize: '12px', fontFamily: 'var(--font-display)' }}
+                                        itemStyle={{ color: '#fff' }}
+                                    />
+                                </RadarChart>
                             </ResponsiveContainer>
                         </div>
+                        <p className="text-[10px] text-gray-500 text-center mt-2">
+                            Анализ распределения нагрузки по типам движений
+                        </p>
                     </div>
                 ) : (
                     <EmptyStateCard
-                        icon={<PieIcon size={48} className="text-gray-600" />}
-                        title="Акцент нагрузки"
+                        icon={<Target size={48} className="text-gray-600" />}
+                        title="Баланс нагрузки"
                         currentCount={logs.length}
-                        requiredCount={WORKOUT_THRESHOLDS.VOLUME_DISTRIBUTION}
-                        description="Визуализация баланса между группами мышц"
+                        requiredCount={5}
+                        description="Визуализация симметрии развития мышечных групп"
                         showProgress={true}
                     />
                 )}
