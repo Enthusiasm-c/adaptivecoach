@@ -6,7 +6,7 @@ import SettingsView from './SettingsView';
 import SquadView from './SquadView';
 import ChatInputBar from './ChatInputBar';
 import MesocycleIndicator from './MesocycleIndicator';
-import { Dumbbell, Calendar as CalendarIcon, BarChart2, Settings, Play, ChevronRight, Info, Battery, Zap, Trophy, Users, Crown, Bot, MessageCircle, Flame, Activity, Clock, TrendingUp, Sparkles, MessageSquarePlus, HelpCircle, Coffee, Sun, Moon, Check, LayoutGrid, Shield, AlertTriangle } from 'lucide-react';
+import { Dumbbell, Calendar as CalendarIcon, BarChart2, Settings, Play, ChevronRight, Info, Battery, Zap, Trophy, Users, User, Crown, Bot, MessageCircle, Flame, Activity, Clock, TrendingUp, Sparkles, MessageSquarePlus, HelpCircle, Coffee, Sun, Moon, Check, LayoutGrid, Shield, AlertTriangle } from 'lucide-react';
 import WorkoutPreviewModal from './WorkoutPreviewModal';
 import ReadinessModal from './ReadinessModal';
 import WhoopInsightScreen from './WhoopInsightScreen';
@@ -62,7 +62,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
 
     // Track page views for analytics
     useEffect(() => {
-        apiService.analytics.track('page_view', { page: activeView }).catch(() => {});
+        apiService.analytics.track('page_view', { page: activeView }).catch(() => { });
     }, [activeView]);
     const [shieldNotification, setShieldNotification] = useState<string | null>(null);
     const [showFirstWorkoutPaywall, setShowFirstWorkoutPaywall] = useState(false);
@@ -134,7 +134,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
                         const firstReps = ex.completedSets[0]?.reps;
                         // If all sets have same non-zero reps and no set is marked complete, likely old pre-filled data
                         return firstReps > 0 &&
-                               ex.completedSets.every(s => s.reps === firstReps && !s.isCompleted);
+                            ex.completedSets.every(s => s.reps === firstReps && !s.isCompleted);
                     });
 
                     if (hasOldPrefilledData) {
@@ -560,88 +560,85 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
         return (
             <div className="grid grid-cols-2 gap-4 animate-fade-in">
                 {/* Header with Weekly Progress Ring */}
-                <div className="col-span-2 flex justify-between items-center py-2 px-1 pt-[env(safe-area-inset-top)]">
-                    <div className="flex items-center gap-3">
-                        {telegramUser?.photo_url ? (
-                            <img
-                                src={telegramUser.photo_url}
-                                alt="User"
-                                className="w-12 h-12 rounded-full border border-white/20"
-                            />
-                        ) : (
-                            <div className="w-12 h-12 rounded-full bg-neutral-800 border border-white/10 flex items-center justify-center">
-                                <Bot size={20} className="text-gray-400" />
+                {/* Header with Weekly Progress Ring */}
+                <div className="col-span-2 flex justify-between items-center py-4 px-1 pt-[env(safe-area-inset-top)]">
+                    <div className="flex items-center gap-4">
+                        <div className="relative">
+                            {telegramUser?.photo_url ? (
+                                <img
+                                    src={telegramUser.photo_url}
+                                    alt="User"
+                                    className="w-14 h-14 rounded-full border-2 border-white/10"
+                                />
+                            ) : (
+                                <div className="w-14 h-14 rounded-full bg-neutral-800 border-2 border-white/10 flex items-center justify-center">
+                                    <User size={24} className="text-gray-400" />
+                                </div>
+                            )}
+                            <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-black rounded-full flex items-center justify-center border border-subtle">
+                                <div className="w-2 h-2 rounded-full bg-success shadow-[0_0_8px_rgba(76,199,109,0.8)] animate-pulse"></div>
                             </div>
-                        )}
+                        </div>
                         <div>
-                            <p className="text-gray-400 text-xs font-bold uppercase tracking-wider">
-                                Добрый день,
+                            <p className="text-gray-500 text-[10px] font-bold mb-1">
+                                {new Date().toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' })}
                             </p>
-                            <h1 className="text-xl font-bold text-white leading-none mt-0.5">
-                                {telegramUser?.first_name || "Спортсмен"}
+                            <h1 className="text-3xl font-display font-black text-white italic leading-none">
+                                {telegramUser?.first_name || "ТЫ"}
                             </h1>
                         </div>
                     </div>
 
-                    {/* Weekly Goal Widget - Clickable to Progress */}
+                    {/* Weekly Goal Widget - Clean Technical Look */}
                     <button
                         onClick={() => handleViewChange('progress')}
-                        className="flex items-center gap-3 bg-neutral-900 border border-white/10 rounded-full pl-4 pr-1.5 py-1.5 hover:bg-neutral-800 transition active:scale-95"
+                        className="flex flex-col items-end"
                     >
-                        <div className="text-right mr-1">
-                            <p className="text-[10px] text-gray-400 font-bold uppercase">План на неделю</p>
-                            <p className="text-sm font-black text-white leading-none">{weeklyProgress} <span className="text-gray-500">/ {profile.daysPerWeek}</span></p>
+                        <div className="flex items-center gap-2 mb-1">
+                            <span className="text-[10px] text-gray-500 font-bold">Цель недели</span>
+                            <div className="w-2 h-2 rounded-full bg-primary" />
                         </div>
-                        <div className="relative w-10 h-10 flex items-center justify-center">
-                            <svg className="w-full h-full transform -rotate-90">
-                                <circle cx="20" cy="20" r="16" stroke="#333" strokeWidth="4" fill="none" />
-                                <circle
-                                    cx="20" cy="20" r="16"
-                                    stroke={weeklyProgress >= profile.daysPerWeek ? '#10B981' : '#6366f1'}
-                                    strokeWidth="4"
-                                    fill="none"
-                                    strokeDasharray={100}
-                                    strokeDashoffset={100 - (100 * Math.min(weeklyProgress, profile.daysPerWeek) / profile.daysPerWeek)}
-                                    className="transition-all duration-1000 ease-out"
-                                    strokeLinecap="round"
-                                />
-                            </svg>
-                            {weeklyProgress >= profile.daysPerWeek && (
-                                <div className="absolute inset-0 flex items-center justify-center">
-                                    <Check size={14} className="text-green-500" strokeWidth={4} />
-                                </div>
-                            )}
+                        <div className="flex items-baseline gap-1">
+                            <span className={`text-2xl font-display font-black ${weeklyProgress >= profile.daysPerWeek ? 'text-success' : 'text-white'}`}>
+                                {weeklyProgress}
+                            </span>
+                            <span className="text-sm font-display font-bold text-gray-600">
+                                / {profile.daysPerWeek}
+                            </span>
                         </div>
                     </button>
                 </div>
 
 
-                {/* Stats Grid */}
+                {/* Stats Grid - Premium Cards */}
                 <div className="col-span-2 grid grid-cols-3 gap-3">
                     {/* Streak */}
-                    <div className="bg-neutral-900/50 border border-white/5 rounded-2xl p-3 flex flex-col items-center justify-center text-center gap-1 relative">
-                        <Flame size={20} className="text-orange-500" fill="currentColor" fillOpacity={0.2} />
-                        <span className="text-xl font-black text-white leading-none">{currentStreak}</span>
-                        <span className="text-[10px] text-gray-500 font-bold uppercase">
-                            {pluralizeRu(currentStreak, 'тренировка', 'тренировки', 'тренировок')}
+                    <div className="bg-surface border border-subtle rounded-xl p-3 flex flex-col items-center justify-center text-center relative overflow-hidden group">
+                        <div className="absolute inset-0 bg-gradient-to-br from-orange-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                        <Flame size={18} className="text-orange-500 mb-2" />
+                        <span className="text-2xl font-display font-black text-white leading-none italic">{currentStreak}</span>
+                        <span className="text-[9px] text-gray-500 font-bold mt-1">
+                            {pluralizeRu(currentStreak, 'серия', 'серии', 'серий')}
                         </span>
                     </div>
 
                     {/* Level */}
-                    <div className="bg-neutral-900/50 border border-white/5 rounded-2xl p-3 flex flex-col items-center justify-center text-center gap-1 relative overflow-hidden">
-                        <div className="absolute inset-x-0 bottom-0 h-1 bg-neutral-800">
+                    <div className="bg-surface border border-subtle rounded-xl p-3 flex flex-col items-center justify-center text-center relative overflow-hidden group">
+                        <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                        <div className="absolute bottom-0 left-0 h-1 bg-subtle w-full">
                             <div className="h-full bg-yellow-500" style={{ width: `${userLevel.levelProgress}%` }}></div>
                         </div>
-                        <Crown size={20} className="text-yellow-500 mb-1" fill="currentColor" fillOpacity={0.2} />
-                        <span className="text-xl font-black text-white leading-none">{userLevel.level}</span>
-                        <span className="text-[10px] text-gray-500 font-bold uppercase">Уровень</span>
+                        <Crown size={18} className="text-yellow-500 mb-2" />
+                        <span className="text-2xl font-display font-black text-white leading-none italic">{userLevel.level}</span>
+                        <span className="text-[9px] text-gray-500 font-bold mt-1">Уровень</span>
                     </div>
 
                     {/* Total Volume */}
-                    <div className="bg-neutral-900/50 border border-white/5 rounded-2xl p-3 flex flex-col items-center justify-center text-center gap-1">
-                        <Dumbbell size={20} className="text-green-500 mb-1" />
-                        <span className="text-lg font-black text-white leading-none">{formatKg(totalVolume)}</span>
-                        <span className="text-[10px] text-gray-500 font-bold uppercase">Всего</span>
+                    <div className="bg-surface border border-subtle rounded-xl p-3 flex flex-col items-center justify-center text-center relative overflow-hidden group">
+                        <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                        <Activity size={18} className="text-blue-500 mb-2" />
+                        <span className="text-xl font-display font-black text-white leading-none italic mt-1">{formatKg(totalVolume)}</span>
+                        <span className="text-[9px] text-gray-500 font-bold mt-1">Тоннаж</span>
                     </div>
                 </div>
 
@@ -662,135 +659,134 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
 
                 {/* CONDITIONAL MAIN CARD: Workout OR Rest */}
                 {isTodayWorkoutDay ? (
-                    /* WORKOUT CARD */
-                    <div className="col-span-2 relative group mt-2">
-                        <div className="absolute inset-0 bg-gradient-to-r from-indigo-600 to-violet-600 rounded-[2rem] blur-xl opacity-40 group-hover:opacity-60 transition-opacity duration-500"></div>
-                        <div className="relative bg-[#111] border border-white/10 rounded-[2rem] p-6 overflow-hidden">
+                    /* WORKOUT CARD - PREMIUM REDESIGN */
+                    <div className="col-span-2 mt-4">
+                        <div className="bg-surface border border-subtle rounded-2xl overflow-hidden relative group">
+                            {/* Decorative Activity Line */}
+                            <div className="absolute top-0 left-0 w-1 h-full bg-primary" />
 
-                            {/* Background Pattern */}
-                            <div className="absolute top-0 right-0 opacity-10 pointer-events-none">
-                                <svg width="200" height="200" viewBox="0 0 200 200" fill="none">
-                                    <path d="M100 0L200 100L100 200L0 100L100 0Z" fill="white" />
-                                </svg>
-                            </div>
-
-                            <div className="relative z-10">
-                                <div className="flex justify-between items-start mb-4">
+                            <div className="p-6">
+                                <div className="flex justify-between items-start mb-6">
                                     <div>
-                                        <div className="flex items-center gap-2 mb-2">
-                                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/10 text-white text-[10px] font-bold uppercase tracking-wider">
+                                        <div className="flex items-center gap-2 mb-3">
+                                            <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-white/5 border border-white/5 text-white text-[10px] font-bold">
                                                 <CalendarIcon size={10} /> {logs.length === 0 ? 'Старт' : 'Сегодня'}
                                             </span>
-                                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/5 text-gray-400 text-[10px] font-bold uppercase tracking-wider">
+                                            <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-white/5 border border-white/5 text-gray-400 text-[10px] font-bold">
                                                 <Clock size={10} /> ~{profile.timePerWorkout} мин
                                             </span>
                                         </div>
-                                        <h2 className="text-3xl font-black text-white leading-tight mb-2">
-                                            {logs.length === 0 ? 'Твоя первая тренировка!' : nextWorkout.name}
+                                        <h2 className="text-4xl font-display font-black text-white italic leading-none mb-1">
+                                            {logs.length === 0 ? 'Первая тренировка' : nextWorkout.name}
                                         </h2>
+                                        <p className="text-gray-500 text-xs font-bold">
+                                            {logs.length === 0 ? 'Начните свой путь сегодня' : 'Ваш персональный план на день'}
+                                        </p>
                                     </div>
                                 </div>
 
-                                {/* Muscle Focus Tags */}
-                                <div className="flex flex-wrap gap-2 mb-4">
+                                {/* Muscle Focus Tags - Minimalist */}
+                                <div className="flex flex-wrap gap-2 mb-8">
                                     {muscleFocus.map(muscle => (
-                                        <span key={muscle} className="px-3 py-1 rounded-full border border-indigo-500/30 text-indigo-300 text-xs font-bold bg-indigo-500/10">
+                                        <span key={muscle} className="px-3 py-1.5 rounded-sm bg-neutral-900 border border-subtle text-gray-300 text-[10px] font-bold uppercase tracking-wider">
                                             {muscle}
                                         </span>
                                     ))}
-                                    <span className="px-3 py-1 rounded-full border border-white/5 text-gray-500 text-xs font-bold">
+                                    <span className="px-3 py-1.5 rounded-sm bg-neutral-900 border border-subtle text-gray-500 text-[10px] font-bold">
                                         +{Math.max(0, nextWorkout.exercises.length - muscleFocus.length)} упр.
                                     </span>
                                 </div>
 
                                 {/* Free workouts remaining warning */}
                                 {workoutLimitStatus && !workoutLimitStatus.isPro && !workoutLimitStatus.isInTrial && (
-                                    <div className="flex items-center gap-2 mb-4 p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl">
-                                        <AlertTriangle size={16} className="text-amber-400 flex-shrink-0" />
-                                        <span className="text-amber-300 text-sm">
-                                            Осталось {workoutLimitStatus.freeWorkoutsLimit - workoutLimitStatus.freeWorkoutsUsed} бесплатных {
+                                    <div className="flex items-center gap-3 mb-6 p-4 bg-amber-900/10 border border-amber-900/30 rounded-lg">
+                                        <AlertTriangle size={16} className="text-amber-500 flex-shrink-0" />
+                                        <span className="text-amber-500 text-xs font-bold">
+                                            Осталось {workoutLimitStatus.freeWorkoutsLimit - workoutLimitStatus.freeWorkoutsUsed} {
                                                 (workoutLimitStatus.freeWorkoutsLimit - workoutLimitStatus.freeWorkoutsUsed) === 1 ? 'тренировка' :
-                                                (workoutLimitStatus.freeWorkoutsLimit - workoutLimitStatus.freeWorkoutsUsed) <= 4 ? 'тренировки' : 'тренировок'
+                                                    (workoutLimitStatus.freeWorkoutsLimit - workoutLimitStatus.freeWorkoutsUsed) <= 4 ? 'тренировки' : 'тренировок'
                                             }
                                         </span>
                                     </div>
                                 )}
 
-                                <div className="flex gap-3">
+                                <div className="grid grid-cols-4 gap-3">
                                     <button
                                         onClick={() => initiateWorkoutStart(nextWorkout.name)}
-                                        className="flex-1 bg-white text-black font-bold py-4 rounded-2xl flex items-center justify-center gap-2 hover:bg-gray-200 transition active:scale-95 shadow-xl shadow-white/5"
+                                        className="col-span-3 bg-white text-black h-14 rounded-full flex items-center justify-center gap-3 hover:bg-gray-200 transition active:scale-95 group"
                                     >
-                                        <Play size={20} fill="currentColor" /> Начать
+                                        <span className="font-display font-black text-xl pt-1">Начать тренировку</span>
+                                        <Play size={20} fill="currentColor" className="group-hover:translate-x-1 transition-transform" />
                                     </button>
                                     <button
                                         onClick={() => setWorkoutToPreview(nextWorkout)}
-                                        className="px-5 bg-white/5 text-white font-semibold rounded-2xl border border-white/10 hover:bg-white/10 transition active:scale-95"
+                                        className="col-span-1 bg-transparent border border-white/20 text-white h-14 rounded-full flex items-center justify-center hover:bg-white/5 transition active:scale-95"
                                     >
-                                        Обзор
+                                        <Info size={24} />
                                     </button>
                                 </div>
                             </div>
                         </div>
                     </div>
                 ) : hasCompletedToday && todaysWorkout ? (
-                    /* COMPLETED WORKOUT CARD */
-                    <div className="col-span-2 relative group mt-2">
-                        <div className="absolute inset-0 bg-gradient-to-r from-green-600 to-green-500 rounded-[2rem] blur-xl opacity-20"></div>
-                        <div className="relative bg-[#111] border border-white/10 rounded-[2rem] p-6 overflow-hidden">
+                    /* COMPLETED WORKOUT CARD - PREMIUM REDESIGN */
+                    <div className="col-span-2 mt-4">
+                        <div className="bg-surface border border-subtle rounded-2xl overflow-hidden relative group">
+                            {/* Decorative Success Line */}
+                            <div className="absolute top-0 left-0 w-1 h-full bg-success" />
 
-                            <div className="relative z-10">
-                                <div className="flex justify-between items-start mb-4">
+                            <div className="p-6">
+                                <div className="flex justify-between items-start mb-6">
                                     <div>
-                                        <div className="flex items-center gap-2 mb-2">
-                                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-green-500/20 text-green-300 text-[10px] font-bold uppercase tracking-wider">
-                                                <Check size={10} /> Тренировка завершена
+                                        <div className="flex items-center gap-2 mb-3">
+                                            <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-success/10 border border-success/20 text-success text-[10px] font-bold">
+                                                <Check size={10} strokeWidth={4} /> Завершено
                                             </span>
                                         </div>
-                                        <h2 className="text-3xl font-black text-white leading-tight mb-2">{todaysWorkout.sessionId}</h2>
-                                        <p className="text-gray-400 text-sm mb-2">
-                                            Отличная работа! Ты стал сильнее.
+                                        <h2 className="text-3xl font-display font-black text-white italic leading-none mb-2">{todaysWorkout.sessionId}</h2>
+                                        <p className="text-gray-500 text-xs font-bold">
+                                            Ещё один шаг к цели
                                         </p>
                                     </div>
-                                    <div className="w-16 h-16 bg-green-500/10 rounded-full flex items-center justify-center">
-                                        <Trophy size={32} className="text-green-500" />
+                                    <div className="w-12 h-12 bg-neutral-900 rounded-full flex items-center justify-center border border-subtle">
+                                        <Trophy size={20} className="text-success" />
                                     </div>
                                 </div>
 
-                                {/* Workout Stats */}
-                                <div className="flex gap-2 mb-4 overflow-x-auto no-scrollbar">
-                                    <div className="bg-neutral-900 border border-white/5 rounded-xl p-3 min-w-[100px]">
-                                        <Clock size={16} className="text-blue-400 mb-2" />
-                                        <p className="text-xs font-bold text-white">
-                                            {todaysWorkout.duration ? `${Math.round(todaysWorkout.duration / 60)} мин` : '—'}
+                                {/* Workout Stats - Minimalist Row */}
+                                <div className="flex gap-4 mb-6">
+                                    <div className="flex-1 bg-neutral-900/50 p-2 rounded-lg text-center border border-subtle">
+                                        <p className="text-xl font-display font-black text-white leading-none">
+                                            {todaysWorkout.duration ? `${Math.round(todaysWorkout.duration / 60)}` : '0'}
                                         </p>
-                                        <p className="text-[10px] text-gray-500">Время</p>
+                                        <p className="text-[9px] text-gray-600 font-bold mt-1">минут</p>
                                     </div>
-                                    <div className="bg-neutral-900 border border-white/5 rounded-xl p-3 min-w-[100px]">
-                                        <Dumbbell size={16} className="text-violet-400 mb-2" />
-                                        <p className="text-xs font-bold text-white">
+                                    <div className="flex-1 bg-neutral-900/50 p-2 rounded-lg text-center border border-subtle">
+                                        <p className="text-xl font-display font-black text-white leading-none">
                                             {todaysWorkout.completedExercises?.length || 0}
                                         </p>
-                                        <p className="text-[10px] text-gray-500">Упражнений</p>
+                                        <p className="text-[9px] text-gray-600 font-bold mt-1">упр.</p>
                                     </div>
-                                    <div className="bg-neutral-900 border border-white/5 rounded-xl p-3 min-w-[100px]">
-                                        <TrendingUp size={16} className="text-green-400 mb-2" />
-                                        <p className="text-xs font-bold text-white">
+                                    <div className="flex-1 bg-neutral-900/50 p-2 rounded-lg text-center border border-subtle">
+                                        <p className="text-xl font-display font-black text-white leading-none">
                                             {formatKg(calculateWorkoutVolume(todaysWorkout))}
                                         </p>
-                                        <p className="text-[10px] text-gray-500">Объём</p>
+                                        <p className="text-[9px] text-gray-600 font-bold mt-1">кг</p>
                                     </div>
                                 </div>
 
                                 {/* Improvements */}
                                 {todayImprovements.length > 0 && (
-                                    <div className="mb-4 bg-green-500/10 border border-green-500/20 rounded-xl p-3">
-                                        <p className="text-xs font-bold text-green-400 mb-2 flex items-center gap-1">
-                                            <Sparkles size={12} /> Прогресс сегодня
+                                    <div className="mb-4 bg-neutral-900 border border-subtle rounded-xl p-4">
+                                        <p className="text-[10px] font-bold text-gray-500 mb-3 flex items-center gap-1.5">
+                                            <Sparkles size={10} className="text-success" /> Лучшие результаты сегодня
                                         </p>
-                                        <div className="space-y-1">
+                                        <div className="space-y-2">
                                             {todayImprovements.map((imp, idx) => (
-                                                <p key={idx} className="text-xs text-green-300">{imp}</p>
+                                                <div key={idx} className="flex items-center gap-2">
+                                                    <div className="w-1 h-1 rounded-full bg-success"></div>
+                                                    <p className="text-xs font-bold text-white">{imp}</p>
+                                                </div>
                                             ))}
                                         </div>
                                     </div>
@@ -802,8 +798,8 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
                                         <p className="text-xs text-gray-400">
                                             Самочувствие: <span className="text-white font-bold">
                                                 {todaysWorkout.feedback.perceivedEffort === 'easy' ? 'Легко' :
-                                                 todaysWorkout.feedback.perceivedEffort === 'moderate' ? 'Умеренно' :
-                                                 todaysWorkout.feedback.perceivedEffort === 'hard' ? 'Тяжело' : '—'}
+                                                    todaysWorkout.feedback.perceivedEffort === 'moderate' ? 'Умеренно' :
+                                                        todaysWorkout.feedback.perceivedEffort === 'hard' ? 'Тяжело' : '—'}
                                             </span>
                                         </p>
                                     </div>
@@ -944,9 +940,8 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
             </main>
 
             {/* Navigation Bar - hide when keyboard is visible */}
-            <nav className={`fixed bottom-6 left-1/2 -translate-x-1/2 bg-[#111]/90 backdrop-blur-xl border border-white/10 rounded-[2rem] px-4 py-1.5 flex items-center gap-2 shadow-2xl z-40 ${
-                isInputFocused ? 'translate-y-full opacity-0 pointer-events-none transition-transform duration-200' : ''
-            }`} style={{ touchAction: 'manipulation' }}>
+            <nav className={`fixed bottom-6 left-1/2 -translate-x-1/2 bg-[#111]/90 backdrop-blur-xl border border-white/10 rounded-[2rem] px-4 py-1.5 flex items-center gap-2 shadow-2xl z-40 ${isInputFocused ? 'translate-y-full opacity-0 pointer-events-none transition-transform duration-200' : ''
+                }`} style={{ touchAction: 'manipulation' }}>
                 <NavButton
                     icon={<Dumbbell size={24} />}
                     label="Тренировка"

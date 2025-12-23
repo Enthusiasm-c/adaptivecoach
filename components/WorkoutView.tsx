@@ -348,7 +348,7 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
     const nameLower = ex.name.toLowerCase();
     // Dumbbells: 2kg step
     if (PAIRED_DUMBBELL_PATTERNS.some(p => nameLower.includes(p)) ||
-        SINGLE_DUMBBELL_PATTERNS.some(p => nameLower.includes(p))) {
+      SINGLE_DUMBBELL_PATTERNS.some(p => nameLower.includes(p))) {
       return 2;
     }
     // Default (barbell, machines): 5kg step
@@ -620,7 +620,7 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
   }
 
   return (
-    <div className="w-full max-w-md mx-auto h-[100dvh] bg-neutral-950 text-white font-sans flex flex-col overflow-hidden">
+    <div className="w-full h-[100dvh] bg-background text-white font-sans flex flex-col overflow-hidden">
 
       {/* Toast Message */}
       {toastMessage && (
@@ -631,7 +631,7 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
       )}
 
       {/* Header */}
-      <header className="pt-[max(1.5rem,env(safe-area-inset-top))] pb-4 px-4 flex items-center justify-between bg-neutral-950 z-10">
+      <header className="pt-[max(1.5rem,env(safe-area-inset-top))] pb-4 px-4 flex items-center justify-between bg-background z-10">
         <button onClick={onBack} className="p-2 bg-neutral-900 border border-white/10 rounded-full text-gray-400 hover:text-white hover:border-white/30 transition">
           <ChevronLeft size={20} />
         </button>
@@ -639,11 +639,10 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
           {/* Pain Report Button - changes appearance when pain is reported */}
           <button
             onClick={() => setShowPainModal(true)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full transition ${
-              midWorkoutPainLocation
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full transition ${midWorkoutPainLocation
                 ? 'bg-red-500/30 border border-red-500/50 text-red-300'
                 : 'bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20'
-            }`}
+              }`}
             title="Сообщить о боли"
           >
             <AlertTriangle size={14} />
@@ -652,7 +651,7 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
             </span>
           </button>
           <div className="flex flex-col items-end">
-            <span className="text-xs text-gray-500 font-bold uppercase tracking-wider">Упражнение {currentExerciseIndex + 1} из {completedExercises.length}</span>
+            <span className="text-xs text-gray-500 font-bold">Упражнение {currentExerciseIndex + 1} из {completedExercises.length}</span>
             <div className="flex gap-1 mt-1">
               {completedExercises.map((ex, idx) => {
                 const isIncomplete = attemptedFinish && !isExerciseComplete(ex);
@@ -667,15 +666,14 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
                     aria-label={`Упражнение ${idx + 1}: ${ex.name}`}
                   >
                     {/* Visual dot with proper touch target (padding expands tap area to ~32px) */}
-                    <div className={`h-1.5 w-4 rounded-full transition-all ${
-                      isIncomplete
+                    <div className={`h-1.5 w-4 rounded-full transition-all ${isIncomplete
                         ? 'bg-red-500 animate-pulse'
                         : isCurrent
                           ? 'bg-indigo-500'
                           : isPast
                             ? 'bg-indigo-900'
                             : 'bg-neutral-800'
-                    } ${isCurrent ? 'scale-110' : 'hover:scale-105'}`}
+                      } ${isCurrent ? 'scale-110' : 'hover:scale-105'}`}
                     />
                   </button>
                 );
@@ -727,7 +725,7 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
                     {currentExerciseIndex + 1}
                   </div>
                   <div>
-                    <h3 className="font-bold text-lg text-white leading-tight">{currentExercise.name}</h3>
+                    <h3 className="font-display font-black text-2xl text-white leading-none italic uppercase">{currentExercise.name}</h3>
                     {!isCardioExercise(currentExercise) ? (
                       <p className="text-xs text-gray-400 mt-0.5">{currentExercise.sets} подхода × {formatReps(currentExercise.reps)}</p>
                     ) : (
@@ -793,7 +791,7 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
               {/* Contextual History Section - hidden for cardio and isometric (bodyweight) exercises */}
               {showHistory && !currentExercise.isWarmup && !isCardioExercise(currentExercise) && !isIsometricExercise(currentExercise) && (
                 <div className="mt-4 bg-neutral-900 rounded-xl border border-indigo-500/30 p-4 animate-slide-up mb-4">
-                  <h4 className="text-xs font-bold text-indigo-400 uppercase mb-3 flex items-center gap-2">
+                  <h4 className="text-xs font-bold text-indigo-400 mb-3 flex items-center gap-2">
                     <History size={12} /> Прошлые тренировки
                   </h4>
                   <div className="space-y-3">
@@ -828,22 +826,21 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
                     ? 'bg-green-500/10 border border-green-500/20'
                     : 'bg-neutral-900/50 border border-white/5'
                     }`}>
-                    <div className="w-6 text-center font-mono text-gray-500 text-sm">#{setIndex + 1}</div>
+                    <div className="w-6 text-center font-display font-bold text-gray-500 text-sm">#{setIndex + 1}</div>
 
                     {exerciseNeedsWeight(currentExercise) && (
-                      <div className={`flex-1 flex flex-col items-center justify-center rounded-lg py-1 px-2 ${
-                        attemptedFinish && getSetErrors(currentExercise, set).weight
+                      <div className={`flex-1 flex flex-col items-center justify-center rounded-lg py-1 px-2 ${attemptedFinish && getSetErrors(currentExercise, set).weight
                           ? 'bg-red-500/10 border border-red-500/30'
                           : 'bg-neutral-800/50'
-                      }`}>
+                        }`}>
                         <input
                           type="text"
                           inputMode="decimal"
                           pattern="[0-9]*[.,]?[0-9]*"
                           value={
                             editingInput?.exIndex === currentExerciseIndex &&
-                            editingInput?.setIndex === setIndex &&
-                            editingInput?.field === 'weight'
+                              editingInput?.setIndex === setIndex &&
+                              editingInput?.field === 'weight'
                               ? editingValue
                               : (set.weight ?? currentExercise.weight ?? '')
                           }
@@ -870,7 +867,7 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
                             setEditingInput(null);
                             setEditingValue('');
                           }}
-                          className="w-full h-8 bg-transparent text-center font-mono font-bold text-white text-sm outline-none"
+                          className="w-full h-8 bg-transparent text-center font-display font-black text-white text-lg outline-none"
                           placeholder="—"
                         />
                         <span className="text-[9px] text-gray-500">
@@ -879,50 +876,49 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
                       </div>
                     )}
 
-                    <div className={`flex-1 flex flex-col items-center justify-center rounded-lg py-1 px-2 ${
-                        attemptedFinish && getSetErrors(currentExercise, set).reps
-                          ? 'bg-red-500/10 border border-red-500/30'
-                          : 'bg-neutral-800/50'
+                    <div className={`flex-1 flex flex-col items-center justify-center rounded-lg py-1 px-2 ${attemptedFinish && getSetErrors(currentExercise, set).reps
+                        ? 'bg-red-500/10 border border-red-500/30'
+                        : 'bg-neutral-800/50'
                       }`}>
-                        <input
-                          type="text"
-                          inputMode="numeric"
-                          pattern="[0-9]*"
-                          value={
-                            editingInput?.exIndex === currentExerciseIndex &&
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        value={
+                          editingInput?.exIndex === currentExerciseIndex &&
                             editingInput?.setIndex === setIndex &&
                             editingInput?.field === 'reps'
-                              ? editingValue
-                              : (set.reps ?? (parseInt(String(currentExercise.reps).split('-')[0].replace(/[^\d]/g, '')) || ''))
-                          }
-                          onChange={(e) => {
-                            const value = e.target.value;
-                            setEditingValue(value);
-                          }}
-                          onFocus={(e) => {
-                            const currentVal = set.reps ?? (parseInt(String(currentExercise.reps).split('-')[0].replace(/[^\d]/g, '')) || '');
-                            setEditingInput({ exIndex: currentExerciseIndex, setIndex, field: 'reps' });
-                            setEditingValue(String(currentVal));
-                            e.target.select();
-                          }}
-                          onBlur={() => {
-                            const value = editingValue;
-                            if (value === '') {
-                              handleValueChange(currentExerciseIndex, setIndex, 'reps', NaN);
-                            } else {
-                              const numValue = parseInt(value, 10);
-                              if (!isNaN(numValue) && numValue >= 0) {
-                                handleValueChange(currentExerciseIndex, setIndex, 'reps', numValue);
-                              }
+                            ? editingValue
+                            : (set.reps ?? (parseInt(String(currentExercise.reps).split('-')[0].replace(/[^\d]/g, '')) || ''))
+                        }
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          setEditingValue(value);
+                        }}
+                        onFocus={(e) => {
+                          const currentVal = set.reps ?? (parseInt(String(currentExercise.reps).split('-')[0].replace(/[^\d]/g, '')) || '');
+                          setEditingInput({ exIndex: currentExerciseIndex, setIndex, field: 'reps' });
+                          setEditingValue(String(currentVal));
+                          e.target.select();
+                        }}
+                        onBlur={() => {
+                          const value = editingValue;
+                          if (value === '') {
+                            handleValueChange(currentExerciseIndex, setIndex, 'reps', NaN);
+                          } else {
+                            const numValue = parseInt(value, 10);
+                            if (!isNaN(numValue) && numValue >= 0) {
+                              handleValueChange(currentExerciseIndex, setIndex, 'reps', numValue);
                             }
-                            setEditingInput(null);
-                            setEditingValue('');
-                          }}
-                          className="w-full h-8 bg-transparent text-center font-mono font-bold text-white text-sm outline-none"
-                          placeholder="—"
-                        />
-                        <span className="text-[9px] text-gray-500">повт</span>
-                      </div>
+                          }
+                          setEditingInput(null);
+                          setEditingValue('');
+                        }}
+                        className="w-full h-8 bg-transparent text-center font-display font-black text-white text-lg outline-none"
+                        placeholder="—"
+                      />
+                      <span className="text-[9px] text-gray-500">повт</span>
+                    </div>
 
                     {/* RIR Selection with Info button - hidden for warmup and cardio */}
                     {!currentExercise.isWarmup && !isCardioExercise(currentExercise) && (
@@ -1014,8 +1010,8 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
               {currentExerciseIndex < completedExercises.length - 1
                 ? 'Дальше'
                 : (completedExercises.some(ex => !isExerciseComplete(ex))
-                    ? 'К незаполненным'
-                    : 'В начало')}
+                  ? 'К незаполненным'
+                  : 'В начало')}
             </button>
           )}
         </div>
@@ -1125,17 +1121,16 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
 
             {/* Pain location chips */}
             <div className="mb-4">
-              <label className="text-xs font-bold text-gray-500 uppercase mb-2 block">Где именно?</label>
+              <label className="text-xs font-bold text-gray-500 mb-2 block">Где именно?</label>
               <div className="flex flex-wrap gap-2">
                 {PAIN_LOCATIONS.map(loc => (
                   <button
                     key={loc}
                     onClick={() => setMidWorkoutPainLocation(loc)}
-                    className={`px-3 py-1.5 rounded-full text-sm font-medium transition ${
-                      midWorkoutPainLocation === loc
+                    className={`px-3 py-1.5 rounded-full text-sm font-medium transition ${midWorkoutPainLocation === loc
                         ? 'bg-red-500 text-white'
                         : 'bg-neutral-700 text-gray-300 hover:bg-neutral-600'
-                    }`}
+                      }`}
                   >
                     {loc}
                   </button>
@@ -1167,11 +1162,10 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
                   }
                 }}
                 disabled={!midWorkoutPainLocation}
-                className={`flex-1 py-3 rounded-xl font-bold transition ${
-                  midWorkoutPainLocation
+                className={`flex-1 py-3 rounded-xl font-bold transition ${midWorkoutPainLocation
                     ? 'bg-red-500 text-white hover:bg-red-400'
                     : 'bg-neutral-700 text-gray-500 cursor-not-allowed'
-                }`}
+                  }`}
               >
                 {midWorkoutPainLocation ? 'Сохранить' : 'Выбери зону'}
               </button>

@@ -227,8 +227,8 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
         return logs.some(log => {
             const logDate = new Date(log.date);
             return logDate >= weekStart &&
-                   logDate < weekEnd &&
-                   log.sessionId === sessionName;
+                logDate < weekEnd &&
+                log.sessionId === sessionName;
         });
     };
 
@@ -363,7 +363,7 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
         return (
             <div className="bg-neutral-900 border border-white/5 rounded-3xl p-5 shadow-lg animate-fade-in">
                 <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-xl font-bold text-white capitalize flex items-center gap-2">
+                    <h2 className="text-xl font-display font-black text-white flex items-center gap-2">
                         <Calendar size={20} className="text-indigo-500" />
                         {monthName}
                     </h2>
@@ -472,13 +472,13 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
                 <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full blur-3xl -mr-10 -mt-10"></div>
 
                 <div className="flex items-center gap-4 mb-3 relative z-10">
-                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-600 to-violet-600 flex items-center justify-center text-white font-black text-xl shadow-lg shadow-indigo-500/30 transform rotate-3 border border-white/10">
+                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-600 to-violet-600 flex items-center justify-center text-white font-display font-black text-3xl shadow-lg shadow-indigo-500/30 transform rotate-3 border border-white/10">
                         {userLevel.level}
                     </div>
                     <div className="flex-1">
                         <div className="flex items-center gap-2">
-                            <h2 className="text-xl font-black text-white">{userLevel.title}</h2>
-                            <Crown size={16} className="text-yellow-400 fill-yellow-400" />
+                            <h2 className="text-2xl font-display font-black text-white">{userLevel.title}</h2>
+                            <Crown size={18} className="text-yellow-400 fill-yellow-400" />
                         </div>
                         <p className="text-xs text-gray-400 font-medium">{userLevel.xp} XP</p>
                     </div>
@@ -617,13 +617,12 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
                                     {painAnalysis.zones.map((zone, idx) => (
                                         <span
                                             key={idx}
-                                            className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                                zone.severity === 'high'
-                                                    ? 'bg-red-600/30 text-red-200'
-                                                    : zone.severity === 'medium'
+                                            className={`px-2 py-1 rounded-full text-xs font-medium ${zone.severity === 'high'
+                                                ? 'bg-red-600/30 text-red-200'
+                                                : zone.severity === 'medium'
                                                     ? 'bg-orange-500/30 text-orange-200'
                                                     : 'bg-yellow-500/30 text-yellow-200'
-                                            }`}
+                                                }`}
                                         >
                                             {zone.bodyPart}: {zone.count}×
                                         </span>
@@ -662,34 +661,38 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
             {/* Enhanced Stats Grid */}
             <div className="grid grid-cols-2 gap-3">
                 {/* Total Volume Card */}
-                <div className="bg-neutral-900 border border-white/5 rounded-2xl p-4">
-                    <div className="flex items-center gap-2 text-gray-400 text-xs mb-2">
-                        <Dumbbell size={14} />
-                        <span>Объем всего</span>
+                <div className="bg-neutral-900 border border-white/5 rounded-2xl p-5 relative overflow-hidden group">
+                    <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+                        <Dumbbell size={40} />
                     </div>
-                    <div className="text-xl font-black text-white">
+                    <div className="text-xs font-bold text-gray-500 mb-1">
+                        Объем всего
+                    </div>
+                    <div className="text-3xl font-display font-black text-white tracking-tight">
                         {formatKg(totalVolume)}
                     </div>
                 </div>
 
                 {/* Streak Card - Enhanced */}
-                <div className="bg-neutral-900 border border-white/5 rounded-2xl p-4">
-                    <div className="flex items-center gap-2 text-gray-400 text-xs mb-2">
-                        <Flame size={14} className="text-orange-500" />
-                        <span>Серия тренировок</span>
+                <div className="bg-neutral-900 border border-white/5 rounded-2xl p-5 relative overflow-hidden group">
+                    <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity text-orange-500">
+                        <Flame size={40} />
                     </div>
-                    <div className="text-2xl font-black text-white">
+                    <div className="text-xs font-bold text-gray-500 mb-1">
+                        Серия (нед)
+                    </div>
+                    <div className="text-3xl font-display font-black text-white tracking-tight flex items-baseline gap-1">
                         {currentStreak}
-                        <span className="text-sm text-gray-500 ml-1">
-                            {pluralizeRu(currentStreak, 'неделя', 'недели', 'недель')}
+                        <span className="text-sm font-sans font-medium text-gray-500">
+                            {pluralizeRu(currentStreak, 'нед', 'нед', 'нед')}
                         </span>
                     </div>
                     {nextScheduledDay && (
                         <div className="text-[10px] text-gray-500 mt-1">
                             След: {nextScheduledDay.dayName}
                             {nextScheduledDay.daysUntil === 0 ? ' (сегодня)' :
-                             nextScheduledDay.daysUntil === 1 ? ' (завтра)' :
-                             ` (через ${nextScheduledDay.daysUntil} дн.)`}
+                                nextScheduledDay.daysUntil === 1 ? ' (завтра)' :
+                                    ` (через ${nextScheduledDay.daysUntil} дн.)`}
                         </div>
                     )}
                 </div>
@@ -700,13 +703,13 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
                 <BlurredContent
                     title="Динамика Силы"
                     description="Отслеживай прогресс в ключевых упражнениях"
-                    onUnlock={onOpenPremium || (() => {})}
+                    onUnlock={onOpenPremium || (() => { })}
                     isPro={profile?.isPro || false}
                 >
                     <div className="bg-neutral-900 border border-white/5 rounded-3xl p-5 shadow-lg">
-                        <div className="flex items-center gap-2 mb-4 text-gray-300 font-bold text-sm">
-                            <TrendingUp size={16} className="text-indigo-400" />
-                            Динамика Силы (e1RM)
+                        <div className="flex items-center gap-2 mb-4 text-gray-400 font-bold text-xs">
+                            <TrendingUp size={14} className="text-indigo-400" />
+                            Динамика силы (e1RM)
                         </div>
                         <div className="h-56 -ml-2">
                             <ResponsiveContainer width="100%" height="100%">
@@ -747,118 +750,116 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Weekly Volume with Comparison */}
                 {logs.length >= WORKOUT_THRESHOLDS.WEEKLY_VOLUME && weeklyVolumeData.length > 0 ? (
-                <div className="bg-neutral-900 border border-white/5 rounded-3xl p-5 shadow-lg">
-                    <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center gap-2 text-gray-300 font-bold text-sm">
-                            <Activity size={16} className="text-green-400" />
-                            Объем за неделю
-                            <button
-                                onClick={() => setShowVolumeInfo(true)}
-                                className="p-1 hover:bg-white/10 rounded-full transition-colors"
-                            >
-                                <Info size={14} className="text-gray-500" />
-                            </button>
-                        </div>
-                        {/* Trend Badge */}
-                        <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-bold ${
-                            weekComparison.trend === 'up'
+                    <div className="bg-neutral-900 border border-white/5 rounded-3xl p-5 shadow-lg">
+                        <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center gap-2 text-gray-400 font-bold text-xs">
+                                <Activity size={14} className="text-green-400" />
+                                Объем за неделю
+                                <button
+                                    onClick={() => setShowVolumeInfo(true)}
+                                    className="p-1 hover:bg-white/10 rounded-full transition-colors"
+                                >
+                                    <Info size={12} className="text-gray-500" />
+                                </button>
+                            </div>
+                            {/* Trend Badge */}
+                            <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-bold ${weekComparison.trend === 'up'
                                 ? 'bg-green-500/20 text-green-400'
                                 : weekComparison.trend === 'down'
-                                ? 'bg-red-500/20 text-red-400'
-                                : 'bg-gray-500/20 text-gray-400'
-                        }`}>
-                            {weekComparison.trend === 'up' && <TrendingUp size={12} />}
-                            {weekComparison.trend === 'down' && <TrendingDown size={12} />}
-                            {weekComparison.trend === 'same' && <Minus size={12} />}
-                            {weekComparison.changePercent > 0 && '+'}
-                            {weekComparison.changePercent}%
+                                    ? 'bg-red-500/20 text-red-400'
+                                    : 'bg-gray-500/20 text-gray-400'
+                                }`}>
+                                {weekComparison.trend === 'up' && <TrendingUp size={12} />}
+                                {weekComparison.trend === 'down' && <TrendingDown size={12} />}
+                                {weekComparison.trend === 'same' && <Minus size={12} />}
+                                {weekComparison.changePercent > 0 && '+'}
+                                {weekComparison.changePercent}%
+                            </div>
                         </div>
-                    </div>
 
-                    {/* Current vs Previous - Average per day */}
-                    <div className="flex flex-col gap-1 mb-4">
-                        <div className="flex items-baseline gap-2">
-                            <span className="text-2xl font-black text-white">
-                                {formatKg(Math.round(weekComparison.currentWeekAvgPerDay))}
+                        {/* Current vs Previous - Average per day */}
+                        <div className="flex flex-col gap-1 mb-4">
+                            <div className="flex items-baseline gap-2">
+                                <span className="text-3xl font-display font-black text-white tracking-tight">
+                                    {formatKg(Math.round(weekComparison.currentWeekAvgPerDay))}
+                                </span>
+                                <span className="text-[10px] font-bold text-gray-500 uppercase">/ день</span>
+                            </div>
+                            <span className="text-xs text-gray-500">
+                                vs {formatKg(Math.round(weekComparison.previousWeekAvgPerDay))}/день
                             </span>
-                            <span className="text-sm text-gray-500">/ день</span>
                         </div>
-                        <span className="text-xs text-gray-500">
-                            vs {formatKg(Math.round(weekComparison.previousWeekAvgPerDay))}/день пр. неделя
-                            ({weekComparison.currentWeekDays} vs {weekComparison.previousWeekDays} {pluralizeRu(weekComparison.previousWeekDays, 'день', 'дня', 'дней')})
-                        </span>
-                    </div>
 
-                    <div className="h-40 -ml-2">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={weeklyVolumeData} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
-                                <CartesianGrid stroke={chartTheme.grid} vertical={false} strokeDasharray="3 3" />
-                                <XAxis
-                                    dataKey="name"
-                                    stroke={chartTheme.text}
-                                    fontSize={10}
-                                    tickLine={false}
-                                    axisLine={false}
-                                    tickFormatter={(val) => val.includes('-W') ? `W${val.split('-W')[1]}` : val}
-                                    dy={10}
-                                />
-                                <YAxis stroke={chartTheme.text} fontSize={10} tickLine={false} axisLine={false} tickFormatter={(val) => `${(val / 1000).toFixed(0)}т`} />
-                                <Bar dataKey="volume" fill="#10b981" radius={[4, 4, 0, 0]} barSize={24} />
-                                <Tooltip
-                                    cursor={{ fill: 'rgba(255,255,255,0.05)' }}
-                                    contentStyle={{ backgroundColor: '#171717', border: '1px solid #333', borderRadius: '8px', color: '#fff' }}
-                                    formatter={(value: any) => [`${(value / 1000).toFixed(2)}т`, 'Объем']}
-                                />
-                            </BarChart>
-                        </ResponsiveContainer>
+                        <div className="h-40 -ml-2">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={weeklyVolumeData} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
+                                    <CartesianGrid stroke={chartTheme.grid} vertical={false} strokeDasharray="3 3" />
+                                    <XAxis
+                                        dataKey="name"
+                                        stroke={chartTheme.text}
+                                        fontSize={10}
+                                        tickLine={false}
+                                        axisLine={false}
+                                        tickFormatter={(val) => val.includes('-W') ? `W${val.split('-W')[1]}` : val}
+                                        dy={10}
+                                    />
+                                    <YAxis stroke={chartTheme.text} fontSize={10} tickLine={false} axisLine={false} tickFormatter={(val) => `${(val / 1000).toFixed(0)}т`} />
+                                    <Bar dataKey="volume" fill="#10b981" radius={[4, 4, 0, 0]} barSize={24} />
+                                    <Tooltip
+                                        cursor={{ fill: 'rgba(255,255,255,0.05)' }}
+                                        contentStyle={{ backgroundColor: '#171717', border: '1px solid #333', borderRadius: '8px', color: '#fff' }}
+                                        formatter={(value: any) => [`${(value / 1000).toFixed(2)}т`, 'Объем']}
+                                    />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </div>
                     </div>
-                </div>
                 ) : (
-                <EmptyStateCard
-                    icon={<BarChart2 size={48} className="text-gray-600" />}
-                    title="Объём за неделю"
-                    currentCount={logs.length}
-                    requiredCount={WORKOUT_THRESHOLDS.WEEKLY_VOLUME}
-                    description="Отслеживайте изменение нагрузки по неделям"
-                />
+                    <EmptyStateCard
+                        icon={<BarChart2 size={48} className="text-gray-600" />}
+                        title="Объём за неделю"
+                        currentCount={logs.length}
+                        requiredCount={WORKOUT_THRESHOLDS.WEEKLY_VOLUME}
+                        description="Отслеживайте изменение нагрузки по неделям"
+                    />
                 )}
 
                 {/* Split Distribution Pie */}
                 {logs.length >= WORKOUT_THRESHOLDS.VOLUME_DISTRIBUTION && volumeDistData.length > 0 ? (
-                <div className="bg-neutral-900 border border-white/5 rounded-3xl p-5 shadow-lg">
-                    <div className="flex items-center gap-2 mb-2 text-gray-300 font-bold text-sm">
-                        <PieIcon size={16} className="text-pink-400" />
-                        Акцент Нагрузки
+                    <div className="bg-neutral-900 border border-white/5 rounded-3xl p-5 shadow-lg">
+                        <div className="flex items-center gap-2 mb-2 text-gray-400 font-bold text-xs">
+                            <PieIcon size={14} className="text-pink-400" />
+                            Акцент нагрузки
+                        </div>
+                        <div className="h-48 flex items-center justify-center">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <PieChart>
+                                    <Pie
+                                        data={volumeDistData}
+                                        innerRadius={40}
+                                        outerRadius={70}
+                                        paddingAngle={5}
+                                        dataKey="value"
+                                    >
+                                        {volumeDistData.map((entry, index) => (
+                                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} stroke="rgba(0,0,0,0)" />
+                                        ))}
+                                    </Pie>
+                                    <Tooltip contentStyle={{ backgroundColor: '#171717', border: '1px solid #333', borderRadius: '8px', color: '#fff' }} />
+                                    <Legend iconType="circle" layout="vertical" verticalAlign="middle" align="right" wrapperStyle={{ fontSize: '10px', color: '#a3a3a3' }} />
+                                </PieChart>
+                            </ResponsiveContainer>
+                        </div>
                     </div>
-                    <div className="h-48 flex items-center justify-center">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
-                                <Pie
-                                    data={volumeDistData}
-                                    innerRadius={40}
-                                    outerRadius={70}
-                                    paddingAngle={5}
-                                    dataKey="value"
-                                >
-                                    {volumeDistData.map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} stroke="rgba(0,0,0,0)" />
-                                    ))}
-                                </Pie>
-                                <Tooltip contentStyle={{ backgroundColor: '#171717', border: '1px solid #333', borderRadius: '8px', color: '#fff' }} />
-                                <Legend iconType="circle" layout="vertical" verticalAlign="middle" align="right" wrapperStyle={{ fontSize: '10px', color: '#a3a3a3' }} />
-                            </PieChart>
-                        </ResponsiveContainer>
-                    </div>
-                </div>
                 ) : (
-                <EmptyStateCard
-                    icon={<PieIcon size={48} className="text-gray-600" />}
-                    title="Акцент нагрузки"
-                    currentCount={logs.length}
-                    requiredCount={WORKOUT_THRESHOLDS.VOLUME_DISTRIBUTION}
-                    description="Визуализация баланса между группами мышц"
-                    showProgress={true}
-                />
+                    <EmptyStateCard
+                        icon={<PieIcon size={48} className="text-gray-600" />}
+                        title="Акцент нагрузки"
+                        currentCount={logs.length}
+                        requiredCount={WORKOUT_THRESHOLDS.VOLUME_DISTRIBUTION}
+                        description="Визуализация баланса между группами мышц"
+                        showProgress={true}
+                    />
                 )}
             </div>
 
@@ -910,14 +911,14 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
                                         </div>
                                     </div>
                                     <div className="text-right">
-                                        <span className="font-black text-xl text-white">
+                                        <span className="font-display font-black text-2xl text-white tracking-tight">
                                             {pr.weight}
                                         </span>
-                                        <span className="text-xs text-gray-500 font-bold ml-1">
+                                        <span className="text-[10px] text-gray-500 font-bold ml-1">
                                             кг
                                         </span>
-                                        <div className="text-[10px] text-gray-500 mt-0.5">
-                                            × {pr.reps} повт.
+                                        <div className="text-[10px] text-gray-500 font-medium mt-0.5">
+                                            × {pr.reps}
                                         </div>
                                     </div>
                                 </div>
@@ -982,11 +983,11 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
                                         </div>
                                     </div>
                                     <div className="text-right">
-                                        <span className="font-black text-xl text-white">
+                                        <span className="font-display font-black text-2xl text-white tracking-tight">
                                             {entry.currentWeight}
                                         </span>
-                                        <span className="text-xs text-gray-500 font-bold ml-1">
-                                            КГ
+                                        <span className="text-[10px] text-gray-500 font-bold ml-1">
+                                            кг
                                         </span>
                                         {entry.changeFromFirst !== 0 && (
                                             <div className={`text-[10px] mt-1 ${entry.changeFromFirst > 0 ? 'text-green-400' : 'text-red-400'}`}>
@@ -1029,8 +1030,8 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
                                 <div key={index} className="bg-gray-700 p-4 rounded-lg">
                                     <h3 className="font-semibold text-white">{ex.name}</h3>
                                     <div className="flex items-center gap-4 text-gray-400 text-sm mt-2">
-                                        <span className="flex items-center gap-1.5"><Repeat size={14}/> {ex.sets} подх. x {ex.reps} повт.</span>
-                                        <span className="flex items-center gap-1.5"><Timer size={14}/> {ex.rest}с отдых</span>
+                                        <span className="flex items-center gap-1.5"><Repeat size={14} /> {ex.sets} подх. x {ex.reps} повт.</span>
+                                        <span className="flex items-center gap-1.5"><Timer size={14} /> {ex.rest}с отдых</span>
                                     </div>
                                 </div>
                             ))}
@@ -1066,13 +1067,13 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
                 const isTimedExercise = (name: string) => {
                     const n = name.toLowerCase();
                     return n.includes('планк') || n.includes('plank') ||
-                           n.includes('кардио') || n.includes('cardio') ||
-                           n.includes('бег') || n.includes('run') ||
-                           n.includes('велосипед') || n.includes('bike') ||
-                           n.includes('эллипс') || n.includes('ellip') ||
-                           n.includes('дорожк') || n.includes('treadmill') ||
-                           n.includes('скакалк') || n.includes('rope') ||
-                           n.includes('берпи') || n.includes('burpee');
+                        n.includes('кардио') || n.includes('cardio') ||
+                        n.includes('бег') || n.includes('run') ||
+                        n.includes('велосипед') || n.includes('bike') ||
+                        n.includes('эллипс') || n.includes('ellip') ||
+                        n.includes('дорожк') || n.includes('treadmill') ||
+                        n.includes('скакалк') || n.includes('rope') ||
+                        n.includes('берпи') || n.includes('burpee');
                 };
 
                 // Calculate total volume (only for weighted exercises)
@@ -1221,7 +1222,7 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
                             <div className="bg-neutral-700/30 rounded-xl p-3">
                                 <h3 className="text-sm font-medium text-white mb-2">Что это?</h3>
                                 <p className="text-gray-300 text-sm">
-                                    Тренировочный объём — это общая нагрузка за тренировку:<br/>
+                                    Тренировочный объём — это общая нагрузка за тренировку:<br />
                                     <span className="text-green-400 font-medium">Вес × Подходы × Повторения</span>
                                 </p>
                             </div>
