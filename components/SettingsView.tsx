@@ -141,7 +141,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({ profile, telegramUser, onUp
 
 
     return (
-        <div className="min-h-screen bg-background text-white p-4 pb-24 font-sans selection:bg-primary/30">
+        <div className="min-h-screen bg-background text-white p-2 pb-24 font-sans selection:bg-primary/30">
             {/* Header */}
             <header className="flex items-center justify-between mb-8 px-2 pt-2">
                 <h1 className="text-4xl font-display font-black tracking-tighter italic">
@@ -319,16 +319,8 @@ const SettingsView: React.FC<SettingsViewProps> = ({ profile, telegramUser, onUp
                 <div className="bg-surface border border-subtle rounded-xl overflow-hidden p-6 relative">
                     <div className="flex items-start justify-between">
                         <div>
-                            {/* Official Whoop Logo - ViewBox Fixed & Simplified */}
-                            <svg viewBox="0 0 100 34" className="h-6 w-auto fill-white mb-2" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
-                                <g>
-                                    <path d="M12.9 0L7.1 19.6L3.9 9.5H0L5.3 26.2H8.8L14.7 6.4L20.6 26.2H24.1L29.4 9.5H25.4L22.2 19.6L16.4 0H12.9Z" />
-                                    <path d="M37.3 0H33.8V26.2H37.3V14.8H43.9V26.2H47.4V0H37.3ZM43.9 11.5H37.3V3.3H43.9V11.5Z" />
-                                    <path d="M64.6 13.1C64.6 20.3 58.7 26.2 51.5 26.2C44.3 26.2 38.4 20.3 38.4 13.1C38.4 5.9 44.3 0 51.5 0C58.7 0 64.6 5.9 64.6 13.1ZM61.1 13.1C61.1 7.8 56.8 3.5 51.5 3.5C46.2 3.5 41.9 7.8 41.9 13.1C41.9 18.4 46.2 22.7 51.5 22.7C56.8 22.7 61.1 18.4 61.1 13.1Z" />
-                                    <path d="M80.8 13.1C80.8 20.3 74.9 26.2 67.7 26.2C60.5 26.2 54.6 20.3 54.6 13.1C54.6 5.9 60.5 0 67.7 0C74.9 0 80.8 5.9 80.8 13.1ZM77.3 13.1C77.3 7.8 73 3.5 67.7 3.5C62.4 3.5 58.1 7.8 58.1 13.1C58.1 18.4 62.4 22.7 67.7 22.7C73 22.7 77.3 18.4 77.3 13.1Z" />
-                                    <path d="M85.4 0H81.9V26.2H85.4V16.7H91.1C96 16.7 100 12.8 100 8.3C100 3.7 96 0 91.1 0H85.4ZM91.1 13.3H85.4V3.4H91.1C93.9 3.4 96.3 5.7 96.3 8.3C96.3 11 93.9 13.3 91.1 13.3Z" />
-                                </g>
-                            </svg>
+                            {/* Official Whoop Logo - Text Replacement for Clarity */}
+                            <h3 className="font-display font-black text-3xl italic tracking-tighter text-white mb-2">WHOOP</h3>
                             <p className="text-gray-500 text-xs font-bold leading-relaxed max-w-[200px]">
                                 {whoopConnected
                                     ? "Данные синхронизируются автоматически в течение цикла восстановления."
