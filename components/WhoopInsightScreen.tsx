@@ -1,7 +1,16 @@
 import React from 'react';
 import { WhoopReadinessData, WorkoutSession } from '../types';
 import { WhoopInsight, getInsightColors, needsAdaptation } from '../services/whoopInsights';
-import { X, Activity, Moon, Heart, Check, ChevronRight } from 'lucide-react';
+import { X, Activity, Moon, Heart, Check, ChevronRight, AlertTriangle, AlertCircle, Zap, ThumbsUp } from 'lucide-react';
+
+// Map icon names to Lucide components
+const iconMap: Record<string, React.ReactNode> = {
+  'moon': <Moon size={40} />,
+  'alert-triangle': <AlertTriangle size={40} />,
+  'alert-circle': <AlertCircle size={40} />,
+  'zap': <Zap size={40} />,
+  'thumbs-up': <ThumbsUp size={40} />,
+};
 
 interface WhoopInsightScreenProps {
   whoopData: WhoopReadinessData;
@@ -53,7 +62,9 @@ const WhoopInsightScreen: React.FC<WhoopInsightScreenProps> = ({
           <div className={`rounded-2xl p-5 border ${colors.bg} ${colors.border}`}>
             {/* Icon + Title */}
             <div className="text-center mb-4">
-              <div className="text-5xl mb-3">{insight.icon}</div>
+              <div className={`w-16 h-16 mx-auto mb-3 rounded-full flex items-center justify-center ${colors.bg} ${colors.icon}`}>
+                {iconMap[insight.icon] || <Activity size={40} />}
+              </div>
               <h2 className={`text-xl font-bold ${colors.text}`}>{insight.title}</h2>
               {insight.subtitle && (
                 <p className="text-gray-400 text-sm mt-1">{insight.subtitle}</p>

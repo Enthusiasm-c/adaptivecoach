@@ -33,7 +33,7 @@ export function generateInsight(whoop: WhoopReadinessData): WhoopInsight {
   if (whoop.sleepHours < 5) {
     return {
       type: 'warning',
-      icon: '😴',
+      icon: 'moon',
       title: `Вижу, ты спал всего ${whoop.sleepHours.toFixed(1)} часа`,
       subtitle: `Recovery ${whoop.recoveryScore}%`,
       adaptations: ['Убрал 2 тяжёлых сета', 'Снизил веса на 15%']
@@ -44,7 +44,7 @@ export function generateInsight(whoop: WhoopReadinessData): WhoopInsight {
   if (whoop.recoveryScore < 40) {
     return {
       type: 'warning',
-      icon: '⚠️',
+      icon: 'alert-triangle',
       title: `Восстановление ${whoop.recoveryScore}% — организму тяжело`,
       subtitle: `Сон: ${whoop.sleepHours.toFixed(1)}ч`,
       adaptations: ['Убрал 2 тяжёлых сета', 'Снизил веса на 15%']
@@ -55,8 +55,8 @@ export function generateInsight(whoop: WhoopReadinessData): WhoopInsight {
   if (whoop.recoveryScore > 80) {
     return {
       type: 'excellent',
-      icon: '🔥',
-      title: `Recovery ${whoop.recoveryScore}% — отличный день!`,
+      icon: 'zap',
+      title: `Recovery ${whoop.recoveryScore}% — отличный день`,
       subtitle: 'Организм готов к нагрузке',
       adaptations: []
     };
@@ -66,7 +66,7 @@ export function generateInsight(whoop: WhoopReadinessData): WhoopInsight {
   if (whoop.recoveryScore >= 65) {
     return {
       type: 'good',
-      icon: '💪',
+      icon: 'thumbs-up',
       title: `Recovery ${whoop.recoveryScore}% — хорошо`,
       subtitle: `Сон: ${whoop.sleepHours.toFixed(1)}ч`,
       adaptations: []
@@ -76,7 +76,7 @@ export function generateInsight(whoop: WhoopReadinessData): WhoopInsight {
   // Caution: Moderate recovery (40-65%)
   return {
     type: 'caution',
-    icon: '🤔',
+    icon: 'alert-circle',
     title: `Recovery ${whoop.recoveryScore}% — средненько`,
     subtitle: 'Поберегу тебя сегодня',
     adaptations: ['Немного снизил веса']
