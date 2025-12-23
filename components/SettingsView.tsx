@@ -59,6 +59,13 @@ const SettingsView: React.FC<SettingsViewProps> = ({ profile, telegramUser, onUp
             }
         };
         loadWhoopStatus();
+
+        // Also check on window focus (user returning from WHOOP OAuth)
+        const handleFocus = () => {
+            loadWhoopStatus();
+        };
+        window.addEventListener('focus', handleFocus);
+        return () => window.removeEventListener('focus', handleFocus);
     }, []);
 
     // Connect WHOOP
