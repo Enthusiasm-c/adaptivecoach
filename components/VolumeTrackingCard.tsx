@@ -43,18 +43,23 @@ const VolumeBar: React.FC<{ data: MuscleVolumeData }> = ({ data }) => {
     return <Minus size={12} className="text-green-400" />;
   };
 
+  const isOptimal = data.status === 'optimal';
+  const targetText = isOptimal ? 'Оптимально' : `${data.totalSets} / ${Math.round(data.optimalSets)} подх.`;
+
   return (
     <div className="space-y-1">
       <div className="flex justify-between items-center text-xs">
-        <span className="text-gray-300">
+        <span className="text-white font-medium">
           {MUSCLE_NAMES_RU[data.muscleId] || data.muscleNameRu.split(' ')[0]}
         </span>
-        <span className="flex items-center gap-1 text-gray-400">
-          {getStatusIcon()}
-          <span title="подходов за неделю / оптимум">{data.totalSets} подх.</span>
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] text-gray-500 font-medium uppercase tracking-wider">{targetText}</span>
+          <span className="flex items-center gap-1 text-gray-400">
+            {getStatusIcon()}
+          </span>
+        </div>
       </div>
-      <div className="h-2 bg-neutral-800 rounded-full overflow-hidden">
+      <div className="h-2 bg-neutral-800 rounded-full overflow-hidden border border-white/5">
         <div
           className={`h-full ${getBarColor()} transition-all duration-500 rounded-full`}
           style={{ width: `${Math.min(percent, 100)}%` }}
@@ -124,7 +129,7 @@ const VolumeTrackingCard: React.FC<VolumeTrackingCardProps> = ({
 
       {/* Overall Score Circle */}
       <div className="flex items-center gap-4 mb-4">
-        <div className="relative w-16 h-16">
+        <div className="relative w-16 h-16 shrink-0">
           <svg className="w-full h-full transform -rotate-90">
             <circle
               cx="32"
@@ -145,17 +150,18 @@ const VolumeTrackingCard: React.FC<VolumeTrackingCardProps> = ({
               strokeLinecap="round"
             />
           </svg>
-          <div className="absolute inset-0 flex items-center justify-center">
-            <span className="text-lg font-bold text-white">{summary.overallScore}%</span>
+          <div className="absolute inset-0 flex items-center justify-center flex-col">
+            <span className="text-lg font-display font-black text-white">{summary.overallScore}%</span>
           </div>
         </div>
         <div className="flex-1">
-          <p className="text-sm text-gray-400 leading-relaxed">
+          <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-1">Достижение цели объема</p>
+          <p className="text-sm text-white font-medium leading-tight">
             {summary.overallScore >= 80
               ? 'Объём тренировок на оптимальном уровне'
               : summary.overallScore >= 50
-              ? 'Неплохо! Можно добавить немного объёма'
-              : 'Добавь больше подходов для прогресса'}
+                ? 'Неплохо! Можно добавить немного объёма'
+                : 'Добавь больше подходов для прогресса'}
           </p>
         </div>
       </div>

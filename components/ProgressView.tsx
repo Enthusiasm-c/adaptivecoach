@@ -567,21 +567,37 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
                                 <div className="absolute inset-2 border-4 border-orange-500/40 rounded-full"></div>
                                 <div className="text-2xl font-display font-black text-white">{painLogs.length}</div>
                             </div>
-                            <p className="text-xs text-orange-400 font-medium">Активных зон</p>
+                            <p className="text-xs text-orange-400 font-bold uppercase tracking-wider">Проблемные зоны</p>
+                            <p className="text-[10px] text-gray-500 text-center mt-1 leading-tight">
+                                Высокая частота болевых ощущений. Рекомендуется снижение нагрузки.
+                            </p>
                         </div>
 
                         {/* Active Zones List */}
                         <div className="space-y-2">
-                            {Object.entries(painByLocation).slice(0, 3).map(([location, logs]) => (
-                                <div key={location} className="flex items-center justify-between bg-neutral-800 rounded-lg p-2 px-3">
-                                    <span className="text-sm text-gray-300">{location}</span>
-                                    <span className="text-xs font-bold text-orange-400">{(logs as any[]).length} записей</span>
-                                </div>
-                            ))}
+                            <p className="text-[10px] text-gray-500 px-1 font-bold uppercase tracking-wider">Последние отчеты</p>
+                            {Object.entries(painByLocation).slice(0, 3).map(([location, logs]) => {
+                                const typedLogs = logs as WorkoutLog[];
+                                const lastLog = typedLogs[typedLogs.length - 1];
+                                const dateStr = new Date(lastLog.date).toLocaleDateString('ru-RU', { weekday: 'short', day: 'numeric' });
+                                return (
+                                    <div key={location} className="flex items-center justify-between bg-neutral-800 rounded-lg p-2 px-3 border border-white/5">
+                                        <span className="text-sm text-gray-200 font-medium">{location}</span>
+                                        <div className="text-right">
+                                            <div className="text-[10px] text-gray-500 font-medium uppercase">{dateStr}</div>
+                                            <div className="text-[10px] text-orange-400">{typedLogs.length} записи</div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+
                             {painAnalysis && (
-                                <div className="mt-2 p-2 bg-orange-500/10 border border-orange-500/10 rounded-lg">
-                                    <p className="text-[10px] text-orange-300 leading-tight">
-                                        AI: {painAnalysis.recommendation || "Рекомендуется снизить нагрузку на проблемные зоны."}
+                                <div className="mt-3 p-3 bg-orange-500/10 border border-orange-500/20 rounded-xl relative">
+                                    <div className="absolute top-0 left-0 bg-orange-500 text-black text-[9px] font-bold px-1.5 py-0.5 rounded-br-lg rounded-tl-lg">
+                                        PHYSIO AI
+                                    </div>
+                                    <p className="text-[11px] text-orange-200 leading-snug mt-2 italic">
+                                        "{painAnalysis.recommendation || "Рекомендуется снизить нагрузку на проблемные зоны."}"
                                     </p>
                                 </div>
                             )}
