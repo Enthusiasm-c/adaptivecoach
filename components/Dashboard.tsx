@@ -411,15 +411,23 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
             if (whoopStatus.connected && pendingSessionName) {
                 // Get WHOOP readiness data
                 const whoopReadiness = await apiService.whoop.getReadiness();
+
+                // Validate we have actual data (not all zeros)
+                const hasValidData = whoopReadiness.recoveryScore > 0 || whoopReadiness.sleepHours > 0;
+                if (!hasValidData) {
+                    console.warn('WHOOP returned empty data, falling back to manual input');
+                    throw new Error('No WHOOP data available');
+                }
+
                 const whoopData: WhoopReadinessData = {
-                    recoveryScore: whoopReadiness.recoveryScore,
-                    sleepPerformance: whoopReadiness.sleepPerformance,
-                    sleepHours: whoopReadiness.sleepHours,
-                    hrv: whoopReadiness.hrv,
-                    rhr: whoopReadiness.rhr,
-                    sleepScore: whoopReadiness.sleepScore,
-                    stressScore: whoopReadiness.stressScore,
-                    sorenessScore: whoopReadiness.sorenessScore,
+                    recoveryScore: whoopReadiness.recoveryScore ?? 50,
+                    sleepPerformance: whoopReadiness.sleepPerformance ?? 80,
+                    sleepHours: whoopReadiness.sleepHours ?? 7,
+                    hrv: whoopReadiness.hrv ?? 50,
+                    rhr: whoopReadiness.rhr ?? 60,
+                    sleepScore: whoopReadiness.sleepScore ?? 3,
+                    stressScore: whoopReadiness.stressScore ?? 3,
+                    sorenessScore: whoopReadiness.sorenessScore ?? 3,
                 };
 
                 // Find the session
