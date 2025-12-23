@@ -11,7 +11,7 @@
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700;800;900&display=swap"
     rel="stylesheet">
   <script>
     tailwind.config = {
@@ -19,11 +19,28 @@
         extend: {
           fontFamily: {
             sans: ['Inter', 'sans-serif'],
+            display: ['"Barlow Condensed"', 'sans-serif'], // For headers and numbers (DIN alternative)
+            body: ['Inter', 'sans-serif'], // For generic text
           },
           colors: {
-            background: '#0a0a0a',
-            surface: '#171717',
-            primary: '#6366f1',
+            // Updated Whoop-inspired palette
+            background: '#0F0F0F', // Whoop Black
+            surface: '#1A1A1A',    // Card Surface
+            subtle: '#262626',     // Borders/Dividers
+            primary: '#E93D3D',    // Whoop Red (Strain/Action) - replacing indigo as primary
+            success: '#4CC76D',    // Whoop Green (Recovery)
+            info: '#2E9BFF',       // Whoop Blue (Sleep)
+            // Legacy mappings to keep app working while refactoring
+            indigo: {
+                400: '#E93D3D', // Remap indigo to Whoop Red for immediate consistency
+                500: '#D63131',
+                600: '#C42626',
+            },
+            neutral: {
+                950: '#0F0F0F',
+                900: '#1A1A1A',
+                800: '#262626',
+            }
           },
           keyframes: {
             'fade-in': {
