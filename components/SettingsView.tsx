@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { OnboardingProfile, TelegramUser, Goal, Location } from '../types';
-import { Trash2, Save, User, LogOut, Target, Calendar, Clock, Award, Loader2, MessageCircle, MapPin, AlertTriangle } from 'lucide-react';
+import { Trash2, Save, User, LogOut, Target, Calendar, Clock, Award, Loader2, MessageCircle, MapPin, AlertTriangle, Activity, ExternalLink, Unlink } from 'lucide-react';
 import { apiService, Badge } from '../services/apiService';
 
 interface SettingsViewProps {
@@ -40,6 +40,54 @@ const SettingsView: React.FC<SettingsViewProps> = ({ profile, telegramUser, onUp
     const [allBadges, setAllBadges] = useState<Badge[]>([]);
     const [myBadges, setMyBadges] = useState<Badge[]>([]);
     const [loadingBadges, setLoadingBadges] = useState(true);
+
+    // WHOOP state
+    const [whoopConnected, setWhoopConnected] = useState(false);
+    const [whoopLoading, setWhoopLoading] = useState(true);
+    const [whoopConnecting, setWhoopConnecting] = useState(false);
+
+    // Load WHOOP status
+    useEffect(() => {
+        const loadWhoopStatus = async () => {
+            try {
+                const status = await apiService.whoop.getStatus();
+                setWhoopConnected(status.connected);
+            } catch (e) {
+                console.error('Failed to load WHOOP status:', e);
+            } finally {
+                setWhoopLoading(false);
+            }
+        };
+        loadWhoopStatus();
+    }, []);
+
+    // Connect WHOOP
+    const handleConnectWhoop = async () => {
+        setWhoopConnecting(true);
+        try {
+            const { authUrl } = await apiService.whoop.getAuthUrl();
+            // Open WHOOP OAuth in browser
+            if (window.Telegram?.WebApp?.openLink) {
+                window.Telegram.WebApp.openLink(authUrl);
+            } else {
+                window.open(authUrl, '_blank');
+            }
+        } catch (e) {
+            console.error('Failed to start WHOOP auth:', e);
+        } finally {
+            setWhoopConnecting(false);
+        }
+    };
+
+    // Disconnect WHOOP
+    const handleDisconnectWhoop = async () => {
+        try {
+            await apiService.whoop.disconnect();
+            setWhoopConnected(false);
+        } catch (e) {
+            console.error('Failed to disconnect WHOOP:', e);
+        }
+    };
 
     useEffect(() => {
         const loadBadges = async () => {
@@ -240,6 +288,72 @@ const SettingsView: React.FC<SettingsViewProps> = ({ profile, telegramUser, onUp
                                 </>
                             )}
                         </button>
+                    </section>
+
+                    {/* WHOOP Integration Section */}
+                    <section className="space-y-4">
+                        <h2 className="text-lg font-bold text-gray-300 px-2 flex items-center gap-2">
+                            <Activity size={18} className="text-green-400" /> WHOOP Integration
+                        </h2>
+
+                        <div className="bg-neutral-900 rounded-2xl p-4 border border-white/5">
+                            {whoopLoading ? (
+                                <div className="flex items-center justify-center py-4">
+                                    <Loader2 className="animate-spin text-green-400" size={24} />
+                                </div>
+                            ) : whoopConnected ? (
+                                <div className="space-y-4">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse" />
+                                            <div>
+                                                <span className="text-green-400 font-medium">Подключено</span>
+                                                <p className="text-xs text-gray-500">Данные синхронизируются автоматически</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-green-900/20 border border-green-500/30 rounded-xl p-3">
+                                        <p className="text-green-300 text-sm">
+                                            Перед тренировкой мы автоматически загружаем твой Recovery Score, HRV и данные о сне из WHOOP.
+                                        </p>
+                                    </div>
+
+                                    <button
+                                        onClick={handleDisconnectWhoop}
+                                        className="w-full py-3 flex items-center justify-center gap-2 text-red-400 bg-red-900/20 border border-red-500/30 rounded-xl font-medium hover:bg-red-900/30 transition"
+                                    >
+                                        <Unlink size={16} /> Отключить WHOOP
+                                    </button>
+                                </div>
+                            ) : (
+                                <div className="space-y-4">
+                                    <div className="text-center py-2">
+                                        <div className="w-16 h-16 mx-auto mb-3 bg-green-900/30 rounded-full flex items-center justify-center">
+                                            <Activity size={32} className="text-green-400" />
+                                        </div>
+                                        <p className="text-gray-300 text-sm mb-1">Подключи WHOOP для автоматического отслеживания</p>
+                                        <p className="text-gray-500 text-xs">Recovery, HRV и качество сна — без ручного ввода</p>
+                                    </div>
+
+                                    <button
+                                        onClick={handleConnectWhoop}
+                                        disabled={whoopConnecting}
+                                        className="w-full py-4 flex items-center justify-center gap-2 bg-green-600 text-white rounded-xl font-bold hover:bg-green-500 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        {whoopConnecting ? (
+                                            <>
+                                                <Loader2 size={18} className="animate-spin" /> Подключение...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <ExternalLink size={18} /> Подключить WHOOP
+                                            </>
+                                        )}
+                                    </button>
+                                </div>
+                            )}
+                        </div>
                     </section>
 
                     {/* Badges Section */}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { OnboardingProfile, TrainingProgram, WorkoutLog, WorkoutSession, ReadinessData, ActiveWorkoutState, TelegramUser, WorkoutLimitStatus } from '../types';
+import { OnboardingProfile, TrainingProgram, WorkoutLog, WorkoutSession, ReadinessData, ActiveWorkoutState, TelegramUser, WorkoutLimitStatus, WhoopReadinessData } from '../types';
 import WorkoutView from './WorkoutView';
 import ProgressView from './ProgressView';
 import SettingsView from './SettingsView';
@@ -9,6 +9,7 @@ import MesocycleIndicator from './MesocycleIndicator';
 import { Dumbbell, Calendar as CalendarIcon, BarChart2, Settings, Play, ChevronRight, Info, Battery, Zap, Trophy, Users, Crown, Bot, MessageCircle, Flame, Activity, Clock, TrendingUp, Sparkles, MessageSquarePlus, HelpCircle, Coffee, Sun, Moon, Check, LayoutGrid, Shield, AlertTriangle } from 'lucide-react';
 import WorkoutPreviewModal from './WorkoutPreviewModal';
 import ReadinessModal from './ReadinessModal';
+import WhoopInsightScreen from './WhoopInsightScreen';
 import WorkoutIntroModal from './WorkoutIntroModal';
 import PremiumModal from './PremiumModal';
 import HardPaywall from './HardPaywall';
@@ -20,6 +21,8 @@ import { hapticFeedback } from '../utils/hapticUtils';
 import SkeletonLoader from './SkeletonLoader';
 import apiService from '../services/apiService';
 import { MesocycleState } from '../services/mesocycleService';
+import { processWhoopData, WhoopInsight, AdaptedWorkoutResult } from '../services/whoopInsights';
+import { calculateReadinessScore } from '../utils/progressUtils';
 
 interface DashboardProps {
     profile: OnboardingProfile;
@@ -64,6 +67,18 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
     const [shieldNotification, setShieldNotification] = useState<string | null>(null);
     const [showFirstWorkoutPaywall, setShowFirstWorkoutPaywall] = useState(false);
     const [isInputFocused, setIsInputFocused] = useState(false);
+
+    // WHOOP Insight Screen state
+    const [showWhoopInsight, setShowWhoopInsight] = useState(false);
+    const [whoopInsightData, setWhoopInsightData] = useState<{
+        whoopData: WhoopReadinessData;
+        originalSession: WorkoutSession;
+        adaptedSession: WorkoutSession;
+        insight: WhoopInsight;
+    } | null>(null);
+    const [isLoadingWhoop, setIsLoadingWhoop] = useState(false);
+    // Store adapted session to use in WorkoutView (bypasses program lookup)
+    const [activeAdaptedSession, setActiveAdaptedSession] = useState<WorkoutSession | null>(null);
 
     // Calendar State (Removed calendarDate, isEditingSchedule, selectedDateToMove, scheduleOverrides)
 
@@ -298,7 +313,8 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
 
 
     if (activeWorkout) {
-        const workout = program.sessions.find(s => s.name === activeWorkout);
+        // Use adapted session from WHOOP if available, otherwise look up from program
+        const workout = activeAdaptedSession || program.sessions.find(s => s.name === activeWorkout);
         if (workout) {
             return (
                 <WorkoutView
@@ -326,6 +342,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
                         setActiveWorkout(null);
                         setCurrentReadiness(null);
                         setRestoredState(null);
+                        setActiveAdaptedSession(null); // Clear adapted session
                         localStorage.removeItem('activeWorkoutState');
 
                         // Show first workout paywall if this is the first workout and user is not Pro
@@ -343,6 +360,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
                         // Let's NOT clear storage on back, just UI.
                         setActiveWorkout(null);
                         setCurrentReadiness(null);
+                        setActiveAdaptedSession(null); // Clear adapted session
                     }}
                 />
             );
@@ -382,8 +400,55 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
     };
 
     // Called when user clicks "Поехали!" on the intro modal
-    const handleIntroContinue = () => {
+    const handleIntroContinue = async () => {
         setShowIntroModal(false);
+
+        // Check if WHOOP is connected and try to get data
+        setIsLoadingWhoop(true);
+        try {
+            const whoopStatus = await apiService.whoop.getStatus();
+
+            if (whoopStatus.connected && pendingSessionName) {
+                // Get WHOOP readiness data
+                const whoopReadiness = await apiService.whoop.getReadiness();
+                const whoopData: WhoopReadinessData = {
+                    recoveryScore: whoopReadiness.recoveryScore,
+                    sleepPerformance: whoopReadiness.sleepPerformance,
+                    sleepHours: whoopReadiness.sleepHours,
+                    hrv: whoopReadiness.hrv,
+                    rhr: whoopReadiness.rhr,
+                    sleepScore: whoopReadiness.sleepScore,
+                    stressScore: whoopReadiness.stressScore,
+                    sorenessScore: whoopReadiness.sorenessScore,
+                };
+
+                // Find the session
+                const originalSession = program?.sessions.find(s => s.name === pendingSessionName);
+                if (originalSession) {
+                    // Process WHOOP data and get adapted workout
+                    const result = processWhoopData(originalSession, whoopData);
+
+                    setWhoopInsightData({
+                        whoopData,
+                        originalSession: result.originalSession,
+                        adaptedSession: result.adaptedSession,
+                        insight: result.insight,
+                    });
+                    setShowWhoopInsight(true);
+                    hapticFeedback.notificationOccurred('success');
+                    return;
+                }
+            }
+        } catch (error) {
+            console.error('Failed to get WHOOP data:', error);
+            // Notify user with haptic feedback that WHOOP sync failed
+            hapticFeedback.notificationOccurred('warning');
+            // Fall through to regular readiness modal
+        } finally {
+            setIsLoadingWhoop(false);
+        }
+
+        // Fallback: show regular readiness modal
         setShowReadinessModal(true);
     };
 
@@ -400,6 +465,59 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
             setActiveWorkout(pendingSessionName);
             setPendingSessionName(null);
         }
+    };
+
+    // Handler for starting the adapted workout (WHOOP recommended)
+    const handleStartAdaptedWorkout = () => {
+        if (!whoopInsightData || !pendingSessionName) return;
+
+        // Calculate readiness from WHOOP data for tracking
+        const readinessData = calculateReadinessScore(
+            whoopInsightData.whoopData.sleepScore,
+            3, // Default food score
+            whoopInsightData.whoopData.stressScore,
+            whoopInsightData.whoopData.sorenessScore
+        );
+
+        setCurrentReadiness(readinessData);
+        setShowWhoopInsight(false);
+
+        // Store the adapted session to use instead of looking up from program
+        setActiveAdaptedSession(whoopInsightData.adaptedSession);
+        setActiveWorkout(whoopInsightData.adaptedSession.name);
+        setWhoopInsightData(null);
+        setPendingSessionName(null);
+        hapticFeedback.notificationOccurred('success');
+    };
+
+    // Handler for starting the original workout (user overrides WHOOP recommendation)
+    const handleStartOriginalWorkout = () => {
+        if (!whoopInsightData || !pendingSessionName) return;
+
+        // Calculate readiness from WHOOP data for tracking
+        const readinessData = calculateReadinessScore(
+            whoopInsightData.whoopData.sleepScore,
+            3, // Default food score
+            whoopInsightData.whoopData.stressScore,
+            whoopInsightData.whoopData.sorenessScore
+        );
+
+        setCurrentReadiness(readinessData);
+        setShowWhoopInsight(false);
+        setWhoopInsightData(null);
+
+        // Use original session (no adapted session needed)
+        setActiveAdaptedSession(null);
+        setActiveWorkout(whoopInsightData.originalSession.name);
+        setPendingSessionName(null);
+        hapticFeedback.impactOccurred('medium');
+    };
+
+    // Handler for canceling WHOOP insight screen
+    const handleCancelWhoopInsight = () => {
+        setShowWhoopInsight(false);
+        setWhoopInsightData(null);
+        setPendingSessionName(null);
     };
 
     // --- Calendar Logic --- (Removed all calendar-related functions)
@@ -871,10 +989,40 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
                 />
             )}
 
+            {/* WHOOP Loading Indicator */}
+            {isLoadingWhoop && (
+                <div className="fixed inset-0 bg-black/90 backdrop-blur-xl flex items-center justify-center z-50">
+                    <div className="bg-neutral-900 border border-white/10 rounded-3xl p-8 text-center animate-fade-in">
+                        <div className="relative w-16 h-16 mx-auto mb-4">
+                            <div className="absolute inset-0 border-4 border-green-500/20 rounded-full"></div>
+                            <div className="absolute inset-0 border-4 border-t-green-500 rounded-full animate-spin"></div>
+                            <div className="absolute inset-0 flex items-center justify-center">
+                                <Activity size={24} className="text-green-400" />
+                            </div>
+                        </div>
+                        <p className="text-white font-medium">Синхронизация с WHOOP...</p>
+                        <p className="text-gray-500 text-sm mt-1">Проверяем твоё восстановление</p>
+                    </div>
+                </div>
+            )}
+
             {showReadinessModal && (
                 <ReadinessModal
                     onConfirm={handleReadinessConfirm}
                     onCancel={() => setShowReadinessModal(false)}
+                />
+            )}
+
+            {/* WHOOP Insight Screen - shows when WHOOP data is available */}
+            {showWhoopInsight && whoopInsightData && (
+                <WhoopInsightScreen
+                    whoopData={whoopInsightData.whoopData}
+                    originalSession={whoopInsightData.originalSession}
+                    adaptedSession={whoopInsightData.adaptedSession}
+                    insight={whoopInsightData.insight}
+                    onStartAdapted={handleStartAdaptedWorkout}
+                    onStartOriginal={handleStartOriginalWorkout}
+                    onCancel={handleCancelWhoopInsight}
                 />
             )}
 

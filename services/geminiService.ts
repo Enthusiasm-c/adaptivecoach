@@ -1,6 +1,6 @@
 
 import { Type } from "@google/genai";
-import { OnboardingProfile, TrainingProgram, WorkoutLog, ChatMessage, Exercise, WorkoutSession, ChatResponse, StrengthInsightsData, Gender, CompletedExercise, Location } from '../types';
+import { OnboardingProfile, TrainingProgram, WorkoutLog, ChatMessage, Exercise, WorkoutSession, ChatResponse, StrengthInsightsData, Gender, CompletedExercise, Location, ChatAction } from '../types';
 import { calculateStreaks, calculateLevel, calculateWeekComparison, calculateWorkoutVolume } from '../utils/progressUtils';
 
 // Import new scientific training system
@@ -1018,8 +1018,8 @@ export const adaptPlan = async (
     return program;
 };
 
-// Internal helper to actually rewrite the JSON
-const modifyPlanWithInstructions = async (currentProgram: TrainingProgram, reason: string, instructions: string): Promise<TrainingProgram> => {
+// Helper to actually rewrite the JSON - exported for action button execution
+export const modifyPlanWithInstructions = async (currentProgram: TrainingProgram, reason: string, instructions: string): Promise<TrainingProgram> => {
     const prompt = buildModificationPrompt(currentProgram, reason, instructions);
 
     const response = await callGeminiProxy(`/v1beta/models/${GEMINI_MODEL}:generateContent`, {
@@ -1116,6 +1116,19 @@ export const getDashboardInsight = async (profile: OnboardingProfile, logs: Work
     return extractText(response);
 };
 
+/**
+ * Generate a user-friendly label for action button based on instructions
+ */
+function generateActionLabel(instructions: string): string {
+    const lower = instructions.toLowerCase();
+    if (lower.includes('добав') || lower.includes('add')) return '✨ Добавить упражнения';
+    if (lower.includes('убр') || lower.includes('удал') || lower.includes('remove')) return '🗑 Убрать упражнения';
+    if (lower.includes('замен') || lower.includes('replace')) return '🔄 Заменить упражнения';
+    if (lower.includes('бицепс') || lower.includes('bicep')) return '💪 Добавить бицепс';
+    if (lower.includes('трицепс') || lower.includes('tricep')) return '💪 Добавить трицепс';
+    return '✏️ Изменить программу';
+}
+
 export const getChatbotResponse = async (history: ChatMessage[], currentProgram: TrainingProgram): Promise<ChatResponse> => {
     // 1. Extract the new user message (last element)
     const newMessage = history[history.length - 1];
@@ -1132,11 +1145,12 @@ export const getChatbotResponse = async (history: ChatMessage[], currentProgram:
     Ты имеешь доступ к текущей программе тренировок пользователя.
     Обращайся к пользователю на "Ты".
 
-    ВАЖНО: Если пользователь жалуется на боль, травму (например, "болит спина") или просит изменить упражнения ("убери приседания"),
-    ТЫ ОБЯЗАН использовать инструмент 'update_workout_plan'.
-    Не просто давай советы, а реально меняй план через этот инструмент.
+    ВАЖНО О ИЗМЕНЕНИИ ПРОГРАММЫ:
+    - Если пользователь хочет добавить/убрать/изменить упражнения — используй инструмент 'update_workout_plan'
+    - Это относится к: добавлению мышечных групп (бицепс, трицепс и тд), замене упражнений, боли/травмам
+    - Пользователь увидит кнопку и сам подтвердит изменение
 
-    Отвечай на естественном РУССКОМ языке.
+    Отвечай на РУССКОМ языке.
     `;
 
     // 4. Build contents with history + new message
@@ -1152,16 +1166,12 @@ export const getChatbotResponse = async (history: ChatMessage[], currentProgram:
         tools: [{ functionDeclarations: [updatePlanTool] }]
     });
 
-    // 6. Handle Function Calls
+    // 6. Handle Function Calls - return as proposedAction instead of auto-modifying
     const functionCall = extractFunctionCall(response);
     if (functionCall && functionCall.name === 'update_workout_plan') {
         const args = functionCall.args as { reason: string, instructions: string };
 
-        // Perform the actual program modification using a separate robust call
-        const updatedProgram = await modifyPlanWithInstructions(currentProgram, args.reason, args.instructions);
-
-        // Return a response indicating success + the new object
-        // Send tool result back for acknowledgment (include thoughtSignature for Gemini 3)
+        // Get acknowledgment text from AI (include thoughtSignature for Gemini 3)
         const modelPart: any = {
             functionCall: { name: functionCall.name, args: functionCall.args }
         };
@@ -1173,14 +1183,22 @@ export const getChatbotResponse = async (history: ChatMessage[], currentProgram:
             contents: [
                 ...contents,
                 { role: 'model', parts: [modelPart] },
-                { role: 'user', parts: [{ functionResponse: { name: 'update_workout_plan', response: { result: 'Program updated successfully.' } } }] }
+                { role: 'user', parts: [{ functionResponse: { name: 'update_workout_plan', response: { result: 'Покажи кнопку пользователю для подтверждения.' } } }] }
             ],
             systemInstruction: { parts: [{ text: systemInstruction }] },
         });
 
+        // Return proposedAction - user must click button to apply changes
         return {
             text: extractText(toolResultResponse),
-            updatedProgram: updatedProgram
+            proposedAction: {
+                id: crypto.randomUUID(),
+                type: 'modify_program',
+                label: generateActionLabel(args.instructions),
+                reason: args.reason,
+                instructions: args.instructions,
+                status: 'pending'
+            }
         };
     }
 

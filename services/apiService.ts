@@ -398,6 +398,65 @@ export const apiService = {
       return apiRequest<ExerciseGifResponse>(`/api/exercises/gif?name=${encodeURIComponent(name)}`);
     },
   },
+
+  // WHOOP Integration
+  whoop: {
+    // Check if WHOOP is connected
+    getStatus: async (): Promise<{
+      connected: boolean;
+      whoopUserId?: number;
+      connectedAt?: string;
+    }> => {
+      return apiRequest('/api/whoop/status');
+    },
+
+    // Get OAuth authorization URL
+    getAuthUrl: async (): Promise<{ authUrl: string }> => {
+      return apiRequest('/api/whoop/auth/start');
+    },
+
+    // Disconnect WHOOP
+    disconnect: async (): Promise<{ success: boolean }> => {
+      return apiRequest('/api/whoop/disconnect', { method: 'POST' });
+    },
+
+    // Get readiness data from WHOOP (pre-calculated 1-5 scores)
+    getReadiness: async (): Promise<{
+      recoveryScore: number;       // 0-100
+      sleepPerformance: number;    // 0-100
+      sleepHours: number;          // hours
+      hrv: number;                 // ms
+      rhr: number;                 // bpm
+      sleepScore: number;          // 1-5
+      stressScore: number;         // 1-5
+      sorenessScore: number;       // 1-5
+    }> => {
+      return apiRequest('/api/whoop/readiness');
+    },
+
+    // Get raw recovery data
+    getRecovery: async (): Promise<{
+      recoveryScore: number;
+      restingHeartRate: number;
+      hrvRmssd: number;
+      spo2Percentage?: number;
+      skinTempCelsius?: number;
+    }> => {
+      return apiRequest('/api/whoop/recovery');
+    },
+
+    // Get raw sleep data
+    getSleep: async (): Promise<{
+      totalInBedMilli: number;
+      totalLightSleepMilli: number;
+      totalRemSleepMilli: number;
+      totalSlowWaveSleepMilli: number;
+      sleepPerformancePercentage: number;
+      sleepEfficiencyPercentage: number;
+    }> => {
+      return apiRequest('/api/whoop/sleep');
+    },
+  },
 };
 
 export default apiService;

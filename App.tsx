@@ -1,11 +1,11 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { OnboardingProfile, TrainingProgram, WorkoutLog, ChatMessage, TelegramUser } from './types';
+import { OnboardingProfile, TrainingProgram, WorkoutLog, ChatMessage, TelegramUser, ChatAction } from './types';
 import Onboarding from './components/Onboarding';
 import Dashboard from './components/Dashboard';
 import FitCubeWelcome from './components/FitCubeWelcome';
 import ExerciseCardTest from './components/ExerciseCardTest';
-import { generateInitialPlan, adaptPlan, getChatbotResponse, currentApiKey, adjustProgramForPain, adaptProgramForLocation } from './services/geminiService';
+import { generateInitialPlan, adaptPlan, getChatbotResponse, currentApiKey, adjustProgramForPain, adaptProgramForLocation, modifyPlanWithInstructions } from './services/geminiService';
 import { apiService } from './services/apiService';
 import Chatbot from './components/Chatbot';
 import { AlertTriangle, RefreshCw, Copy, Settings, Globe, Brain, Dumbbell, Activity, CalendarCheck } from 'lucide-react';
@@ -130,6 +130,7 @@ const App: React.FC = () => {
     }
   });
   const [isChatbotLoading, setIsChatbotLoading] = useState(false);
+  const [executingActionId, setExecutingActionId] = useState<string | undefined>(undefined);
 
   // Persist chat messages to localStorage
   useEffect(() => {
@@ -619,18 +620,29 @@ const App: React.FC = () => {
   
   const handleChatbotSend = async (message: string) => {
     if (!trainingProgram) return;
-    
+
     const newMessages: ChatMessage[] = [...chatMessages, { role: 'user', text: message }];
     setChatMessages(newMessages);
     setIsChatbotLoading(true);
     try {
       const response = await getChatbotResponse(newMessages, trainingProgram);
-      setChatMessages([...newMessages, { role: 'assistant', text: response.text }]);
-      
-      if (response.updatedProgram) {
-          setTrainingProgram(response.updatedProgram);
-          localStorage.setItem('trainingProgram', JSON.stringify(response.updatedProgram));
-          setToastMessage("План обновлен тренером!");
+
+      if (response.proposedAction) {
+        // Add message with action button - user must click to apply
+        setChatMessages([...newMessages, {
+          role: 'assistant',
+          text: response.text,
+          action: response.proposedAction
+        }]);
+      } else if (response.updatedProgram) {
+        // Legacy: auto-update (for backward compatibility)
+        setChatMessages([...newMessages, { role: 'assistant', text: response.text }]);
+        setTrainingProgram(response.updatedProgram);
+        localStorage.setItem('trainingProgram', JSON.stringify(response.updatedProgram));
+        setToastMessage("План обновлен тренером!");
+      } else {
+        // Regular text response
+        setChatMessages([...newMessages, { role: 'assistant', text: response.text }]);
       }
 
     } catch (e) {
@@ -638,6 +650,49 @@ const App: React.FC = () => {
       setChatMessages([...newMessages, { role: 'assistant', text: "Ошибка сети. Проверь VPN (если ты в РФ) или соединение." }]);
     } finally {
       setIsChatbotLoading(false);
+    }
+  };
+
+  // Execute action from chat when user clicks the button
+  const executeAction = async (action: ChatAction) => {
+    if (!trainingProgram) return;
+
+    setExecutingActionId(action.id);
+
+    try {
+      // Apply the changes to the program
+      const updatedProgram = await modifyPlanWithInstructions(
+        trainingProgram,
+        action.reason,
+        action.instructions
+      );
+
+      // Update program state
+      setTrainingProgram(updatedProgram);
+      localStorage.setItem('trainingProgram', JSON.stringify(updatedProgram));
+
+      // Update action status in chat history
+      setChatMessages(prev => prev.map(msg =>
+        msg.action?.id === action.id
+          ? { ...msg, action: { ...msg.action, status: 'completed' as const } }
+          : msg
+      ));
+
+      setToastMessage("Программа обновлена!");
+
+    } catch (error) {
+      console.error('Failed to execute action:', error);
+
+      // Update action status to failed
+      setChatMessages(prev => prev.map(msg =>
+        msg.action?.id === action.id
+          ? { ...msg, action: { ...msg.action, status: 'failed' as const } }
+          : msg
+      ));
+
+      setToastMessage("Ошибка при обновлении программы");
+    } finally {
+      setExecutingActionId(undefined);
     }
   };
 
@@ -832,7 +887,9 @@ const App: React.FC = () => {
                 onToggle={() => setIsChatbotOpen(!isChatbotOpen)}
                 messages={chatMessages}
                 onSendMessage={handleChatbotSend}
+                onActionClick={executeAction}
                 isLoading={isChatbotLoading}
+                executingActionId={executingActionId}
             />
             </>
         ) : showFitCubeWelcome ? (

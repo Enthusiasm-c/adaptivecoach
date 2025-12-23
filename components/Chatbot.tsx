@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { ChatMessage } from '../types';
+import { ChatMessage, ChatAction } from '../types';
 import { Send, X, Bot, Zap, ShieldAlert, Clock, ArrowRight } from 'lucide-react';
 
 interface ChatbotProps {
@@ -8,10 +8,12 @@ interface ChatbotProps {
     onToggle: () => void;
     messages: ChatMessage[];
     onSendMessage: (message: string) => void;
+    onActionClick: (action: ChatAction) => void;
     isLoading: boolean;
+    executingActionId?: string;
 }
 
-const Chatbot: React.FC<ChatbotProps> = ({ isOpen, onToggle, messages, onSendMessage, isLoading }) => {
+const Chatbot: React.FC<ChatbotProps> = ({ isOpen, onToggle, messages, onSendMessage, onActionClick, isLoading, executingActionId }) => {
     const [input, setInput] = useState('');
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -92,7 +94,42 @@ const Chatbot: React.FC<ChatbotProps> = ({ isOpen, onToggle, messages, onSendMes
                         {messages.map((msg, index) => (
                             <div key={index} className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                                 <div className={`max-w-xs md:max-w-sm rounded-2xl p-3 ${msg.role === 'user' ? 'bg-indigo-600 rounded-br-lg' : 'bg-gray-700 rounded-bl-lg'}`}>
-                                    <p className="text-sm">{msg.text}</p>
+                                    <p className="text-sm whitespace-pre-wrap">{msg.text}</p>
+
+                                    {/* Action Button - pending state */}
+                                    {msg.action && msg.action.status === 'pending' && (
+                                        <button
+                                            onClick={() => onActionClick(msg.action!)}
+                                            disabled={executingActionId === msg.action.id}
+                                            className="mt-3 w-full py-2.5 px-4 bg-indigo-600 hover:bg-indigo-500
+                                                       disabled:bg-gray-600 rounded-xl text-sm font-medium
+                                                       flex items-center justify-center gap-2 transition-all
+                                                       active:scale-[0.98]"
+                                        >
+                                            {executingActionId === msg.action.id ? (
+                                                <>
+                                                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                                    Применяю...
+                                                </>
+                                            ) : (
+                                                msg.action.label
+                                            )}
+                                        </button>
+                                    )}
+
+                                    {/* Action Button - completed state */}
+                                    {msg.action && msg.action.status === 'completed' && (
+                                        <div className="mt-3 py-2 px-4 bg-green-600/20 border border-green-500/30 rounded-xl text-sm text-green-400 text-center">
+                                            ✅ Программа обновлена
+                                        </div>
+                                    )}
+
+                                    {/* Action Button - failed state */}
+                                    {msg.action && msg.action.status === 'failed' && (
+                                        <div className="mt-3 py-2 px-4 bg-red-600/20 border border-red-500/30 rounded-xl text-sm text-red-400 text-center">
+                                            ❌ Ошибка. Попробуй еще раз.
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         ))}

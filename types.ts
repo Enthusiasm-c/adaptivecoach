@@ -201,14 +201,27 @@ export interface ActiveWorkoutState {
   lastActivityTime: number; // Timestamp of last user activity for timeout detection
 }
 
+// --- Chat Action (for AI-suggested program changes) ---
+
+export interface ChatAction {
+  id: string;               // Unique ID for tracking
+  type: 'modify_program';   // Action type
+  label: string;            // Button text (e.g., "Добавить бицепс")
+  reason: string;           // Reason for the change
+  instructions: string;     // Instructions for AI
+  status?: 'pending' | 'executing' | 'completed' | 'failed';
+}
+
 export interface ChatMessage {
   role: 'user' | 'assistant';
   text: string;
+  action?: ChatAction;      // Proposed action button
 }
 
 export interface ChatResponse {
   text: string;
   updatedProgram?: TrainingProgram;
+  proposedAction?: ChatAction;  // Proposed action instead of auto-change
 }
 
 export interface PersonalRecord {
@@ -320,4 +333,43 @@ export interface StreakShieldStatus {
   shieldAvailable: boolean;
   usedAt: string | null;
   isPro: boolean;
+}
+
+// --- WHOOP Integration ---
+
+export interface WhoopConnectionStatus {
+  connected: boolean;
+  whoopUserId?: number;
+  connectedAt?: string;
+}
+
+export interface WhoopRecoveryData {
+  recoveryScore: number;      // 0-100
+  restingHeartRate: number;   // bpm
+  hrvRmssd: number;           // ms
+  spo2Percentage?: number;    // %
+  skinTempCelsius?: number;   // °C
+}
+
+export interface WhoopSleepData {
+  totalInBedMilli: number;           // ms
+  totalLightSleepMilli: number;      // ms
+  totalRemSleepMilli: number;        // ms
+  totalSlowWaveSleepMilli: number;   // ms
+  sleepPerformancePercentage: number; // 0-100
+  sleepEfficiencyPercentage: number;  // 0-100
+}
+
+export interface WhoopReadinessData {
+  // Raw WHOOP data (for display)
+  recoveryScore: number;       // 0-100
+  sleepPerformance: number;    // 0-100
+  sleepHours: number;          // hours
+  hrv: number;                 // ms
+  rhr: number;                 // bpm
+
+  // Pre-calculated 1-5 scores (for ReadinessData)
+  sleepScore: number;          // 1-5
+  stressScore: number;         // 1-5 (from HRV)
+  sorenessScore: number;       // 1-5 (from recovery)
 }
