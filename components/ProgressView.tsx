@@ -362,20 +362,17 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
 
         return (
             <div className="bg-neutral-900 border border-white/5 rounded-3xl p-5 shadow-lg animate-fade-in">
-                <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-xl font-display font-black text-white flex items-center gap-2">
-                        <Calendar size={20} className="text-indigo-500" />
+                <div className="flex items-end justify-between mb-6 px-1">
+                    <h2 className="text-3xl font-display font-black text-white italic tracking-tighter uppercase leading-none">
                         {monthName}
                     </h2>
-                    <div className="flex items-center gap-2">
-                        <div className="flex bg-neutral-800 rounded-xl p-1">
-                            <button onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() - 1)))} className="p-2 hover:bg-white/10 rounded-lg text-gray-400">
-                                <ChevronLeft size={18} />
-                            </button>
-                            <button onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() + 1)))} className="p-2 hover:bg-white/10 rounded-lg text-gray-400">
-                                <ChevronRight size={18} />
-                            </button>
-                        </div>
+                    <div className="flex items-center gap-1">
+                        <button onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() - 1)))} className="p-2 hover:bg-white/10 rounded-full text-gray-400 transition-colors">
+                            <ChevronLeft size={20} />
+                        </button>
+                        <button onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() + 1)))} className="p-2 hover:bg-white/10 rounded-full text-gray-400 transition-colors">
+                            <ChevronRight size={20} />
+                        </button>
                     </div>
                 </div>
 
@@ -458,8 +455,10 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
     };
 
     const chartTheme = {
-        grid: "#404040",
+        grid: "#262626",
         text: "#737373",
+        fontSize: 10,
+        fontFamily: "var(--font-display)", // Ensure this maps to Barlow Condensed in CSS
     };
 
     const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ec4899']; // Indigo, Emerald, Amber, Pink
@@ -500,7 +499,7 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
                 </div>
             </div>
 
-            <h2 className="text-xl font-bold text-white px-2">Статистика</h2>
+            <h2 className="text-lg font-display font-bold text-white px-2 mt-8 mb-4 uppercase tracking-wider opacity-60">Статистика</h2>
 
             {/* Calendar Section */}
             {renderCalendar()}
@@ -713,14 +712,30 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
                         </div>
                         <div className="h-56 -ml-2">
                             <ResponsiveContainer width="100%" height="100%">
-                                <LineChart data={strengthData.data} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+                                <LineChart data={strengthData.data} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
                                     <CartesianGrid stroke={chartTheme.grid} vertical={false} strokeDasharray="3 3" />
-                                    <XAxis dataKey="date" stroke={chartTheme.text} fontSize={10} tickLine={false} axisLine={false} dy={10} />
-                                    <YAxis stroke={chartTheme.text} fontSize={10} tickLine={false} axisLine={false} domain={['auto', 'auto']} />
-                                    <Tooltip
-                                        contentStyle={{ backgroundColor: '#171717', border: '1px solid #333', borderRadius: '8px', color: '#fff' }}
+                                    <XAxis
+                                        dataKey="date"
+                                        stroke={chartTheme.text}
+                                        fontSize={10}
+                                        tickLine={false}
+                                        axisLine={false}
+                                        dy={10}
+                                        tick={{ fontFamily: 'var(--font-display)' }}
                                     />
-                                    <Legend wrapperStyle={{ fontSize: '10px', paddingTop: '10px' }} iconType="circle" />
+                                    <YAxis
+                                        stroke={chartTheme.text}
+                                        fontSize={10}
+                                        tickLine={false}
+                                        axisLine={false}
+                                        domain={['auto', 'auto']}
+                                        tick={{ fontFamily: 'var(--font-display)' }}
+                                    />
+                                    <Tooltip
+                                        contentStyle={{ backgroundColor: '#0a0a0a', border: '1px solid #333', borderRadius: '4px', color: '#fff', fontSize: '12px', fontFamily: 'var(--font-display)' }}
+                                        itemStyle={{ padding: 0 }}
+                                    />
+                                    <Legend wrapperStyle={{ fontSize: '10px', paddingTop: '15px', fontFamily: 'var(--font-display)', opacity: 0.7 }} iconType="circle" />
                                     {strengthData.exercises[0] && (
                                         <Line type="monotone" dataKey="ex0" name={strengthData.exercises[0]} stroke="#6366f1" strokeWidth={3} dot={false} connectNulls />
                                     )}
@@ -800,15 +815,26 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
                                         fontSize={10}
                                         tickLine={false}
                                         axisLine={false}
-                                        tickFormatter={(val) => val.includes('-W') ? `W${val.split('-W')[1]}` : val}
                                         dy={10}
+                                        tick={{ fontFamily: 'var(--font-display)' }}
                                     />
-                                    <YAxis stroke={chartTheme.text} fontSize={10} tickLine={false} axisLine={false} tickFormatter={(val) => `${(val / 1000).toFixed(0)}т`} />
-                                    <Bar dataKey="volume" fill="#10b981" radius={[4, 4, 0, 0]} barSize={24} />
+                                    <YAxis
+                                        stroke={chartTheme.text}
+                                        fontSize={10}
+                                        tickLine={false}
+                                        axisLine={false}
+                                        tickFormatter={(value) => `${Math.round(value / 1000)}k`}
+                                        tick={{ fontFamily: 'var(--font-display)' }}
+                                    />
                                     <Tooltip
-                                        cursor={{ fill: 'rgba(255,255,255,0.05)' }}
-                                        contentStyle={{ backgroundColor: '#171717', border: '1px solid #333', borderRadius: '8px', color: '#fff' }}
-                                        formatter={(value: any) => [`${(value / 1000).toFixed(2)}т`, 'Объем']}
+                                        cursor={{ fill: 'white', opacity: 0.05 }}
+                                        contentStyle={{ backgroundColor: '#0a0a0a', border: '1px solid #333', borderRadius: '4px', color: '#fff', fontSize: '12px', fontFamily: 'var(--font-display)' }}
+                                    />
+                                    <Bar
+                                        dataKey="volume"
+                                        fill="#10b981"
+                                        radius={[4, 4, 0, 0]}
+                                        barSize={24}
                                     />
                                 </BarChart>
                             </ResponsiveContainer>
