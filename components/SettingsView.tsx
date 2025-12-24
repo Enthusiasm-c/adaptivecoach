@@ -450,6 +450,17 @@ const SettingsView: React.FC<SettingsViewProps> = ({ profile, telegramUser, onUp
                                             </div>
                                         </div>
 
+                                        {/* Warning when no data */}
+                                        {!whoopDebugData.hasRealData && (
+                                            <div className="bg-yellow-900/20 border border-yellow-500/30 rounded-xl p-4">
+                                                <p className="text-yellow-400 font-bold text-sm mb-1">Нет данных о сне</p>
+                                                <p className="text-yellow-300/70 text-xs">
+                                                    WHOOP рассчитывает Recovery только после фиксации сна.
+                                                    Убедитесь что браслет надет во время сна и данные синхронизированы.
+                                                </p>
+                                            </div>
+                                        )}
+
                                         {/* Recovery */}
                                         <div className="bg-black/50 rounded-xl p-4 border border-white/5">
                                             <p className="text-gray-500 text-xs font-bold mb-2">Recovery</p>
