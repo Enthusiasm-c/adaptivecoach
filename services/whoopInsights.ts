@@ -34,9 +34,9 @@ export function generateInsight(whoop: WhoopReadinessData): WhoopInsight {
     return {
       type: 'warning',
       icon: 'moon',
-      title: `Вижу, ты спал всего ${whoop.sleepHours.toFixed(1)} часа`,
+      title: `${whoop.sleepHours.toFixed(1)} часа сна — адаптирую нагрузку`,
       subtitle: `Recovery ${whoop.recoveryScore}%`,
-      adaptations: ['Убрал 2 тяжёлых сета', 'Снизил веса на 15%']
+      adaptations: ['Снижаю объём на 2 сета', 'Веса −15%']
     };
   }
 
@@ -45,9 +45,9 @@ export function generateInsight(whoop: WhoopReadinessData): WhoopInsight {
     return {
       type: 'warning',
       icon: 'alert-triangle',
-      title: `Восстановление ${whoop.recoveryScore}% — организму тяжело`,
-      subtitle: `Сон: ${whoop.sleepHours.toFixed(1)}ч`,
-      adaptations: ['Убрал 2 тяжёлых сета', 'Снизил веса на 15%']
+      title: `Recovery ${whoop.recoveryScore}% — день восстановления`,
+      subtitle: `HRV показывает высокую нагрузку на нервную систему`,
+      adaptations: ['Снижаю объём на 2 сета', 'Веса −15%']
     };
   }
 
@@ -56,8 +56,8 @@ export function generateInsight(whoop: WhoopReadinessData): WhoopInsight {
     return {
       type: 'excellent',
       icon: 'zap',
-      title: `Recovery ${whoop.recoveryScore}% — отличный день`,
-      subtitle: 'Организм готов к нагрузке',
+      title: `Recovery ${whoop.recoveryScore}% — пиковая готовность`,
+      subtitle: 'Идеальный день для прогрессии',
       adaptations: []
     };
   }
@@ -67,19 +67,32 @@ export function generateInsight(whoop: WhoopReadinessData): WhoopInsight {
     return {
       type: 'good',
       icon: 'thumbs-up',
-      title: `Recovery ${whoop.recoveryScore}% — хорошо`,
-      subtitle: `Сон: ${whoop.sleepHours.toFixed(1)}ч`,
+      title: `Recovery ${whoop.recoveryScore}% — в рабочем режиме`,
+      subtitle: `${whoop.sleepHours.toFixed(1)}ч сна, организм готов`,
       adaptations: []
     };
   }
 
   // Caution: Moderate recovery (40-65%)
+  // Differentiate based on sleep quality
+  const sleepGood = whoop.sleepHours >= 7 && whoop.sleepScore >= 4;
+
+  if (sleepGood) {
+    return {
+      type: 'caution',
+      icon: 'alert-circle',
+      title: `Recovery ${whoop.recoveryScore}% — сон хороший, но HRV низкий`,
+      subtitle: 'Возможно накопленная усталость или стресс',
+      adaptations: ['Веса −5%', 'Убираю 1 сет']
+    };
+  }
+
   return {
     type: 'caution',
     icon: 'alert-circle',
-    title: `Recovery ${whoop.recoveryScore}% — средненько`,
-    subtitle: 'Поберегу тебя сегодня',
-    adaptations: ['Немного снизил веса']
+    title: `Recovery ${whoop.recoveryScore}% — работаем в щадящем режиме`,
+    subtitle: 'Сегодня фокус на технику, не на рекорды',
+    adaptations: ['Веса −5%', 'Убираю 1 сет']
   };
 }
 
