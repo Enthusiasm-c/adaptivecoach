@@ -498,14 +498,25 @@ export const calculateMovementPatterns = (logs: WorkoutLog[]) => {
                 return;
             }
 
-            if (n.includes('squat') || n.includes('присед') || n.includes('выпады') || n.includes('leg press') || n.includes('lunge') || n.includes('step up') || n.includes('bulgarian') || n.includes('hack') || n.includes('goblet')) {
-                patterns.Squat++;
-            } else if (n.includes('deadlift') || n.includes('тяга') || n.includes('rdl') || n.includes('clean') || n.includes('snatch') || n.includes('swing') || n.includes('good morning') || n.includes('hip thrust') || n.includes('glute') || n.includes('мост')) {
-                patterns.Hinge++;
-            } else if (n.includes('bench') || n.includes('жим') || n.includes('press') || n.includes('push') || n.includes('dip') || n.includes('fly') || n.includes('raise') || n.includes('tricep') || n.includes('skullcrusher') || n.includes('extension') || n.includes('отжимания') || n.includes('разводк')) {
-                patterns.Push++;
-            } else if (n.includes('row') || n.includes('pull') || n.includes('chin') || n.includes('lat') || n.includes('curl') || n.includes('shrug') || n.includes('bicep') || n.includes('подтягиван')) {
+            // Pull exercises (back, biceps) - check BEFORE Hinge because "тяга" is ambiguous
+            // "Тяга верхнего блока", "Тяга гантели в наклоне" = Pull (back)
+            // "Становая тяга", "Румынская тяга" = Hinge (posterior chain)
+            const isPullTyaga = n.includes('тяга') && (
+                n.includes('блок') || n.includes('наклон') || n.includes('гантел') ||
+                n.includes('штанг') || n.includes('т-гриф') || n.includes('горизонтальн') ||
+                n.includes('нейтральн') || n.includes('широк') || n.includes('узк')
+            );
+
+            if (n.includes('row') || n.includes('pull') || n.includes('chin') || n.includes('lat') ||
+                n.includes('curl') || n.includes('shrug') || n.includes('bicep') || n.includes('подтягиван') ||
+                n.includes('сгибание рук') || n.includes('бицепс') || isPullTyaga) {
                 patterns.Pull++;
+            } else if (n.includes('squat') || n.includes('присед') || n.includes('выпады') || n.includes('leg press') || n.includes('lunge') || n.includes('step up') || n.includes('bulgarian') || n.includes('hack') || n.includes('goblet')) {
+                patterns.Squat++;
+            } else if (n.includes('deadlift') || n.includes('становая') || n.includes('румынская') || n.includes('rdl') || n.includes('clean') || n.includes('snatch') || n.includes('swing') || n.includes('good morning') || n.includes('hip thrust') || n.includes('glute') || n.includes('мост') || (n.includes('тяга') && !isPullTyaga)) {
+                patterns.Hinge++;
+            } else if (n.includes('bench') || n.includes('жим') || n.includes('press') || n.includes('push') || n.includes('dip') || n.includes('fly') || n.includes('raise') || n.includes('tricep') || n.includes('skullcrusher') || n.includes('французский') || n.includes('трицепс') || n.includes('отжимания') || n.includes('разводк')) {
+                patterns.Push++;
             } else if (n.includes('plank') || n.includes('планк') || n.includes('crunch') || n.includes('sit up') || n.includes('leg raise') || n.includes('ab ') || n.includes('hollow') || n.includes('russian') || n.includes('скручиван') || n.includes('пресс')) {
                 patterns.Core++;
             }
