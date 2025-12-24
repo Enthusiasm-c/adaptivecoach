@@ -36,7 +36,11 @@ export function generateInsight(whoop: WhoopReadinessData): WhoopInsight {
       icon: 'moon',
       title: `${whoop.sleepHours.toFixed(1)} часа сна — адаптирую нагрузку`,
       subtitle: `Recovery ${whoop.recoveryScore}%`,
-      adaptations: ['Снижаю объём на 2 сета', 'Веса −15%']
+      adaptations: [
+        'Уберу по 2 подхода с основных упражнений',
+        'Возьмём гантели/блины на шаг легче',
+        'Больше отдыха между подходами'
+      ]
     };
   }
 
@@ -47,7 +51,11 @@ export function generateInsight(whoop: WhoopReadinessData): WhoopInsight {
       icon: 'alert-triangle',
       title: `Recovery ${whoop.recoveryScore}% — день восстановления`,
       subtitle: `HRV показывает высокую нагрузку на нервную систему`,
-      adaptations: ['Снижаю объём на 2 сета', 'Веса −15%']
+      adaptations: [
+        'Уберу по 2 подхода с основных упражнений',
+        'Возьмём гантели/блины на шаг легче',
+        'Темп спокойный, без форсирования'
+      ]
     };
   }
 
@@ -83,7 +91,10 @@ export function generateInsight(whoop: WhoopReadinessData): WhoopInsight {
       icon: 'alert-circle',
       title: `Recovery ${whoop.recoveryScore}% — сон хороший, но HRV низкий`,
       subtitle: 'Возможно накопленная усталость или стресс',
-      adaptations: ['Веса −5%', 'Убираю 1 сет']
+      adaptations: [
+        'Уберу по 1 подходу с тяжёлых упражнений',
+        'Если вес пойдёт тяжело — возьмём на шаг легче'
+      ]
     };
   }
 
@@ -92,7 +103,10 @@ export function generateInsight(whoop: WhoopReadinessData): WhoopInsight {
     icon: 'alert-circle',
     title: `Recovery ${whoop.recoveryScore}% — работаем в щадящем режиме`,
     subtitle: 'Сегодня фокус на технику, не на рекорды',
-    adaptations: ['Веса −5%', 'Убираю 1 сет']
+    adaptations: [
+      'Уберу по 1 подходу с тяжёлых упражнений',
+      'Не гонимся за весами — работаем чисто'
+    ]
   };
 }
 

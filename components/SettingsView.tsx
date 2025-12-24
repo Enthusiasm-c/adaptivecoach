@@ -594,8 +594,8 @@ const SettingsView: React.FC<SettingsViewProps> = ({ profile, telegramUser, onUp
                                                 </div>
                                                 <p className="text-gray-500 text-[10px] mt-3">
                                                     {adaptation.reason === 'low_recovery'
-                                                        ? 'Сегодня приоритет — не навредить. Лучше сделать меньше качественно, чем много через силу.'
-                                                        : 'Небольшая коррекция поможет избежать переутомления и сохранить прогресс.'}
+                                                        ? 'Главное сегодня — не откатиться назад. Сделаем меньше, но качественно. Завтра наверстаем.'
+                                                        : 'Чуть скорректируем нагрузку. Ты всё равно получишь хороший стимул для роста.'}
                                                 </p>
                                             </div>
                                         )}
@@ -604,11 +604,12 @@ const SettingsView: React.FC<SettingsViewProps> = ({ profile, telegramUser, onUp
                                             <div className="bg-success/10 border border-success/30 rounded-2xl p-4">
                                                 <div className="flex items-center gap-2 mb-2">
                                                     <TrendingUp className="text-success" size={18} />
-                                                    <span className="text-xs font-bold text-success">ГОТОВ К ПОЛНОЙ НАГРУЗКЕ</span>
+                                                    <span className="text-xs font-bold text-success">РАБОТАЕМ ПО ПЛАНУ</span>
                                                 </div>
                                                 <p className="text-gray-400 text-sm">
-                                                    Организм восстановился — работаем по плану без ограничений.
-                                                    {whoopData.recoveryScore > 80 && ' Отличный день для прогрессии в рабочих весах.'}
+                                                    {whoopData.recoveryScore > 80
+                                                        ? 'Отличное восстановление. Если последний подход пойдёт легко — можно попробовать добавить вес.'
+                                                        : 'Организм в норме. Выполняем тренировку как запланировано.'}
                                                 </p>
                                             </div>
                                         )}
