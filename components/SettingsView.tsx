@@ -65,6 +65,9 @@ const SettingsView: React.FC<SettingsViewProps> = ({ profile, telegramUser, onUp
     const [whoopConnected, setWhoopConnected] = useState(false);
     const [whoopLoading, setWhoopLoading] = useState(true);
     const [whoopConnecting, setWhoopConnecting] = useState(false);
+    const [showWhoopDebug, setShowWhoopDebug] = useState(false);
+    const [whoopDebugData, setWhoopDebugData] = useState<any>(null);
+    const [whoopDebugLoading, setWhoopDebugLoading] = useState(false);
 
     // Load WHOOP status
     useEffect(() => {
@@ -139,6 +142,18 @@ const SettingsView: React.FC<SettingsViewProps> = ({ profile, telegramUser, onUp
         }
     };
 
+    const handleTestWhoop = async () => {
+        setWhoopDebugLoading(true);
+        setShowWhoopDebug(true);
+        try {
+            const data = await apiService.whoop.getReadiness();
+            setWhoopDebugData(data);
+        } catch (error: any) {
+            setWhoopDebugData({ error: error.message || 'Failed to fetch WHOOP data' });
+        } finally {
+            setWhoopDebugLoading(false);
+        }
+    };
 
     return (
         <div className="min-h-screen bg-background text-white p-2 pb-24 font-sans selection:bg-primary/30">
@@ -331,22 +346,33 @@ const SettingsView: React.FC<SettingsViewProps> = ({ profile, telegramUser, onUp
                         <div className={`w-3 h-3 rounded-full mt-2 ${whoopConnected ? 'bg-success shadow-[0_0_10px_rgba(76,199,109,0.5)]' : 'bg-gray-700'}`} />
                     </div>
 
-                    <button
-                        onClick={whoopConnected ? handleDisconnectWhoop : handleConnectWhoop}
-                        disabled={whoopConnecting}
-                        className={`mt-6 w-full py-3 rounded-lg font-display font-bold text-sm transition-all ${whoopConnected
-                            ? 'bg-red-900/20 text-red-500 border border-red-500/30 hover:bg-red-900/30'
-                            : 'bg-white text-black hover:bg-gray-200'
-                            }`}
-                    >
-                        {whoopConnecting ? (
-                            <span className="flex items-center justify-center gap-2"><Loader2 className="animate-spin" size={14} /> Подключение</span>
-                        ) : whoopConnected ? (
-                            'Отключить'
-                        ) : (
-                            'Подключить'
+                    <div className="mt-6 flex gap-2">
+                        <button
+                            onClick={whoopConnected ? handleDisconnectWhoop : handleConnectWhoop}
+                            disabled={whoopConnecting}
+                            className={`flex-1 py-3 rounded-lg font-display font-bold text-sm transition-all ${whoopConnected
+                                ? 'bg-red-900/20 text-red-500 border border-red-500/30 hover:bg-red-900/30'
+                                : 'bg-white text-black hover:bg-gray-200'
+                                }`}
+                        >
+                            {whoopConnecting ? (
+                                <span className="flex items-center justify-center gap-2"><Loader2 className="animate-spin" size={14} /> Подключение</span>
+                            ) : whoopConnected ? (
+                                'Отключить'
+                            ) : (
+                                'Подключить'
+                            )}
+                        </button>
+                        {whoopConnected && (
+                            <button
+                                onClick={handleTestWhoop}
+                                disabled={whoopDebugLoading}
+                                className="px-4 py-3 rounded-lg font-display font-bold text-sm bg-info/20 text-info border border-info/30 hover:bg-info/30 transition-all"
+                            >
+                                {whoopDebugLoading ? <Loader2 className="animate-spin" size={14} /> : 'Тест'}
+                            </button>
                         )}
-                    </button>
+                    </div>
                 </div>
 
                 {/* Account Actions */}
@@ -380,6 +406,124 @@ const SettingsView: React.FC<SettingsViewProps> = ({ profile, telegramUser, onUp
                     )}
                 </div>
             </div>
+
+            {/* WHOOP Debug Modal */}
+            {showWhoopDebug && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-fade-in">
+                    <div className="bg-surface border border-subtle rounded-3xl p-6 max-w-md w-full max-h-[80vh] overflow-hidden animate-scale-in">
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-xl font-display font-bold text-white">WHOOP Data</h3>
+                            <button
+                                onClick={() => setShowWhoopDebug(false)}
+                                className="text-gray-500 hover:text-white transition"
+                            >
+                                &times;
+                            </button>
+                        </div>
+
+                        {whoopDebugLoading ? (
+                            <div className="flex items-center justify-center py-12">
+                                <Loader2 className="animate-spin text-info" size={32} />
+                            </div>
+                        ) : whoopDebugData ? (
+                            <div className="overflow-y-auto max-h-[60vh] space-y-3">
+                                {whoopDebugData.error ? (
+                                    <div className="bg-red-900/20 border border-red-500/30 rounded-xl p-4">
+                                        <p className="text-red-400 font-bold text-sm">Error</p>
+                                        <p className="text-red-300 text-xs mt-1">{whoopDebugData.error}</p>
+                                    </div>
+                                ) : (
+                                    <>
+                                        {/* Status */}
+                                        <div className="bg-black/50 rounded-xl p-4 border border-white/5">
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-gray-500 text-xs font-bold">Connected</span>
+                                                <span className={`text-sm font-bold ${whoopDebugData.connected ? 'text-success' : 'text-red-500'}`}>
+                                                    {whoopDebugData.connected ? 'Yes' : 'No'}
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center justify-between mt-2">
+                                                <span className="text-gray-500 text-xs font-bold">Has Real Data</span>
+                                                <span className={`text-sm font-bold ${whoopDebugData.hasRealData ? 'text-success' : 'text-yellow-500'}`}>
+                                                    {whoopDebugData.hasRealData ? 'Yes' : 'No'}
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        {/* Recovery */}
+                                        <div className="bg-black/50 rounded-xl p-4 border border-white/5">
+                                            <p className="text-gray-500 text-xs font-bold mb-2">Recovery</p>
+                                            <div className="grid grid-cols-2 gap-2">
+                                                <div>
+                                                    <p className="text-gray-600 text-[10px]">Score</p>
+                                                    <p className="text-white font-display font-bold text-lg">{whoopDebugData.recoveryScore || 0}%</p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-gray-600 text-[10px]">HRV</p>
+                                                    <p className="text-white font-display font-bold text-lg">{whoopDebugData.hrv || 0} ms</p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-gray-600 text-[10px]">Resting HR</p>
+                                                    <p className="text-white font-display font-bold text-lg">{whoopDebugData.rhr || 0} bpm</p>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Sleep */}
+                                        <div className="bg-black/50 rounded-xl p-4 border border-white/5">
+                                            <p className="text-gray-500 text-xs font-bold mb-2">Sleep</p>
+                                            <div className="grid grid-cols-2 gap-2">
+                                                <div>
+                                                    <p className="text-gray-600 text-[10px]">Hours</p>
+                                                    <p className="text-white font-display font-bold text-lg">{whoopDebugData.sleepHours || 0}h</p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-gray-600 text-[10px]">Performance</p>
+                                                    <p className="text-white font-display font-bold text-lg">{whoopDebugData.sleepPerformance || 0}%</p>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Calculated Scores */}
+                                        <div className="bg-black/50 rounded-xl p-4 border border-white/5">
+                                            <p className="text-gray-500 text-xs font-bold mb-2">Calculated Scores (1-5)</p>
+                                            <div className="grid grid-cols-3 gap-2">
+                                                <div className="text-center">
+                                                    <p className="text-gray-600 text-[10px]">Sleep</p>
+                                                    <p className="text-info font-display font-bold text-2xl">{whoopDebugData.sleepScore || 3}</p>
+                                                </div>
+                                                <div className="text-center">
+                                                    <p className="text-gray-600 text-[10px]">Stress</p>
+                                                    <p className="text-primary font-display font-bold text-2xl">{whoopDebugData.stressScore || 3}</p>
+                                                </div>
+                                                <div className="text-center">
+                                                    <p className="text-gray-600 text-[10px]">Soreness</p>
+                                                    <p className="text-success font-display font-bold text-2xl">{whoopDebugData.sorenessScore || 3}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Raw JSON */}
+                                        <div className="bg-black/50 rounded-xl p-4 border border-white/5">
+                                            <p className="text-gray-500 text-xs font-bold mb-2">Raw Response</p>
+                                            <pre className="text-[10px] text-gray-400 overflow-x-auto whitespace-pre-wrap font-mono">
+                                                {JSON.stringify(whoopDebugData, null, 2)}
+                                            </pre>
+                                        </div>
+                                    </>
+                                )}
+                            </div>
+                        ) : null}
+
+                        <button
+                            onClick={() => setShowWhoopDebug(false)}
+                            className="mt-4 w-full py-3 bg-subtle text-white rounded-xl font-display font-bold text-sm hover:bg-white/10 transition"
+                        >
+                            Закрыть
+                        </button>
+                    </div>
+                </div>
+            )}
 
             {/* Location Change Confirmation Modal */}
             {pendingLocation && (
