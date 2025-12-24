@@ -524,10 +524,37 @@ export const calculateMovementPatterns = (logs: WorkoutLog[]) => {
     });
 
     const maxVal = Math.max(...Object.values(patterns));
+
+    // Russian names and muscle group descriptions
+    const patternInfo: Record<string, { name: string; muscles: string[] }> = {
+        Push: {
+            name: 'Жимовые',
+            muscles: ['Грудные', 'Передние дельты', 'Трицепс']
+        },
+        Pull: {
+            name: 'Тяговые',
+            muscles: ['Широчайшие', 'Ромбовидные', 'Задние дельты', 'Бицепс', 'Предплечья']
+        },
+        Squat: {
+            name: 'Приседания',
+            muscles: ['Квадрицепс', 'Ягодичные', 'Приводящие']
+        },
+        Hinge: {
+            name: 'Наклоны',
+            muscles: ['Бицепс бедра', 'Ягодичные', 'Разгибатели спины']
+        },
+        Core: {
+            name: 'Кор',
+            muscles: ['Прямая м. живота', 'Косые м. живота', 'Поперечная м. живота']
+        }
+    };
+
     return Object.keys(patterns).map(key => ({
-        subject: key,
+        subject: patternInfo[key]?.name || key,
+        key: key, // Keep original key for reference
         A: (patterns as any)[key],
-        fullMark: maxVal > 0 ? maxVal * 1.2 : 10 // Default scale if empty
+        fullMark: maxVal > 0 ? maxVal * 1.2 : 10,
+        muscles: patternInfo[key]?.muscles || []
     }));
 };
 

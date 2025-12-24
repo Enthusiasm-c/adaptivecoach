@@ -171,6 +171,7 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
     const [selectedImbalance, setSelectedImbalance] = React.useState<ImbalanceReport | null>(null);
     const [showStrengthAnalysis, setShowStrengthAnalysis] = React.useState(false);
     const [showVolumeInfo, setShowVolumeInfo] = React.useState(false);
+    const [selectedMovement, setSelectedMovement] = React.useState<{name: string; key: string; muscles: string[]; sets: number} | null>(null);
 
     // Calculate imbalances when user has enough workout data
     // Cache version to invalidate old data with bad translations
@@ -853,7 +854,7 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
                             <Target size={14} className="text-indigo-400" />
                             Баланс Нагрузки
                         </div>
-                        <div className="h-64 flex items-center justify-center -ml-4">
+                        <div className="h-56 flex items-center justify-center -ml-4">
                             <ResponsiveContainer width="100%" height="100%">
                                 <RadarChart cx="50%" cy="50%" outerRadius="70%" data={movementData}>
                                     <PolarGrid gridType="polygon" stroke="#262626" />
@@ -874,8 +875,29 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
                                 </RadarChart>
                             </ResponsiveContainer>
                         </div>
-                        <p className="text-[10px] text-gray-500 text-center mt-2">
-                            Анализ распределения нагрузки по типам движений
+                        {/* Interactive muscle group list */}
+                        <div className="mt-3 flex flex-wrap gap-2 justify-center">
+                            {movementData.map((item: any) => (
+                                <button
+                                    key={item.key}
+                                    onClick={() => {
+                                        hapticFeedback.selectionChanged();
+                                        setSelectedMovement({
+                                            name: item.subject,
+                                            key: item.key,
+                                            muscles: item.muscles || [],
+                                            sets: item.A
+                                        });
+                                    }}
+                                    className="px-3 py-1.5 bg-neutral-800 hover:bg-indigo-500/20 border border-white/10 hover:border-indigo-500/30 rounded-lg text-xs text-gray-300 hover:text-indigo-300 transition-all flex items-center gap-1.5"
+                                >
+                                    <span className="font-medium">{item.subject}</span>
+                                    <span className="text-gray-500 text-[10px]">{item.A}</span>
+                                </button>
+                            ))}
+                        </div>
+                        <p className="text-[10px] text-gray-500 text-center mt-3">
+                            Нажмите на группу чтобы увидеть детали
                         </p>
                     </div>
                 ) : (
@@ -1288,6 +1310,72 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
                                 className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-xl transition-all"
                             >
                                 Понятно
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Movement Pattern Detail Modal */}
+            {selectedMovement && (
+                <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4 pb-28">
+                    <div className="bg-gray-800 rounded-2xl shadow-lg w-full max-w-md overflow-hidden animate-fade-in-up">
+                        <div className="p-4 border-b border-neutral-700 flex justify-between items-center">
+                            <div className="flex items-center gap-2">
+                                <Target size={20} className="text-indigo-400" />
+                                <h2 className="text-lg font-bold text-white">{selectedMovement.name}</h2>
+                            </div>
+                            <button
+                                onClick={() => setSelectedMovement(null)}
+                                className="p-1 rounded-full hover:bg-gray-700 text-gray-400"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        <div className="p-4 space-y-4">
+                            {/* Stats */}
+                            <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-xl p-4 flex items-center justify-between">
+                                <span className="text-indigo-300 font-medium">Выполнено подходов</span>
+                                <span className="text-2xl font-display font-black text-white">{selectedMovement.sets}</span>
+                            </div>
+
+                            {/* Muscles included */}
+                            <div className="bg-neutral-700/30 rounded-xl p-4">
+                                <h3 className="text-sm font-medium text-gray-400 mb-3 uppercase tracking-wider">Мышцы в этой группе</h3>
+                                <div className="space-y-2">
+                                    {selectedMovement.muscles.length > 0 ? (
+                                        selectedMovement.muscles.map((muscle, idx) => (
+                                            <div key={idx} className="flex items-center gap-2 bg-neutral-800 rounded-lg px-3 py-2">
+                                                <div className="w-2 h-2 bg-indigo-500 rounded-full"></div>
+                                                <span className="text-gray-200 text-sm">{muscle}</span>
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <p className="text-gray-500 text-sm">Информация о мышцах недоступна</p>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Pattern description */}
+                            <div className="bg-neutral-700/30 rounded-xl p-4">
+                                <h3 className="text-sm font-medium text-gray-400 mb-2 uppercase tracking-wider">Описание</h3>
+                                <p className="text-gray-300 text-sm">
+                                    {selectedMovement.key === 'Push' && 'Жимовые движения развивают переднюю поверхность тела: грудные мышцы, передние дельты и трицепсы.'}
+                                    {selectedMovement.key === 'Pull' && 'Тяговые движения укрепляют заднюю поверхность: широчайшие мышцы спины, ромбовидные, задние дельты и бицепсы.'}
+                                    {selectedMovement.key === 'Squat' && 'Приседания — базовое движение для нижней части тела, акцент на квадрицепсы и ягодичные мышцы.'}
+                                    {selectedMovement.key === 'Hinge' && 'Наклоны и становые тяги прорабатывают заднюю цепь: бицепс бедра, ягодичные и разгибатели спины.'}
+                                    {selectedMovement.key === 'Core' && 'Упражнения на кор стабилизируют корпус и защищают позвоночник при всех движениях.'}
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="p-4 border-t border-neutral-700">
+                            <button
+                                onClick={() => setSelectedMovement(null)}
+                                className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-xl transition-all"
+                            >
+                                Закрыть
                             </button>
                         </div>
                     </div>
