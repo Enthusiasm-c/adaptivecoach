@@ -1,8 +1,9 @@
 
 import React, { useState, useEffect } from 'react';
-import { OnboardingProfile, TelegramUser, Goal, Location } from '../types';
-import { Trash2, Save, User, LogOut, Target, Calendar, Clock, Award, Loader2, MessageCircle, MapPin, AlertTriangle, Activity, ExternalLink, Unlink } from 'lucide-react';
+import { OnboardingProfile, TelegramUser, Goal, Location, WhoopReadinessData } from '../types';
+import { Trash2, Save, User, LogOut, Target, Calendar, Clock, Award, Loader2, MessageCircle, MapPin, AlertTriangle, Activity, ExternalLink, Unlink, Moon, Zap, ThumbsUp, AlertCircle, Heart, Wind, Thermometer, TrendingDown, TrendingUp } from 'lucide-react';
 import { apiService, Badge } from '../services/apiService';
+import { generateInsight, calculateAdaptation, getInsightColors } from '../services/whoopInsights';
 
 interface SettingsViewProps {
     profile: OnboardingProfile;
@@ -407,147 +408,241 @@ const SettingsView: React.FC<SettingsViewProps> = ({ profile, telegramUser, onUp
                 </div>
             </div>
 
-            {/* WHOOP Debug Modal */}
+            {/* WHOOP Coach Analysis Modal */}
             {showWhoopDebug && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-fade-in">
-                    <div className="bg-surface border border-subtle rounded-3xl p-6 max-w-md w-full max-h-[80vh] overflow-hidden animate-scale-in">
-                        <div className="flex items-center justify-between mb-4">
-                            <h3 className="text-xl font-display font-bold text-white">WHOOP Data</h3>
-                            <button
-                                onClick={() => setShowWhoopDebug(false)}
-                                className="text-gray-500 hover:text-white transition"
-                            >
-                                &times;
-                            </button>
-                        </div>
-
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/95 backdrop-blur-md animate-fade-in">
+                    <div className="bg-surface border border-subtle rounded-3xl max-w-md w-full max-h-[90vh] overflow-hidden animate-scale-in">
                         {whoopDebugLoading ? (
-                            <div className="flex items-center justify-center py-12">
-                                <Loader2 className="animate-spin text-info" size={32} />
-                            </div>
-                        ) : whoopDebugData ? (
-                            <div className="overflow-y-auto max-h-[60vh] space-y-3">
-                                {whoopDebugData.error ? (
-                                    <div className="bg-red-900/20 border border-red-500/30 rounded-xl p-4">
-                                        <p className="text-red-400 font-bold text-sm">Error</p>
-                                        <p className="text-red-300 text-xs mt-1">{whoopDebugData.error}</p>
+                            <div className="flex flex-col items-center justify-center py-20 px-6">
+                                <div className="relative">
+                                    <Activity className="text-primary animate-pulse" size={48} />
+                                    <div className="absolute inset-0 animate-ping">
+                                        <Activity className="text-primary/30" size={48} />
                                     </div>
-                                ) : (
-                                    <>
-                                        {/* Status */}
-                                        <div className="bg-black/50 rounded-xl p-4 border border-white/5">
-                                            <div className="flex items-center justify-between">
-                                                <span className="text-gray-500 text-xs font-bold">Connected</span>
-                                                <span className={`text-sm font-bold ${whoopDebugData.connected ? 'text-success' : 'text-red-500'}`}>
-                                                    {whoopDebugData.connected ? 'Yes' : 'No'}
+                                </div>
+                                <p className="text-gray-400 font-display font-bold mt-4">Анализирую данные WHOOP...</p>
+                            </div>
+                        ) : whoopDebugData?.error ? (
+                            <div className="p-6">
+                                <div className="bg-red-900/20 border border-red-500/30 rounded-xl p-4">
+                                    <p className="text-red-400 font-bold text-sm">Ошибка подключения</p>
+                                    <p className="text-red-300 text-xs mt-1">{whoopDebugData.error}</p>
+                                </div>
+                                <button
+                                    onClick={() => setShowWhoopDebug(false)}
+                                    className="mt-4 w-full py-3 bg-subtle text-white rounded-xl font-display font-bold text-sm"
+                                >
+                                    Закрыть
+                                </button>
+                            </div>
+                        ) : whoopDebugData?.hasRealData ? (() => {
+                            // Generate coach insight
+                            const whoopData: WhoopReadinessData = {
+                                recoveryScore: whoopDebugData.recoveryScore || 0,
+                                sleepPerformance: whoopDebugData.sleepPerformance || 0,
+                                sleepHours: whoopDebugData.sleepHours || 0,
+                                hrv: whoopDebugData.hrv || 0,
+                                rhr: whoopDebugData.rhr || 0,
+                                sleepScore: whoopDebugData.sleepScore || 3,
+                                stressScore: whoopDebugData.stressScore || 3,
+                                sorenessScore: whoopDebugData.sorenessScore || 3,
+                            };
+                            const insight = generateInsight(whoopData);
+                            const adaptation = calculateAdaptation(whoopData);
+                            const colors = getInsightColors(insight.type);
+
+                            const InsightIcon = insight.icon === 'moon' ? Moon
+                                : insight.icon === 'zap' ? Zap
+                                : insight.icon === 'thumbs-up' ? ThumbsUp
+                                : AlertCircle;
+
+                            const getRecoveryColor = (score: number) => {
+                                if (score >= 67) return 'text-success';
+                                if (score >= 34) return 'text-yellow-400';
+                                return 'text-red-400';
+                            };
+
+                            const getHrvInterpretation = (hrv: number) => {
+                                if (hrv >= 60) return { text: 'Высокая адаптация', color: 'text-success' };
+                                if (hrv >= 40) return { text: 'Умеренная нагрузка', color: 'text-yellow-400' };
+                                return { text: 'Высокая нагрузка на НС', color: 'text-red-400' };
+                            };
+
+                            const hrvInfo = getHrvInterpretation(whoopData.hrv);
+
+                            return (
+                                <div className="overflow-y-auto max-h-[90vh]">
+                                    {/* Header with Recovery Score */}
+                                    <div className={`${colors.bg} border-b ${colors.border} p-6`}>
+                                        <div className="flex items-start justify-between">
+                                            <div className="flex items-center gap-3">
+                                                <div className={`w-12 h-12 rounded-full ${colors.bg} border ${colors.border} flex items-center justify-center`}>
+                                                    <InsightIcon className={colors.icon} size={24} />
+                                                </div>
+                                                <div>
+                                                    <p className="text-gray-500 text-[10px] font-bold uppercase tracking-wider">Твоё состояние</p>
+                                                    <p className={`${colors.text} font-display font-bold text-lg leading-tight`}>{insight.title}</p>
+                                                </div>
+                                            </div>
+                                            <button
+                                                onClick={() => setShowWhoopDebug(false)}
+                                                className="text-gray-500 hover:text-white transition text-2xl leading-none"
+                                            >
+                                                &times;
+                                            </button>
+                                        </div>
+                                        {insight.subtitle && (
+                                            <p className="text-gray-400 text-sm mt-3 ml-15">{insight.subtitle}</p>
+                                        )}
+                                    </div>
+
+                                    {/* Key Metrics */}
+                                    <div className="p-4 space-y-3">
+                                        {/* Recovery Score - Big Display */}
+                                        <div className="bg-black/50 rounded-2xl p-4 border border-white/5">
+                                            <div className="flex items-center justify-between mb-3">
+                                                <span className="text-gray-500 text-xs font-bold uppercase tracking-wider">Recovery Score</span>
+                                                <span className={`font-display font-black text-4xl ${getRecoveryColor(whoopData.recoveryScore)}`}>
+                                                    {whoopData.recoveryScore}%
                                                 </span>
                                             </div>
-                                            <div className="flex items-center justify-between mt-2">
-                                                <span className="text-gray-500 text-xs font-bold">Has Real Data</span>
-                                                <span className={`text-sm font-bold ${whoopDebugData.hasRealData ? 'text-success' : 'text-yellow-500'}`}>
-                                                    {whoopDebugData.hasRealData ? 'Yes' : 'No'}
-                                                </span>
+                                            <div className="h-2 bg-neutral-800 rounded-full overflow-hidden">
+                                                <div
+                                                    className={`h-full rounded-full transition-all ${
+                                                        whoopData.recoveryScore >= 67 ? 'bg-success' :
+                                                        whoopData.recoveryScore >= 34 ? 'bg-yellow-400' : 'bg-red-400'
+                                                    }`}
+                                                    style={{ width: `${whoopData.recoveryScore}%` }}
+                                                />
+                                            </div>
+                                            <div className="flex justify-between mt-1 text-[10px] text-gray-600">
+                                                <span>Восстановление</span>
+                                                <span>Нагрузка</span>
+                                                <span>Пик</span>
                                             </div>
                                         </div>
 
-                                        {/* Warning when no data */}
-                                        {!whoopDebugData.hasRealData && (
-                                            <div className="bg-yellow-900/20 border border-yellow-500/30 rounded-xl p-4">
-                                                <p className="text-yellow-400 font-bold text-sm mb-1">Нет данных о сне</p>
-                                                <p className="text-yellow-300/70 text-xs">
-                                                    WHOOP рассчитывает Recovery только после фиксации сна.
-                                                    Убедитесь что браслет надет во время сна и данные синхронизированы.
+                                        {/* HRV Analysis */}
+                                        <div className="bg-black/50 rounded-2xl p-4 border border-white/5">
+                                            <div className="flex items-center gap-3 mb-2">
+                                                <Heart className="text-primary" size={18} />
+                                                <span className="text-gray-500 text-xs font-bold uppercase tracking-wider">Вариабельность пульса (HRV)</span>
+                                            </div>
+                                            <div className="flex items-baseline gap-2">
+                                                <span className="font-display font-black text-2xl text-white">{Math.round(whoopData.hrv)}</span>
+                                                <span className="text-gray-500 text-sm">мс</span>
+                                                <span className={`ml-auto text-xs font-bold ${hrvInfo.color}`}>{hrvInfo.text}</span>
+                                            </div>
+                                            <p className="text-gray-600 text-[10px] mt-2">
+                                                HRV отражает способность нервной системы адаптироваться к нагрузке.
+                                                {whoopData.hrv < 40 ? ' Низкий показатель указывает на накопленную усталость.' :
+                                                 whoopData.hrv > 60 ? ' Отличный показатель — организм готов к интенсивной работе.' :
+                                                 ' Нормальный уровень для тренировки.'}
+                                            </p>
+                                        </div>
+
+                                        {/* Sleep & Vitals Grid */}
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <div className="bg-black/50 rounded-xl p-3 border border-white/5">
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    <Moon className="text-info" size={14} />
+                                                    <span className="text-gray-600 text-[10px] font-bold">СОН</span>
+                                                </div>
+                                                <p className="font-display font-bold text-xl text-white">{whoopData.sleepHours}ч</p>
+                                                <p className="text-gray-500 text-[10px]">Эффективность {Math.round(whoopDebugData.sleepEfficiency || 0)}%</p>
+                                            </div>
+                                            <div className="bg-black/50 rounded-xl p-3 border border-white/5">
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    <Heart className="text-red-400" size={14} />
+                                                    <span className="text-gray-600 text-[10px] font-bold">ПУЛЬС ПОКОЯ</span>
+                                                </div>
+                                                <p className="font-display font-bold text-xl text-white">{whoopData.rhr}</p>
+                                                <p className="text-gray-500 text-[10px]">уд/мин</p>
+                                            </div>
+                                            <div className="bg-black/50 rounded-xl p-3 border border-white/5">
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    <Wind className="text-blue-400" size={14} />
+                                                    <span className="text-gray-600 text-[10px] font-bold">SpO2</span>
+                                                </div>
+                                                <p className="font-display font-bold text-xl text-white">{whoopDebugData.spo2 || 0}%</p>
+                                                <p className="text-gray-500 text-[10px]">Насыщение O2</p>
+                                            </div>
+                                            <div className="bg-black/50 rounded-xl p-3 border border-white/5">
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    <Thermometer className="text-orange-400" size={14} />
+                                                    <span className="text-gray-600 text-[10px] font-bold">ТЕМПЕРАТУРА</span>
+                                                </div>
+                                                <p className="font-display font-bold text-xl text-white">{Math.round((whoopDebugData.skinTemp || 0) * 10) / 10}°</p>
+                                                <p className="text-gray-500 text-[10px]">Кожи</p>
+                                            </div>
+                                        </div>
+
+                                        {/* Workout Adaptation */}
+                                        {adaptation.reason !== 'good_recovery' && (
+                                            <div className={`${colors.bg} border ${colors.border} rounded-2xl p-4`}>
+                                                <div className="flex items-center gap-2 mb-3">
+                                                    <TrendingDown className={colors.icon} size={18} />
+                                                    <span className={`text-xs font-bold ${colors.text}`}>АДАПТАЦИЯ ТРЕНИРОВКИ</span>
+                                                </div>
+                                                <div className="space-y-2">
+                                                    {insight.adaptations.map((a, i) => (
+                                                        <div key={i} className="flex items-center gap-2">
+                                                            <div className={`w-1.5 h-1.5 rounded-full ${colors.icon.replace('text-', 'bg-')}`} />
+                                                            <span className="text-gray-300 text-sm">{a}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                                <p className="text-gray-500 text-[10px] mt-3">
+                                                    {adaptation.reason === 'low_recovery'
+                                                        ? 'Сегодня приоритет — не навредить. Лучше сделать меньше качественно, чем много через силу.'
+                                                        : 'Небольшая коррекция поможет избежать переутомления и сохранить прогресс.'}
                                                 </p>
                                             </div>
                                         )}
 
-                                        {/* Recovery */}
-                                        <div className="bg-black/50 rounded-xl p-4 border border-white/5">
-                                            <p className="text-gray-500 text-xs font-bold mb-2">Recovery</p>
-                                            <div className="grid grid-cols-3 gap-2">
-                                                <div>
-                                                    <p className="text-gray-600 text-[10px]">Score</p>
-                                                    <p className="text-success font-display font-bold text-lg">{whoopDebugData.recoveryScore || 0}%</p>
+                                        {adaptation.reason === 'good_recovery' && (
+                                            <div className="bg-success/10 border border-success/30 rounded-2xl p-4">
+                                                <div className="flex items-center gap-2 mb-2">
+                                                    <TrendingUp className="text-success" size={18} />
+                                                    <span className="text-xs font-bold text-success">ГОТОВ К ПОЛНОЙ НАГРУЗКЕ</span>
                                                 </div>
-                                                <div>
-                                                    <p className="text-gray-600 text-[10px]">HRV</p>
-                                                    <p className="text-white font-display font-bold text-lg">{Math.round(whoopDebugData.hrv || 0)} ms</p>
-                                                </div>
-                                                <div>
-                                                    <p className="text-gray-600 text-[10px]">Resting HR</p>
-                                                    <p className="text-white font-display font-bold text-lg">{whoopDebugData.rhr || 0} bpm</p>
-                                                </div>
-                                                <div>
-                                                    <p className="text-gray-600 text-[10px]">SpO2</p>
-                                                    <p className="text-white font-display font-bold text-lg">{whoopDebugData.spo2 || 0}%</p>
-                                                </div>
-                                                <div>
-                                                    <p className="text-gray-600 text-[10px]">Skin Temp</p>
-                                                    <p className="text-white font-display font-bold text-lg">{Math.round((whoopDebugData.skinTemp || 0) * 10) / 10}°C</p>
-                                                </div>
+                                                <p className="text-gray-400 text-sm">
+                                                    Организм восстановился — работаем по плану без ограничений.
+                                                    {whoopData.recoveryScore > 80 && ' Отличный день для прогрессии в рабочих весах.'}
+                                                </p>
                                             </div>
-                                        </div>
+                                        )}
+                                    </div>
 
-                                        {/* Sleep */}
-                                        <div className="bg-black/50 rounded-xl p-4 border border-white/5">
-                                            <p className="text-gray-500 text-xs font-bold mb-2">Sleep</p>
-                                            <div className="grid grid-cols-2 gap-2">
-                                                <div>
-                                                    <p className="text-gray-600 text-[10px]">Hours</p>
-                                                    <p className="text-info font-display font-bold text-lg">{whoopDebugData.sleepHours || 0}h</p>
-                                                </div>
-                                                <div>
-                                                    <p className="text-gray-600 text-[10px]">Performance</p>
-                                                    <p className="text-white font-display font-bold text-lg">{whoopDebugData.sleepPerformance || 0}%</p>
-                                                </div>
-                                                <div>
-                                                    <p className="text-gray-600 text-[10px]">Efficiency</p>
-                                                    <p className="text-white font-display font-bold text-lg">{Math.round(whoopDebugData.sleepEfficiency || 0)}%</p>
-                                                </div>
-                                                <div>
-                                                    <p className="text-gray-600 text-[10px]">Resp Rate</p>
-                                                    <p className="text-white font-display font-bold text-lg">{Math.round((whoopDebugData.respiratoryRate || 0) * 10) / 10}/min</p>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {/* Calculated Scores */}
-                                        <div className="bg-black/50 rounded-xl p-4 border border-white/5">
-                                            <p className="text-gray-500 text-xs font-bold mb-2">Calculated Scores (1-5)</p>
-                                            <div className="grid grid-cols-3 gap-2">
-                                                <div className="text-center">
-                                                    <p className="text-gray-600 text-[10px]">Sleep</p>
-                                                    <p className="text-info font-display font-bold text-2xl">{whoopDebugData.sleepScore || 3}</p>
-                                                </div>
-                                                <div className="text-center">
-                                                    <p className="text-gray-600 text-[10px]">Stress</p>
-                                                    <p className="text-primary font-display font-bold text-2xl">{whoopDebugData.stressScore || 3}</p>
-                                                </div>
-                                                <div className="text-center">
-                                                    <p className="text-gray-600 text-[10px]">Soreness</p>
-                                                    <p className="text-success font-display font-bold text-2xl">{whoopDebugData.sorenessScore || 3}</p>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {/* Raw JSON */}
-                                        <div className="bg-black/50 rounded-xl p-4 border border-white/5">
-                                            <p className="text-gray-500 text-xs font-bold mb-2">Raw Response</p>
-                                            <pre className="text-[10px] text-gray-400 overflow-x-auto whitespace-pre-wrap font-mono">
-                                                {JSON.stringify(whoopDebugData, null, 2)}
-                                            </pre>
-                                        </div>
-                                    </>
-                                )}
+                                    {/* Footer */}
+                                    <div className="p-4 pt-0">
+                                        <button
+                                            onClick={() => setShowWhoopDebug(false)}
+                                            className="w-full py-4 bg-white text-black rounded-xl font-display font-bold hover:bg-gray-200 transition"
+                                        >
+                                            Понятно
+                                        </button>
+                                    </div>
+                                </div>
+                            );
+                        })() : (
+                            <div className="p-6">
+                                <div className="text-center py-8">
+                                    <Moon className="text-gray-600 mx-auto mb-4" size={48} />
+                                    <p className="text-white font-display font-bold text-lg mb-2">Нет данных о сне</p>
+                                    <p className="text-gray-500 text-sm">
+                                        WHOOP рассчитывает Recovery после фиксации сна.
+                                        Убедись что браслет был надет ночью и данные синхронизированы.
+                                    </p>
+                                </div>
+                                <button
+                                    onClick={() => setShowWhoopDebug(false)}
+                                    className="w-full py-3 bg-subtle text-white rounded-xl font-display font-bold text-sm"
+                                >
+                                    Закрыть
+                                </button>
                             </div>
-                        ) : null}
-
-                        <button
-                            onClick={() => setShowWhoopDebug(false)}
-                            className="mt-4 w-full py-3 bg-subtle text-white rounded-xl font-display font-bold text-sm hover:bg-white/10 transition"
-                        >
-                            Закрыть
-                        </button>
+                        )}
                     </div>
                 </div>
             )}
