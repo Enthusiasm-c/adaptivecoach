@@ -52,8 +52,8 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
     const [restoredState, setRestoredState] = useState<ActiveWorkoutState | null>(null);
     const [staleWorkoutState, setStaleWorkoutState] = useState<ActiveWorkoutState | null>(null);
 
-    // Workout timeout constant (20 minutes)
-    const STALE_TIMEOUT_MS = 20 * 60 * 1000;
+    // Workout timeout constant (1 hour - allows for rest periods and distractions)
+    const STALE_TIMEOUT_MS = 60 * 60 * 1000;
 
     // Monetization state
     const [showHardPaywall, setShowHardPaywall] = useState(false);
@@ -412,10 +412,10 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
                 // Get WHOOP readiness data
                 const whoopReadiness = await apiService.whoop.getReadiness();
 
-                // Validate we have actual data (not all zeros)
-                const hasValidData = whoopReadiness.recoveryScore > 0 || whoopReadiness.sleepHours > 0;
-                if (!hasValidData) {
-                    console.warn('WHOOP returned empty data, falling back to manual input');
+                // Use backend hasRealData flag for reliable validation
+                // This handles cases where WHOOP API returned empty data
+                if (!whoopReadiness.hasRealData) {
+                    console.warn('WHOOP returned no real data, falling back to manual input');
                     throw new Error('No WHOOP data available');
                 }
 

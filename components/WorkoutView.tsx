@@ -165,6 +165,39 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
     }
   }, [completedExercises, onProgress]);
 
+  // Critical: Save state on app close/minimize (fixes session loss on Telegram Mini App close)
+  useEffect(() => {
+    const saveStateImmediately = () => {
+      if (completedExercises.length > 0 && onProgress) {
+        onProgress({
+          completedExercises,
+          startTime: startTimeRef.current,
+          lastActivityTime: lastActivityRef.current
+        });
+      }
+    };
+
+    // For desktop browsers
+    window.addEventListener('beforeunload', saveStateImmediately);
+
+    // For iOS Safari and Telegram Mini App (more reliable than beforeunload)
+    window.addEventListener('pagehide', saveStateImmediately);
+
+    // When app is minimized or tab loses focus
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        saveStateImmediately();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('beforeunload', saveStateImmediately);
+      window.removeEventListener('pagehide', saveStateImmediately);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [completedExercises, onProgress]);
+
   // Fetch history on exercise change
   useEffect(() => {
     // Fix #8: Explicit bounds check to prevent crash when array is empty
@@ -226,14 +259,14 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
     } else {
       (newExercises[exIndex].completedSets[setIndex] as any)[field] = value;
 
-      // Fix #2: Auto-fill only to sets that are NOT completed (user hasn't touched them)
-      // This prevents overwriting user data when they fill sets in non-sequential order
+      // Fix #2: Auto-fill weight to ALL subsequent incomplete sets when changing first set
+      // This ensures user only needs to set weight once and it propagates to all sets
       if (field === 'weight' && setIndex === 0) {
-        // When changing weight in first set, copy to subsequent incomplete sets only
+        // When changing weight in first set, copy to ALL subsequent incomplete sets
         for (let i = 1; i < newExercises[exIndex].completedSets.length; i++) {
           const set = newExercises[exIndex].completedSets[i];
-          // Only auto-fill if set is not completed AND has no weight or zero
-          if (!set.isCompleted && (!set.weight || set.weight === 0)) {
+          // Auto-fill to all incomplete sets (user can still override individually)
+          if (!set.isCompleted) {
             (set as any).weight = value;
           }
         }
@@ -243,7 +276,7 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
         if (nextSetIndex < newExercises[exIndex].completedSets.length) {
           const nextSet = newExercises[exIndex].completedSets[nextSetIndex];
           // Only auto-fill if next set is not completed
-          if (!nextSet.isCompleted && (!nextSet[field] || nextSet[field] === 0)) {
+          if (!nextSet.isCompleted) {
             (nextSet as any)[field] = value;
           }
         }
