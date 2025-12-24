@@ -464,18 +464,26 @@ const SettingsView: React.FC<SettingsViewProps> = ({ profile, telegramUser, onUp
                                         {/* Recovery */}
                                         <div className="bg-black/50 rounded-xl p-4 border border-white/5">
                                             <p className="text-gray-500 text-xs font-bold mb-2">Recovery</p>
-                                            <div className="grid grid-cols-2 gap-2">
+                                            <div className="grid grid-cols-3 gap-2">
                                                 <div>
                                                     <p className="text-gray-600 text-[10px]">Score</p>
-                                                    <p className="text-white font-display font-bold text-lg">{whoopDebugData.recoveryScore || 0}%</p>
+                                                    <p className="text-success font-display font-bold text-lg">{whoopDebugData.recoveryScore || 0}%</p>
                                                 </div>
                                                 <div>
                                                     <p className="text-gray-600 text-[10px]">HRV</p>
-                                                    <p className="text-white font-display font-bold text-lg">{whoopDebugData.hrv || 0} ms</p>
+                                                    <p className="text-white font-display font-bold text-lg">{Math.round(whoopDebugData.hrv || 0)} ms</p>
                                                 </div>
                                                 <div>
                                                     <p className="text-gray-600 text-[10px]">Resting HR</p>
                                                     <p className="text-white font-display font-bold text-lg">{whoopDebugData.rhr || 0} bpm</p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-gray-600 text-[10px]">SpO2</p>
+                                                    <p className="text-white font-display font-bold text-lg">{whoopDebugData.spo2 || 0}%</p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-gray-600 text-[10px]">Skin Temp</p>
+                                                    <p className="text-white font-display font-bold text-lg">{Math.round((whoopDebugData.skinTemp || 0) * 10) / 10}°C</p>
                                                 </div>
                                             </div>
                                         </div>
@@ -486,11 +494,19 @@ const SettingsView: React.FC<SettingsViewProps> = ({ profile, telegramUser, onUp
                                             <div className="grid grid-cols-2 gap-2">
                                                 <div>
                                                     <p className="text-gray-600 text-[10px]">Hours</p>
-                                                    <p className="text-white font-display font-bold text-lg">{whoopDebugData.sleepHours || 0}h</p>
+                                                    <p className="text-info font-display font-bold text-lg">{whoopDebugData.sleepHours || 0}h</p>
                                                 </div>
                                                 <div>
                                                     <p className="text-gray-600 text-[10px]">Performance</p>
                                                     <p className="text-white font-display font-bold text-lg">{whoopDebugData.sleepPerformance || 0}%</p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-gray-600 text-[10px]">Efficiency</p>
+                                                    <p className="text-white font-display font-bold text-lg">{Math.round(whoopDebugData.sleepEfficiency || 0)}%</p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-gray-600 text-[10px]">Resp Rate</p>
+                                                    <p className="text-white font-display font-bold text-lg">{Math.round((whoopDebugData.respiratoryRate || 0) * 10) / 10}/min</p>
                                                 </div>
                                             </div>
                                         </div>
