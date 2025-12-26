@@ -73,7 +73,7 @@ const BadgesView: React.FC<BadgesViewProps> = ({ onClose }) => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-sm animate-fade-in">
-      <div className="bg-[#111] border border-white/10 w-full max-w-lg h-[85vh] rounded-t-3xl sm:rounded-3xl overflow-hidden flex flex-col shadow-2xl animate-slide-up">
+      <div className="bg-surface border border-white/10 w-full max-w-lg h-[85vh] rounded-t-3xl sm:rounded-3xl overflow-hidden flex flex-col shadow-2xl animate-slide-up">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-white/10">
           <div>

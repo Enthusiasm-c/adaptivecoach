@@ -695,7 +695,7 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
                                         tick={{ fontFamily: 'var(--font-display)' }}
                                     />
                                     <Tooltip
-                                        contentStyle={{ backgroundColor: '#0a0a0a', border: '1px solid #333', borderRadius: '4px', color: '#fff', fontSize: '12px', fontFamily: 'var(--font-display)' }}
+                                        contentStyle={{ backgroundColor: '#000000', border: '1px solid #333', borderRadius: '4px', color: '#fff', fontSize: '12px', fontFamily: 'var(--font-display)' }}
                                         itemStyle={{ padding: 0 }}
                                     />
                                     <Legend wrapperStyle={{ fontSize: '10px', paddingTop: '15px', fontFamily: 'var(--font-display)', opacity: 0.7 }} iconType="circle" />
@@ -825,7 +825,7 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
                                     />
                                     <Tooltip
                                         cursor={{ fill: 'white', opacity: 0.05 }}
-                                        contentStyle={{ backgroundColor: '#0a0a0a', border: '1px solid #333', borderRadius: '4px', color: '#fff', fontSize: '12px', fontFamily: 'var(--font-display)' }}
+                                        contentStyle={{ backgroundColor: '#000000', border: '1px solid #333', borderRadius: '4px', color: '#fff', fontSize: '12px', fontFamily: 'var(--font-display)' }}
                                     />
                                     <Bar
                                         dataKey="volume"
@@ -869,7 +869,7 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
                                         fillOpacity={0.4}
                                     />
                                     <Tooltip
-                                        contentStyle={{ backgroundColor: '#0a0a0a', border: '1px solid #333', borderRadius: '4px', color: '#fff', fontSize: '12px', fontFamily: 'var(--font-display)' }}
+                                        contentStyle={{ backgroundColor: '#000000', border: '1px solid #333', borderRadius: '4px', color: '#fff', fontSize: '12px', fontFamily: 'var(--font-display)' }}
                                         itemStyle={{ color: '#fff' }}
                                     />
                                 </RadarChart>

@@ -70,7 +70,7 @@ const FriendProfileModal: React.FC<FriendProfileModalProps> = ({
 
     return (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-sm animate-fade-in p-4">
-            <div className="bg-[#111] border border-white/10 w-full max-w-sm rounded-3xl overflow-hidden relative shadow-2xl animate-slide-up max-h-[85vh] flex flex-col">
+            <div className="bg-surface border border-white/10 w-full max-w-sm rounded-3xl overflow-hidden relative shadow-2xl animate-slide-up max-h-[85vh] flex flex-col">
 
                 {/* Header Image */}
                 <div className="h-24 bg-gradient-to-r from-indigo-900 to-purple-900 relative">

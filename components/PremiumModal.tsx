@@ -144,7 +144,7 @@ const PremiumModal: React.FC<PremiumModalProps> = ({
 
     return (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-sm animate-fade-in p-4">
-            <div className="bg-[#111] border border-white/10 w-full max-w-sm rounded-3xl overflow-hidden relative shadow-2xl animate-slide-up max-h-[90vh] overflow-y-auto">
+            <div className="bg-surface border border-white/10 w-full max-w-sm rounded-3xl overflow-hidden relative shadow-2xl animate-slide-up max-h-[90vh] overflow-y-auto">
 
                 {/* Close Button */}
                 <button

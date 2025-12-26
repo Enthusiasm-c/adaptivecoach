@@ -563,7 +563,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
 
         if (activeView === 'coach') {
             return (
-                <div className="fixed inset-0 z-50 bg-[#0f0f0f] animate-fade-in">
+                <div className="fixed inset-0 z-50 bg-black animate-fade-in">
                     <CoachChatView
                         messages={chatMessages}
                         onSendMessage={onSendMessage}
@@ -933,7 +933,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
                     className="p-2 bg-gradient-to-r from-amber-500/20 to-yellow-500/20 border border-amber-500/30 rounded-xl text-amber-400 hover:text-amber-300 transition-colors relative group"
                 >
                     <Crown size={24} fill="currentColor" className="drop-shadow-[0_0_8px_rgba(251,191,36,0.5)]" />
-                    <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-[#0a0a0a]"></div>
+                    <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-black"></div>
                 </button>
             </header>
 

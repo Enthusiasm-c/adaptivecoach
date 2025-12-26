@@ -60,7 +60,7 @@ const FirstWorkoutPaywall: React.FC<FirstWorkoutPaywallProps> = ({
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm animate-fade-in p-4">
-            <div className="bg-[#111] border border-white/10 w-full max-w-sm rounded-3xl overflow-hidden relative shadow-2xl animate-scale-in">
+            <div className="bg-surface border border-white/10 w-full max-w-sm rounded-3xl overflow-hidden relative shadow-2xl animate-scale-in">
                 {/* Close Button */}
                 <button
                     onClick={handleClose}
