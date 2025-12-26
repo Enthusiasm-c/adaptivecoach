@@ -23,10 +23,10 @@
             body: ['Inter', 'sans-serif'], // For generic text
           },
           colors: {
-            // WHOOP-style palette with better contrast
-            background: '#000000', // Pure black (was #0F0F0F)
-            surface: '#1c1c1e',    // WHOOP-style card surface (was #1A1A1A)
-            subtle: '#2c2c2e',     // Borders/Dividers (was #262626)
+            // High contrast dark palette
+            background: '#000000', // Pure black
+            surface: '#1f1f23',    // Lighter card surface for better contrast
+            subtle: '#38383c',     // Lighter borders
             primary: '#E93D3D',    // Whoop Red (Strain/Action)
             success: '#4CC76D',    // Whoop Green (Recovery)
             info: '#2E9BFF',       // Whoop Blue (Sleep)
@@ -37,9 +37,9 @@
                 600: '#C42626',
             },
             neutral: {
-                950: '#000000',    // Pure black (was #0F0F0F)
-                900: '#1c1c1e',    // WHOOP-style (was #1A1A1A)
-                800: '#2c2c2e',    // Lighter border (was #262626)
+                950: '#000000',    // Pure black
+                900: '#1f1f23',    // Lighter for contrast
+                800: '#38383c',    // Even lighter
             }
           },
           keyframes: {
@@ -79,12 +79,12 @@
     }
 
     ::-webkit-scrollbar-thumb {
-      background: #2c2c2e;
+      background: #38383c;
       border-radius: 10px;
     }
 
     ::-webkit-scrollbar-thumb:hover {
-      background: #3c3c3e;
+      background: #48484c;
     }
 
     html {
