@@ -1147,10 +1147,17 @@ export const getChatbotResponse = async (history: ChatMessage[], currentProgram:
     Ты имеешь доступ к текущей программе тренировок пользователя.
     Обращайся к пользователю на "Ты".
 
-    ВАЖНО О ИЗМЕНЕНИИ ПРОГРАММЫ:
-    - Если пользователь хочет добавить/убрать/изменить упражнения — используй инструмент 'update_workout_plan'
-    - Это относится к: добавлению мышечных групп (бицепс, трицепс и тд), замене упражнений, боли/травмам
-    - Пользователь увидит кнопку и сам подтвердит изменение
+    КРИТИЧЕСКИ ВАЖНО — ИЗМЕНЕНИЕ ПРОГРАММЫ:
+    Если пользователь просит изменить программу тренировок:
+    - добавить/убрать/заменить упражнения
+    - добавить мышечную группу (бицепс, трицепс, пресс и тд)
+    - изменить подходы, повторения, веса
+    - адаптировать под травму или боль
+
+    Ты ОБЯЗАН вызвать функцию 'update_workout_plan'.
+    НЕ пиши текстом "сейчас изменю" или "внесу изменения" — это не работает!
+    Только вызов функции = реальные изменения.
+    Пользователь увидит кнопку подтверждения после вызова функции.
 
     Отвечай на РУССКОМ языке.
     `;
@@ -1168,10 +1175,26 @@ export const getChatbotResponse = async (history: ChatMessage[], currentProgram:
         tools: [{ functionDeclarations: [updatePlanTool] }]
     });
 
+    // Debug: Log what Gemini returned
+    console.log('[Chat] API response:', {
+        hasCandidates: !!response.candidates,
+        firstPart: response.candidates?.[0]?.content?.parts?.[0]
+    });
+
     // 6. Handle Function Calls - return as proposedAction instead of auto-modifying
     const functionCall = extractFunctionCall(response);
+    console.log('[Chat] Function call extracted:', functionCall);
+
     if (functionCall && functionCall.name === 'update_workout_plan') {
         const args = functionCall.args as { reason: string, instructions: string };
+
+        // Validate args before proceeding
+        if (!args?.reason || !args?.instructions) {
+            console.error('[Chat] Invalid function call args:', args);
+            return { text: 'Произошла ошибка при обработке запроса. Попробуй переформулировать.' };
+        }
+
+        console.log('[Chat] Creating proposedAction with args:', args);
 
         // Get acknowledgment text from AI (include thoughtSignature for Gemini 3)
         const modelPart: any = {
@@ -1204,7 +1227,20 @@ export const getChatbotResponse = async (history: ChatMessage[], currentProgram:
         };
     }
 
-    return { text: extractText(response) };
+    // Detect false promises - AI said it would make changes but didn't call function
+    const responseText = extractText(response);
+    const textLower = responseText.toLowerCase();
+    const mentionsChanges = textLower.includes('внесу изменения') ||
+                            textLower.includes('отправлю запрос') ||
+                            textLower.includes('сейчас изменю') ||
+                            textLower.includes('сейчас добавлю') ||
+                            textLower.includes('изменю программу');
+
+    if (mentionsChanges) {
+        console.warn('[Chat] AI mentioned changes but did not call function! Text:', responseText);
+    }
+
+    return { text: responseText };
 }
 
 // ============================================
