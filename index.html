@@ -23,23 +23,23 @@
             body: ['Inter', 'sans-serif'], // For generic text
           },
           colors: {
-            // Updated Whoop-inspired palette
-            background: '#0F0F0F', // Whoop Black
-            surface: '#1A1A1A',    // Card Surface
-            subtle: '#262626',     // Borders/Dividers
-            primary: '#E93D3D',    // Whoop Red (Strain/Action) - replacing indigo as primary
+            // WHOOP-style palette with better contrast
+            background: '#000000', // Pure black (was #0F0F0F)
+            surface: '#1c1c1e',    // WHOOP-style card surface (was #1A1A1A)
+            subtle: '#2c2c2e',     // Borders/Dividers (was #262626)
+            primary: '#E93D3D',    // Whoop Red (Strain/Action)
             success: '#4CC76D',    // Whoop Green (Recovery)
             info: '#2E9BFF',       // Whoop Blue (Sleep)
-            // Legacy mappings to keep app working while refactoring
+            // Legacy mappings
             indigo: {
-                400: '#E93D3D', // Remap indigo to Whoop Red for immediate consistency
+                400: '#E93D3D',
                 500: '#D63131',
                 600: '#C42626',
             },
             neutral: {
-                950: '#0F0F0F',
-                900: '#1A1A1A',
-                800: '#262626',
+                950: '#000000',    // Pure black (was #0F0F0F)
+                900: '#1c1c1e',    // WHOOP-style (was #1A1A1A)
+                800: '#2c2c2e',    // Lighter border (was #262626)
             }
           },
           keyframes: {
@@ -75,20 +75,20 @@
     }
 
     ::-webkit-scrollbar-track {
-      background: #0a0a0a;
+      background: #000000;
     }
 
     ::-webkit-scrollbar-thumb {
-      background: #333;
+      background: #2c2c2e;
       border-radius: 10px;
     }
 
     ::-webkit-scrollbar-thumb:hover {
-      background: #555;
+      background: #3c3c3e;
     }
 
     html {
-      background-color: #0a0a0a;
+      background-color: #000000;
       overscroll-behavior-y: none;
       /* Prevent rubber-banding on iOS */
       touch-action: manipulation;
@@ -97,7 +97,7 @@
     }
 
     body {
-      background-color: #0a0a0a;
+      background-color: #000000;
       overscroll-behavior-y: none;
       /* background-image removed */
     }

@@ -831,7 +831,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
                     /* REST DAY CARD - Minimalist Design */
                     <div className="col-span-2 relative group mt-2">
                         <div className="absolute inset-0 bg-gradient-to-r from-green-600 to-teal-600 rounded-[2rem] blur-xl opacity-15"></div>
-                        <div className="relative bg-[#111] border border-white/10 rounded-[2rem] p-5 overflow-hidden">
+                        <div className="relative bg-surface border border-white/10 rounded-[2rem] p-5 overflow-hidden">
 
                             {/* Header */}
                             <div className="flex items-center gap-3 mb-4">
@@ -916,7 +916,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
             )}
 
             {/* Header */}
-            <header className="px-6 pt-6 pb-4 flex items-center justify-between sticky top-0 bg-[#0a0a0a]/80 backdrop-blur-md z-40 border-b border-white/5">
+            <header className="px-6 pt-6 pb-4 flex items-center justify-between sticky top-0 bg-black/80 backdrop-blur-md z-40 border-b border-white/5">
                 <div>
                     <h1 className="text-2xl font-black text-white tracking-tight italic">
                         SENSEI<span className="text-indigo-500">.AI</span>
@@ -945,7 +945,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
             {/* Navigation Bar - WHOOP-style with separate AI button */}
             <div className="fixed bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-3 z-40">
                 {/* Main Navigation */}
-                <nav className="bg-[#111]/90 backdrop-blur-xl border border-white/10 rounded-[2rem] px-4 py-1.5 flex items-center gap-2 shadow-2xl"
+                <nav className="bg-surface/90 backdrop-blur-xl border border-white/10 rounded-[2rem] px-4 py-1.5 flex items-center gap-2 shadow-2xl"
                      style={{ touchAction: 'manipulation' }}>
                     <NavButton
                         icon={<Dumbbell size={24} />}
@@ -973,7 +973,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
                     className={`relative w-14 h-14 rounded-2xl flex items-center justify-center transition-all active:scale-95
                         ${activeView === 'coach'
                             ? 'bg-[#1a1a2e]'
-                            : 'bg-[#111]/90 hover:bg-[#1a1a2e]'
+                            : 'bg-surface/90 hover:bg-surface'
                         }`}
                     style={{ touchAction: 'manipulation' }}
                 >
@@ -981,7 +981,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
                     <div className={`absolute inset-0 rounded-2xl p-[2px] bg-gradient-to-br from-indigo-500 via-purple-500 to-cyan-400 ${
                         activeView === 'coach' ? 'opacity-100' : 'opacity-50'
                     }`}>
-                        <div className="w-full h-full rounded-[14px] bg-[#0a0a0a]" />
+                        <div className="w-full h-full rounded-[14px] bg-black" />
                     </div>
                     {/* Icon */}
                     <MessageCircle size={24} className={`relative z-10 ${
