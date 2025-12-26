@@ -657,15 +657,18 @@ const App: React.FC = () => {
   const executeAction = async (action: ChatAction) => {
     if (!trainingProgram) return;
 
+    console.log('[ExecuteAction] Starting:', action);
     setExecutingActionId(action.id);
 
     try {
       // Apply the changes to the program
+      console.log('[ExecuteAction] Calling modifyPlanWithInstructions...');
       const updatedProgram = await modifyPlanWithInstructions(
         trainingProgram,
         action.reason,
         action.instructions
       );
+      console.log('[ExecuteAction] Got updated program, sessions:', updatedProgram?.sessions?.length);
 
       // Update program state
       setTrainingProgram(updatedProgram);

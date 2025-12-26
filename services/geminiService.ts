@@ -74,7 +74,7 @@ interface GeminiResponse {
 }
 
 /**
- * Call Gemini API through secure proxy
+ * Call Gemini API through secure proxy with timeout
  */
 async function callGeminiProxy(endpoint: string, body: GenerateContentRequest): Promise<GeminiResponse> {
     const url = `${PROXY_URL}/api/gemini${endpoint}`;
@@ -85,21 +85,36 @@ async function callGeminiProxy(endpoint: string, body: GenerateContentRequest): 
         normalizedBody.contents = [{ role: 'user', parts: [{ text: body.contents }] }];
     }
 
-    const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-API-Key': CLIENT_API_KEY
-        },
-        body: JSON.stringify(normalizedBody)
-    });
+    // Add timeout of 60 seconds
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
 
-    if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Proxy error ${response.status}: ${errorText}`);
+    try {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-API-Key': CLIENT_API_KEY
+            },
+            body: JSON.stringify(normalizedBody),
+            signal: controller.signal
+        });
+
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Proxy error ${response.status}: ${errorText}`);
+        }
+
+        return response.json();
+    } catch (error: any) {
+        clearTimeout(timeoutId);
+        if (error.name === 'AbortError') {
+            throw new Error('API request timed out (60s). Please try again.');
+        }
+        throw error;
     }
-
-    return response.json();
 }
 
 /**
@@ -1022,7 +1037,11 @@ export const adaptPlan = async (
 
 // Helper to actually rewrite the JSON - exported for action button execution
 export const modifyPlanWithInstructions = async (currentProgram: TrainingProgram, reason: string, instructions: string): Promise<TrainingProgram> => {
+    console.log('[ModifyPlan] Starting modification:', { reason, instructions });
+    const startTime = Date.now();
+
     const prompt = buildModificationPrompt(currentProgram, reason, instructions);
+    console.log('[ModifyPlan] Prompt built, calling API...');
 
     const response = await callGeminiProxy(`/v1beta/models/${GEMINI_MODEL}:generateContent`, {
         contents: prompt,
@@ -1032,7 +1051,10 @@ export const modifyPlanWithInstructions = async (currentProgram: TrainingProgram
         },
     });
 
+    console.log('[ModifyPlan] API responded in', Date.now() - startTime, 'ms');
+
     const jsonText = extractText(response);
+    console.log('[ModifyPlan] Extracted text length:', jsonText?.length || 0);
 
     // Validate AI response with fallback to current program
     const { program, wasValid } = parseAndValidateProgram(jsonText, currentProgram, `modifyPlan: ${reason.slice(0, 50)}`);
