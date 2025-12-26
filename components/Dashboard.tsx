@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { OnboardingProfile, TrainingProgram, WorkoutLog, WorkoutSession, ReadinessData, ActiveWorkoutState, TelegramUser, WorkoutLimitStatus, WhoopReadinessData } from '../types';
+import { OnboardingProfile, TrainingProgram, WorkoutLog, WorkoutSession, ReadinessData, ActiveWorkoutState, TelegramUser, WorkoutLimitStatus, WhoopReadinessData, ChatMessage, ChatAction } from '../types';
 import WorkoutView from './WorkoutView';
 import ProgressView from './ProgressView';
 import SettingsView from './SettingsView';
 import SquadView from './SquadView';
-import ChatInputBar from './ChatInputBar';
+import CoachChatView from './CoachChatView';
 import MesocycleIndicator from './MesocycleIndicator';
 import { Dumbbell, Calendar as CalendarIcon, BarChart2, Settings, Play, ChevronRight, Info, Battery, Zap, Trophy, Users, User, Crown, Bot, MessageCircle, Flame, Activity, Clock, TrendingUp, Sparkles, MessageSquarePlus, HelpCircle, Coffee, Sun, Moon, Check, LayoutGrid, Shield, AlertTriangle } from 'lucide-react';
 import WorkoutPreviewModal from './WorkoutPreviewModal';
@@ -34,12 +34,16 @@ interface DashboardProps {
     onUpdateProfile: (profile: OnboardingProfile) => void;
     onWorkoutComplete: (log: WorkoutLog) => void;
     onResetAccount: () => void;
-    onOpenChat: () => void;
+    // Chat props
+    chatMessages: ChatMessage[];
     onSendMessage: (message: string) => void;
+    onActionClick: (action: ChatAction) => void;
+    isChatLoading: boolean;
+    executingActionId?: string;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramUser, mesocycleState, onUpdateProgram, onUpdateProfile, onWorkoutComplete, onResetAccount, onOpenChat, onSendMessage }) => {
-    const [activeView, setActiveView] = useState<'today' | 'squad' | 'progress' | 'settings'>('today');
+const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramUser, mesocycleState, onUpdateProgram, onUpdateProfile, onWorkoutComplete, onResetAccount, chatMessages, onSendMessage, onActionClick, isChatLoading, executingActionId }) => {
+    const [activeView, setActiveView] = useState<'today' | 'squad' | 'progress' | 'settings' | 'coach'>('today');
     const [activeWorkout, setActiveWorkout] = useState<string | null>(null);
     const [workoutToPreview, setWorkoutToPreview] = useState<WorkoutSession | null>(null);
     const [insight, setInsight] = useState<string | null>(null); // Unified insight state
@@ -66,7 +70,6 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
     }, [activeView]);
     const [shieldNotification, setShieldNotification] = useState<string | null>(null);
     const [showFirstWorkoutPaywall, setShowFirstWorkoutPaywall] = useState(false);
-    const [isInputFocused, setIsInputFocused] = useState(false);
 
     // WHOOP Insight Screen state
     const [showWhoopInsight, setShowWhoopInsight] = useState(false);
@@ -556,6 +559,20 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
             );
         }
 
+        if (activeView === 'coach') {
+            return (
+                <div className="h-[calc(100vh-120px)] animate-fade-in">
+                    <CoachChatView
+                        messages={chatMessages}
+                        onSendMessage={onSendMessage}
+                        onActionClick={onActionClick}
+                        isLoading={isChatLoading}
+                        executingActionId={executingActionId}
+                    />
+                </div>
+            );
+        }
+
         // Default 'today' view
         return (
             <div className="grid grid-cols-2 gap-4 animate-fade-in">
@@ -857,16 +874,6 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
                                 </span>
                             </div>
 
-                            {/* Integrated chat input */}
-                            <div className="mb-3">
-                                <ChatInputBar
-                                    onSendMessage={onSendMessage}
-                                    onFocusChange={setIsInputFocused}
-                                    placeholder="Спросить тренера..."
-                                    compact
-                                />
-                            </div>
-
                             {/* Secondary action */}
                             <button
                                 onClick={() => initiateWorkoutStart(nextWorkout.name)}
@@ -882,7 +889,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
         );
     };
 
-    const handleViewChange = (view: 'today' | 'squad' | 'progress' | 'settings') => {
+    const handleViewChange = (view: 'today' | 'squad' | 'progress' | 'settings' | 'coach') => {
         setActiveView(view);
         hapticFeedback.selectionChanged();
     };
@@ -930,45 +937,55 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
             {/* Main Content */}
             <main className="px-6 py-6 pb-32">
                 {renderContent()}
-
-                {/* Chat Input Bar - show only on workout day or after completing workout (not on rest day - it's embedded there) */}
-                {activeView === 'today' && !activeWorkout && (isTodayWorkoutDay || hasCompletedToday) && (
-                    <div className="mt-4">
-                        <ChatInputBar onSendMessage={onSendMessage} onFocusChange={setIsInputFocused} />
-                    </div>
-                )}
             </main>
 
-            {/* Navigation Bar - hide when keyboard is visible */}
-            <nav className={`fixed bottom-6 left-1/2 -translate-x-1/2 bg-[#111]/90 backdrop-blur-xl border border-white/10 rounded-[2rem] px-4 py-1.5 flex items-center gap-2 shadow-2xl z-40 ${isInputFocused ? 'translate-y-full opacity-0 pointer-events-none transition-transform duration-200' : ''
-                }`} style={{ touchAction: 'manipulation' }}>
-                <NavButton
-                    icon={<Dumbbell size={24} />}
-                    label="Тренировка"
-                    isActive={activeView === 'today'}
-                    onClick={() => handleViewChange('today')}
-                />
-                {/* TODO: Re-enable when social features are ready
-                <NavButton
-                    icon={<Users size={24} />}
-                    label="Команда"
-                    isActive={activeView === 'squad'}
-                    onClick={() => handleViewChange('squad')}
-                />
-                */}
-                <NavButton
-                    icon={<BarChart2 size={24} />}
-                    label="Прогресс"
-                    isActive={activeView === 'progress'}
-                    onClick={() => handleViewChange('progress')}
-                />
-                <NavButton
-                    icon={<Settings size={24} />}
-                    label="Настройки"
-                    isActive={activeView === 'settings'}
-                    onClick={() => handleViewChange('settings')}
-                />
-            </nav>
+            {/* Navigation Bar - WHOOP-style with separate AI button */}
+            <div className="fixed bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-3 z-40">
+                {/* Main Navigation */}
+                <nav className="bg-[#111]/90 backdrop-blur-xl border border-white/10 rounded-[2rem] px-4 py-1.5 flex items-center gap-2 shadow-2xl"
+                     style={{ touchAction: 'manipulation' }}>
+                    <NavButton
+                        icon={<Dumbbell size={24} />}
+                        label="Тренировка"
+                        isActive={activeView === 'today'}
+                        onClick={() => handleViewChange('today')}
+                    />
+                    <NavButton
+                        icon={<BarChart2 size={24} />}
+                        label="Прогресс"
+                        isActive={activeView === 'progress'}
+                        onClick={() => handleViewChange('progress')}
+                    />
+                    <NavButton
+                        icon={<Settings size={24} />}
+                        label="Настройки"
+                        isActive={activeView === 'settings'}
+                        onClick={() => handleViewChange('settings')}
+                    />
+                </nav>
+
+                {/* AI Coach Button - separate with gradient ring */}
+                <button
+                    onClick={() => handleViewChange('coach')}
+                    className={`relative w-14 h-14 rounded-2xl flex items-center justify-center transition-all active:scale-95
+                        ${activeView === 'coach'
+                            ? 'bg-[#1a1a2e]'
+                            : 'bg-[#111]/90 hover:bg-[#1a1a2e]'
+                        }`}
+                    style={{ touchAction: 'manipulation' }}
+                >
+                    {/* Gradient ring */}
+                    <div className={`absolute inset-0 rounded-2xl p-[2px] bg-gradient-to-br from-indigo-500 via-purple-500 to-cyan-400 ${
+                        activeView === 'coach' ? 'opacity-100' : 'opacity-50'
+                    }`}>
+                        <div className="w-full h-full rounded-[14px] bg-[#0a0a0a]" />
+                    </div>
+                    {/* Icon */}
+                    <Sparkles size={24} className={`relative z-10 ${
+                        activeView === 'coach' ? 'text-indigo-400' : 'text-gray-400'
+                    }`} />
+                </button>
+            </div>
 
             {/* Modals */}
             {workoutToPreview && (

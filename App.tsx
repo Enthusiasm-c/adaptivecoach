@@ -7,7 +7,6 @@ import FitCubeWelcome from './components/FitCubeWelcome';
 import ExerciseCardTest from './components/ExerciseCardTest';
 import { generateInitialPlan, adaptPlan, getChatbotResponse, currentApiKey, adjustProgramForPain, adaptProgramForLocation, modifyPlanWithInstructions } from './services/geminiService';
 import { apiService } from './services/apiService';
-import Chatbot from './components/Chatbot';
 import { AlertTriangle, RefreshCw, Copy, Settings, Globe, Brain, Dumbbell, Activity, CalendarCheck } from 'lucide-react';
 import { useSessionTracking } from './utils/useSessionTracking';
 import {
@@ -119,7 +118,6 @@ const App: React.FC = () => {
   // Session tracking for analytics
   const { trackPageView, trackFeature } = useSessionTracking();
 
-  const [isChatbotOpen, setIsChatbotOpen] = useState(false);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>(() => {
     // Load chat history from localStorage
     try {
@@ -699,12 +697,6 @@ const App: React.FC = () => {
     }
   };
 
-  // Handler for sending message from Dashboard mini input - opens chat and sends
-  const handleSendFromDashboard = (message: string) => {
-    setIsChatbotOpen(true);
-    handleChatbotSend(message);
-  };
-
   const handleUpdateProfile = async (newProfile: OnboardingProfile) => {
     const locationChanged = onboardingProfile && newProfile.location !== onboardingProfile.location;
 
@@ -871,29 +863,21 @@ const App: React.FC = () => {
 
       <div className="relative z-10 h-full">
         {onboardingProfile && trainingProgram ? (
-          <>
-            <Dashboard
-              profile={onboardingProfile}
-              program={displayProgram}
-              logs={workoutLogs}
-              telegramUser={telegramUser}
-              mesocycleState={mesocycleState}
-              onWorkoutComplete={handleWorkoutComplete}
-              onUpdateProfile={handleUpdateProfile}
-              onResetAccount={resetOnboarding}
-              onOpenChat={() => setIsChatbotOpen(true)}
-              onSendMessage={handleSendFromDashboard}
-            />
-            <Chatbot
-              isOpen={isChatbotOpen}
-              onToggle={() => setIsChatbotOpen(!isChatbotOpen)}
-              messages={chatMessages}
-              onSendMessage={handleChatbotSend}
-              onActionClick={executeAction}
-              isLoading={isChatbotLoading}
-              executingActionId={executingActionId}
-            />
-          </>
+          <Dashboard
+            profile={onboardingProfile}
+            program={displayProgram}
+            logs={workoutLogs}
+            telegramUser={telegramUser}
+            mesocycleState={mesocycleState}
+            onWorkoutComplete={handleWorkoutComplete}
+            onUpdateProfile={handleUpdateProfile}
+            onResetAccount={resetOnboarding}
+            chatMessages={chatMessages}
+            onSendMessage={handleChatbotSend}
+            onActionClick={executeAction}
+            isChatLoading={isChatbotLoading}
+            executingActionId={executingActionId}
+          />
         ) : showFitCubeWelcome ? (
           <FitCubeWelcome onComplete={() => setShowFitCubeWelcome(false)} />
         ) : (
