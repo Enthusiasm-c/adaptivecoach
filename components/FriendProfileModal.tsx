@@ -85,7 +85,7 @@ const FriendProfileModal: React.FC<FriendProfileModalProps> = ({
                 {/* Profile Info */}
                 <div className="px-6 -mt-10 mb-4">
                     <div className="relative inline-block">
-                        <div className="w-20 h-20 rounded-full bg-neutral-800 border-4 border-[#111] flex items-center justify-center text-2xl font-bold text-gray-400 overflow-hidden">
+                        <div className="w-20 h-20 rounded-full bg-neutral-800 border-4 border-surface flex items-center justify-center text-2xl font-bold text-gray-400 overflow-hidden">
                             {friend.photoUrl ? (
                                 <img src={friend.photoUrl} alt={friend.name} className="w-full h-full object-cover" />
                             ) : (
@@ -93,7 +93,7 @@ const FriendProfileModal: React.FC<FriendProfileModalProps> = ({
                             )}
                         </div>
                         {friend.isOnline && (
-                            <div className="absolute bottom-1 right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-[#111]"></div>
+                            <div className="absolute bottom-1 right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-surface"></div>
                         )}
                     </div>
                 </div>

@@ -136,7 +136,7 @@ const VolumeTrackingCard: React.FC<VolumeTrackingCardProps> = ({
               cy="32"
               r="28"
               fill="none"
-              stroke="#262626"
+              stroke="#2c2c2e"
               strokeWidth="6"
             />
             <circle

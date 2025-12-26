@@ -456,7 +456,7 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
     };
 
     const chartTheme = {
-        grid: "#262626",
+        grid: "#2c2c2e",
         text: "#737373",
         fontSize: 10,
         fontFamily: "var(--font-display)", // Ensure this maps to Barlow Condensed in CSS
@@ -857,7 +857,7 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
                         <div className="h-56 flex items-center justify-center -ml-4">
                             <ResponsiveContainer width="100%" height="100%">
                                 <RadarChart cx="50%" cy="50%" outerRadius="70%" data={movementData}>
-                                    <PolarGrid gridType="polygon" stroke="#262626" />
+                                    <PolarGrid gridType="polygon" stroke="#2c2c2e" />
                                     <PolarAngleAxis dataKey="subject" tick={{ fill: '#737373', fontSize: 10, fontFamily: 'var(--font-display)' }} />
                                     <PolarRadiusAxis angle={30} domain={[0, 'auto']} tick={false} axisLine={false} />
                                     <Radar

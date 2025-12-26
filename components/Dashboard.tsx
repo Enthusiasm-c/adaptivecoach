@@ -972,7 +972,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
                     onClick={() => handleViewChange('coach')}
                     className={`relative w-14 h-14 rounded-2xl flex items-center justify-center transition-all active:scale-95
                         ${activeView === 'coach'
-                            ? 'bg-[#1a1a2e]'
+                            ? 'bg-surface'
                             : 'bg-surface/90 hover:bg-surface'
                         }`}
                     style={{ touchAction: 'manipulation' }}
