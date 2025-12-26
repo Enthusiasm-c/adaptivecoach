@@ -44,7 +44,7 @@ const VolumeBar: React.FC<{ data: MuscleVolumeData }> = ({ data }) => {
   };
 
   const isOptimal = data.status === 'optimal';
-  const targetText = isOptimal ? 'Оптимально' : `${data.totalSets} / ${Math.round(data.optimalSets)} подх.`;
+  const targetText = isOptimal ? 'Оптимально' : `${data.totalSets} / ${Math.round(data.targetOptimal)} подх.`;
 
   return (
     <div className="space-y-1">

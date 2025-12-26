@@ -342,7 +342,7 @@ export const generateWarmupSets = (workingWeight: number, exerciseName?: string)
     if (workingWeight > 40) {
         const weight50 = Math.round((workingWeight * 0.5) / 2.5) * 2.5;
         warmups.push({
-            name: `🔥 50% от ${workingWeight}кг`,
+            name: `🔥 Разминка: ${weight50}кг`,
             description: `Разминочный подход для "${shortName}". ${weight50}кг = 50% от рабочего веса. Контроль техники.`,
             sets: 1,
             reps: "5",
@@ -355,7 +355,7 @@ export const generateWarmupSets = (workingWeight: number, exerciseName?: string)
     if (workingWeight > 60) {
         const weight75 = Math.round((workingWeight * 0.75) / 2.5) * 2.5;
         warmups.push({
-            name: `🔥 75% от ${workingWeight}кг`,
+            name: `🔥 Разминка: ${weight75}кг`,
             description: `Разминочный подход для "${shortName}". ${weight75}кг = 75% от рабочего веса. Не утомляйся!`,
             sets: 1,
             reps: "3",
@@ -368,7 +368,7 @@ export const generateWarmupSets = (workingWeight: number, exerciseName?: string)
     if (workingWeight > 100) {
         const weight90 = Math.round((workingWeight * 0.9) / 2.5) * 2.5;
         warmups.push({
-            name: `🔥 90% от ${workingWeight}кг`,
+            name: `🔥 Разминка: ${weight90}кг`,
             description: `Разминочный подход для "${shortName}". ${weight90}кг = 90% от рабочего веса. Один повтор для активации ЦНС.`,
             sets: 1,
             reps: "1",

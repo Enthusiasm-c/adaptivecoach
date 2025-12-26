@@ -191,6 +191,8 @@ export interface WorkoutLog {
   duration?: number; // Duration in seconds
   feedback: WorkoutFeedback;
   completedExercises: CompletedExercise[];
+  // WHOOP data at the time of workout (for recovery/performance correlation)
+  whoopData?: WhoopReadinessData;
 }
 
 export interface ActiveWorkoutState {
@@ -199,6 +201,10 @@ export interface ActiveWorkoutState {
   startTime: number;
   readiness: ReadinessData | null;
   lastActivityTime: number; // Timestamp of last user activity for timeout detection
+  // Bug fix: track if workout was started intentionally (not pre-filled bug)
+  isValidSession?: boolean;
+  // WHOOP data persistence (Bug #1)
+  whoopData?: WhoopReadinessData;
 }
 
 // --- Chat Action (for AI-suggested program changes) ---

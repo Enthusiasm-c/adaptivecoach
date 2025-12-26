@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { WorkoutSession, CompletedExercise, WorkoutLog, OnboardingProfile, Exercise, ReadinessData } from '../types';
+import { WorkoutSession, CompletedExercise, WorkoutLog, OnboardingProfile, Exercise, ReadinessData, WhoopReadinessData } from '../types';
 import FeedbackModal from './FeedbackModal';
 import { ChevronLeft, ChevronRight, Timer, Replace, AlertTriangle, Info, Calculator, History, CheckCircle2, ExternalLink, Video, ChevronDown, ChevronUp, Minus, Plus } from 'lucide-react';
 import CoachFeedbackModal from './CoachFeedbackModal';
@@ -22,9 +22,10 @@ interface WorkoutViewProps {
   onFinish: (log: WorkoutLog) => void;
   onBack: () => void;
   onProgress?: (state: { completedExercises: CompletedExercise[], startTime: number, lastActivityTime: number }) => void;
+  whoopData?: WhoopReadinessData; // WHOOP data to include in workout log
 }
 
-const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, logs, initialState, onFinish, onBack, onProgress }) => {
+const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, logs, initialState, onFinish, onBack, onProgress, whoopData }) => {
   const [currentSession, setCurrentSession] = useState<WorkoutSession>(session);
   const [completedExercises, setCompletedExercises] = useState<CompletedExercise[]>([]);
   const startTimeRef = useRef<number>(initialState?.startTime || Date.now());
@@ -569,6 +570,7 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
       duration: Math.floor((Date.now() - startTimeRef.current) / 1000),
       feedback: { ...feedback, pain: mergedPain, readiness },
       completedExercises: mainExercises,
+      whoopData: whoopData, // Include WHOOP data for recovery/performance correlation
     };
     setFinalLog(log);
 
@@ -762,7 +764,9 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
                     {!isCardioExercise(currentExercise) ? (
                       <p className="text-xs text-gray-400 mt-0.5">{currentExercise.sets} подхода × {formatReps(currentExercise.reps)}</p>
                     ) : (
-                      <p className="text-xs text-gray-400 mt-0.5">{formatReps(currentExercise.reps)}</p>
+                      <p className="text-xs text-gray-400 mt-0.5">
+                        {formatReps(currentExercise.reps)}{!currentExercise.reps.toLowerCase().includes('мин') && ' мин'}
+                      </p>
                     )}
                   </div>
                 </div>
@@ -953,8 +957,8 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
                       <span className="text-[9px] text-gray-500">повт</span>
                     </div>
 
-                    {/* RIR Selection with Info button - hidden for warmup and cardio */}
-                    {!currentExercise.isWarmup && !isCardioExercise(currentExercise) && (
+                    {/* RIR Selection with Info button - hidden for warmup, cardio, bodyweight, isometric */}
+                    {!currentExercise.isWarmup && exerciseNeedsWeight(currentExercise) && (
                       <div className="flex items-center gap-1">
                         <select
                           value={set.rir ?? ''}

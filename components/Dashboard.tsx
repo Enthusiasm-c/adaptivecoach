@@ -82,6 +82,8 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
     const [isLoadingWhoop, setIsLoadingWhoop] = useState(false);
     // Store adapted session to use in WorkoutView (bypasses program lookup)
     const [activeAdaptedSession, setActiveAdaptedSession] = useState<WorkoutSession | null>(null);
+    // Store WHOOP data during workout for persistence (Bug #1 & #2)
+    const [currentWhoopData, setCurrentWhoopData] = useState<WhoopReadinessData | null>(null);
 
     // Calendar State (Removed calendarDate, isEditingSchedule, selectedDateToMove, scheduleOverrides)
 
@@ -129,33 +131,25 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
                 // Verify if session still exists in program
                 const sessionExists = program.sessions.some(s => s.name === parsedState.session.name);
                 if (sessionExists) {
-                    // Migration: Check if state has old pre-filled values (bug fix)
-                    // Old bug: reps/weight were pre-filled, so canFinish was true immediately
-                    // Detect: if ALL sets have identical reps values matching the exercise template, it's old data
-                    const hasOldPrefilledData = parsedState.completedExercises.some(ex => {
-                        if (!ex.completedSets || ex.completedSets.length === 0) return false;
-                        const firstReps = ex.completedSets[0]?.reps;
-                        // If all sets have same non-zero reps and no set is marked complete, likely old pre-filled data
-                        return firstReps > 0 &&
-                            ex.completedSets.every(s => s.reps === firstReps && !s.isCompleted);
-                    });
+                    // Check for stale workout (no activity for STALE_TIMEOUT_MS)
+                    const lastActivity = parsedState.lastActivityTime || parsedState.startTime;
+                    const isStale = Date.now() - lastActivity > STALE_TIMEOUT_MS;
 
-                    if (hasOldPrefilledData) {
-                        // Clear old buggy data
-                        localStorage.removeItem('activeWorkoutState');
-                        console.log('Cleared old pre-filled workout state (migration)');
+                    if (isStale) {
+                        // Show dialog to continue or close
+                        setStaleWorkoutState(parsedState);
                     } else {
-                        // Check for stale workout (no activity for 20+ minutes)
-                        const lastActivity = parsedState.lastActivityTime || parsedState.startTime;
-                        const isStale = Date.now() - lastActivity > STALE_TIMEOUT_MS;
-
-                        if (isStale) {
-                            // Show dialog to continue or close
-                            setStaleWorkoutState(parsedState);
-                        } else {
-                            setRestoredState(parsedState);
-                            setActiveWorkout(parsedState.session.name);
-                            setCurrentReadiness(parsedState.readiness);
+                        // Restore active workout
+                        setRestoredState(parsedState);
+                        setActiveWorkout(parsedState.session.name);
+                        setCurrentReadiness(parsedState.readiness);
+                        // Restore adapted session if it was a WHOOP-adapted workout
+                        if (parsedState.session) {
+                            setActiveAdaptedSession(parsedState.session);
+                        }
+                        // Restore WHOOP data if present
+                        if (parsedState.whoopData) {
+                            setCurrentWhoopData(parsedState.whoopData);
                         }
                     }
                 } else {
@@ -330,13 +324,16 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
                         startTime: restoredState.startTime,
                         lastActivityTime: restoredState.lastActivityTime
                     } : undefined}
+                    whoopData={currentWhoopData || undefined}
                     onProgress={(state) => {
                         const activeState: ActiveWorkoutState = {
                             session: workout,
                             completedExercises: state.completedExercises,
                             startTime: state.startTime,
                             readiness: currentReadiness,
-                            lastActivityTime: state.lastActivityTime
+                            lastActivityTime: state.lastActivityTime,
+                            isValidSession: true,
+                            whoopData: currentWhoopData || undefined
                         };
                         localStorage.setItem('activeWorkoutState', JSON.stringify(activeState));
                     }}
@@ -345,7 +342,8 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
                         setActiveWorkout(null);
                         setCurrentReadiness(null);
                         setRestoredState(null);
-                        setActiveAdaptedSession(null); // Clear adapted session
+                        setActiveAdaptedSession(null);
+                        setCurrentWhoopData(null); // Clear WHOOP data
                         localStorage.removeItem('activeWorkoutState');
 
                         // Show first workout paywall if this is the first workout and user is not Pro
@@ -496,6 +494,8 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
         // Store the adapted session to use instead of looking up from program
         setActiveAdaptedSession(whoopInsightData.adaptedSession);
         setActiveWorkout(whoopInsightData.adaptedSession.name);
+        // Bug fix: Store WHOOP data for persistence and logging
+        setCurrentWhoopData(whoopInsightData.whoopData);
         setWhoopInsightData(null);
         setPendingSessionName(null);
         hapticFeedback.notificationOccurred('success');
@@ -515,6 +515,8 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
 
         setCurrentReadiness(readinessData);
         setShowWhoopInsight(false);
+        // Bug fix: Store WHOOP data for persistence and logging
+        setCurrentWhoopData(whoopInsightData.whoopData);
         setWhoopInsightData(null);
 
         // Use original session (no adapted session needed)

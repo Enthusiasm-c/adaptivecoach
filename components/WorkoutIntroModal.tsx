@@ -29,7 +29,7 @@ const WorkoutIntroModal: React.FC<WorkoutIntroModalProps> = ({
             return "Первый шаг — самый важный. Ты уже здесь, а значит готов стать лучше!";
         }
         if (currentStreak >= 7) {
-            return `${currentStreak} дней подряд! Ты на волне — не останавливайся!`;
+            return `${currentStreak} тренировок подряд! Ты на волне — не останавливайся!`;
         }
         if (currentStreak >= 3) {
             return "Отличный темп! Каждая тренировка приближает тебя к цели.";
@@ -119,7 +119,7 @@ const WorkoutIntroModal: React.FC<WorkoutIntroModalProps> = ({
                 {currentStreak > 0 && (
                     <div className="mt-6 flex items-center gap-2 text-orange-400">
                         <Star size={16} fill="currentColor" />
-                        <span className="text-sm font-bold">{currentStreak} дней подряд</span>
+                        <span className="text-sm font-bold">{currentStreak} тренировок подряд</span>
                     </div>
                 )}
             </div>
