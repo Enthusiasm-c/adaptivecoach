@@ -159,7 +159,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete, isLoading, error, p
                     {renderStep()}
                 </div>
 
-                {error && <p className="text-red-400 text-center mb-4 p-3 bg-red-900/20 rounded-xl border border-red-900/50 animate-slide-up text-sm font-medium">{error}</p>}
+                {error && <p className="text-amber-400 text-center mb-4 p-3 bg-amber-900/20 rounded-xl border border-amber-900/50 animate-slide-up text-sm font-medium">{error}</p>}
 
                 {/* Footer Controls */}
                 {step > 0 && !isAnalyzing && (
@@ -558,8 +558,8 @@ const LogisticsStep = ({ profile, updateProfile, setProfile }: any) => {
 const InjuryStep = ({ profile, updateProfile }: any) => (
     <div className="space-y-6 animate-slide-up">
         <div className="space-y-2 text-center mb-4">
-            <div className="w-16 h-16 mx-auto bg-red-500/10 rounded-full flex items-center justify-center mb-4">
-                <ShieldAlert className="text-red-500" size={32} />
+            <div className="w-16 h-16 mx-auto bg-amber-500/10 rounded-full flex items-center justify-center mb-4">
+                <ShieldAlert className="text-amber-500" size={32} />
             </div>
             <h2 className="text-3xl font-black tracking-tight">Ограничения?</h2>
             <p className="text-gray-500">Травмы или боли, которые нужно учесть.</p>
@@ -575,9 +575,9 @@ const InjuryStep = ({ profile, updateProfile }: any) => (
             </button>
             <button
                 onClick={() => updateProfile('hasInjuries', true)}
-                className={`p-6 rounded-3xl border-2 transition-all duration-200 ${profile.hasInjuries ? 'border-red-500 bg-red-500/10' : 'border-neutral-800 bg-neutral-900 grayscale opacity-60 hover:opacity-100'}`}
+                className={`p-6 rounded-3xl border-2 transition-all duration-200 ${profile.hasInjuries ? 'border-amber-500 bg-amber-500/10' : 'border-neutral-800 bg-neutral-900 grayscale opacity-60 hover:opacity-100'}`}
             >
-                <span className={`block text-2xl font-black mb-1 ${profile.hasInjuries ? 'text-red-400' : 'text-gray-400'}`}>Да</span>
+                <span className={`block text-2xl font-black mb-1 ${profile.hasInjuries ? 'text-amber-400' : 'text-gray-400'}`}>Да</span>
                 <span className="text-xs text-gray-500 font-bold uppercase">Есть нюансы</span>
             </button>
         </div>
@@ -588,7 +588,7 @@ const InjuryStep = ({ profile, updateProfile }: any) => (
                 <textarea
                     value={profile.injuries || ''}
                     onChange={e => updateProfile('injuries', e.target.value)}
-                    className="w-full p-4 bg-neutral-900 rounded-2xl border border-neutral-800 focus:border-red-500 focus:ring-1 focus:ring-red-500 outline-none min-h-[120px] text-white text-lg placeholder-gray-700"
+                    className="w-full p-4 bg-neutral-900 rounded-2xl border border-neutral-800 focus:border-amber-500 focus:ring-1 focus:ring-red-500 outline-none min-h-[120px] text-white text-lg placeholder-gray-700"
                     placeholder="Например: болит поясница при приседаниях..."
                 />
             </div>

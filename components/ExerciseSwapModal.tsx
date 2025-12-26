@@ -49,7 +49,7 @@ const ExerciseSwapModal: React.FC<ExerciseSwapModalProps> = ({ exercise, session
     }
 
     if (error) {
-      return <p className="text-center text-red-400 py-8">{error}</p>;
+      return <p className="text-center text-amber-400 py-8">{error}</p>;
     }
 
     if (alternatives.length === 0) {

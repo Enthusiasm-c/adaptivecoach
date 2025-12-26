@@ -352,7 +352,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({ profile, telegramUser, onUp
                             onClick={whoopConnected ? handleDisconnectWhoop : handleConnectWhoop}
                             disabled={whoopConnecting}
                             className={`flex-1 py-3 rounded-lg font-display font-bold text-sm transition-all ${whoopConnected
-                                ? 'bg-red-900/20 text-red-500 border border-red-500/30 hover:bg-red-900/30'
+                                ? 'bg-amber-900/20 text-amber-500 border border-amber-500/30 hover:bg-amber-900/30'
                                 : 'bg-white text-black hover:bg-gray-200'
                                 }`}
                         >
@@ -381,14 +381,14 @@ const SettingsView: React.FC<SettingsViewProps> = ({ profile, telegramUser, onUp
                     {!isConfirmingReset ? (
                         <button
                             onClick={() => setIsConfirmingReset(true)}
-                            className="w-full py-3 flex items-center justify-center gap-2 text-gray-600 font-bold hover:text-red-500 transition text-xs"
+                            className="w-full py-3 flex items-center justify-center gap-2 text-gray-600 font-bold hover:text-amber-500 transition text-xs"
                         >
                             Сбросить данные аккаунта
                         </button>
                     ) : (
-                        <div className="bg-red-900/10 border border-red-900/50 rounded-xl p-4 text-center space-y-4 animate-scale-in">
-                            <p className="text-red-300 font-display font-bold">Опасная зона</p>
-                            <p className="text-red-200/70 text-xs">Это действие безвозвратно удалит все данные ваших тренировок.</p>
+                        <div className="bg-amber-900/10 border border-amber-900/50 rounded-xl p-4 text-center space-y-4 animate-scale-in">
+                            <p className="text-amber-300 font-display font-bold">Опасная зона</p>
+                            <p className="text-amber-200/70 text-xs">Это действие безвозвратно удалит все данные ваших тренировок.</p>
                             <div className="flex gap-3">
                                 <button
                                     onClick={() => setIsConfirmingReset(false)}
@@ -398,7 +398,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({ profile, telegramUser, onUp
                                 </button>
                                 <button
                                     onClick={onResetAccount}
-                                    className="flex-1 py-3 bg-red-600 text-white rounded-lg font-bold text-xs hover:bg-red-500"
+                                    className="flex-1 py-3 bg-amber-600 text-white rounded-lg font-bold text-xs hover:bg-amber-500"
                                 >
                                     Удалить
                                 </button>
@@ -424,9 +424,9 @@ const SettingsView: React.FC<SettingsViewProps> = ({ profile, telegramUser, onUp
                             </div>
                         ) : whoopDebugData?.error ? (
                             <div className="p-6">
-                                <div className="bg-red-900/20 border border-red-500/30 rounded-xl p-4">
-                                    <p className="text-red-400 font-bold text-sm">Ошибка подключения</p>
-                                    <p className="text-red-300 text-xs mt-1">{whoopDebugData.error}</p>
+                                <div className="bg-amber-900/20 border border-amber-500/30 rounded-xl p-4">
+                                    <p className="text-amber-400 font-bold text-sm">Ошибка подключения</p>
+                                    <p className="text-amber-300 text-xs mt-1">{whoopDebugData.error}</p>
                                 </div>
                                 <button
                                     onClick={() => setShowWhoopDebug(false)}
@@ -459,13 +459,13 @@ const SettingsView: React.FC<SettingsViewProps> = ({ profile, telegramUser, onUp
                             const getRecoveryColor = (score: number) => {
                                 if (score >= 67) return 'text-success';
                                 if (score >= 34) return 'text-yellow-400';
-                                return 'text-red-400';
+                                return 'text-amber-400';
                             };
 
                             const getHrvInterpretation = (hrv: number) => {
                                 if (hrv >= 60) return { text: 'Высокая адаптация', color: 'text-success' };
                                 if (hrv >= 40) return { text: 'Умеренная нагрузка', color: 'text-yellow-400' };
-                                return { text: 'Высокая нагрузка на НС', color: 'text-red-400' };
+                                return { text: 'Высокая нагрузка на НС', color: 'text-amber-400' };
                             };
 
                             const hrvInfo = getHrvInterpretation(whoopData.hrv);
@@ -510,7 +510,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({ profile, telegramUser, onUp
                                                 <div
                                                     className={`h-full rounded-full transition-all ${
                                                         whoopData.recoveryScore >= 67 ? 'bg-success' :
-                                                        whoopData.recoveryScore >= 34 ? 'bg-yellow-400' : 'bg-red-400'
+                                                        whoopData.recoveryScore >= 34 ? 'bg-yellow-400' : 'bg-amber-400'
                                                     }`}
                                                     style={{ width: `${whoopData.recoveryScore}%` }}
                                                 />
@@ -553,7 +553,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({ profile, telegramUser, onUp
                                             </div>
                                             <div className="bg-black/50 rounded-xl p-3 border border-white/5">
                                                 <div className="flex items-center gap-2 mb-1">
-                                                    <Heart className="text-red-400" size={14} />
+                                                    <Heart className="text-amber-400" size={14} />
                                                     <span className="text-gray-600 text-[10px] font-bold">ПУЛЬС ПОКОЯ</span>
                                                 </div>
                                                 <p className="font-display font-bold text-xl text-white">{whoopData.rhr}</p>

@@ -205,7 +205,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
     if (!program || !Array.isArray(program.sessions) || program.sessions.length === 0) {
         return (
             <div className="flex flex-col items-center justify-center min-h-[100dvh] text-center p-4">
-                <h2 className="text-2xl font-bold text-red-400">Ошибка плана</h2>
+                <h2 className="text-2xl font-bold text-amber-400">Ошибка плана</h2>
                 <button onClick={onResetAccount} className="mt-4 px-6 py-3 bg-white text-black rounded-full font-bold">
                     Сбросить план
                 </button>
@@ -933,7 +933,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
                     className="p-2 bg-gradient-to-r from-amber-500/20 to-yellow-500/20 border border-amber-500/30 rounded-xl text-amber-400 hover:text-amber-300 transition-colors relative group"
                 >
                     <Crown size={24} fill="currentColor" className="drop-shadow-[0_0_8px_rgba(251,191,36,0.5)]" />
-                    <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-black"></div>
+                    <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-amber-500 rounded-full border-2 border-black"></div>
                 </button>
             </header>
 

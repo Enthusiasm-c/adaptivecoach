@@ -133,13 +133,13 @@ const ReadinessModal: React.FC<ReadinessModalProps> = ({ onConfirm, onCancel }) 
   const getRecoveryColor = (score: number) => {
     if (score >= 67) return 'text-green-400';
     if (score >= 34) return 'text-yellow-400';
-    return 'text-red-400';
+    return 'text-amber-400';
   };
 
   const getRecoveryBgColor = (score: number) => {
     if (score >= 67) return 'bg-green-900/30 border-green-500/30';
     if (score >= 34) return 'bg-yellow-900/30 border-yellow-500/30';
-    return 'bg-red-900/30 border-red-500/30';
+    return 'bg-amber-900/30 border-amber-500/30';
   };
 
   // WHOOP Hybrid Mode
@@ -195,7 +195,7 @@ const ReadinessModal: React.FC<ReadinessModalProps> = ({ onConfirm, onCancel }) 
                 <div className="text-[10px] text-gray-500 uppercase">Сон</div>
               </div>
               <div className="bg-black/30 rounded-xl p-3 text-center">
-                <Heart size={16} className="text-red-400 mx-auto mb-1" />
+                <Heart size={16} className="text-amber-400 mx-auto mb-1" />
                 <div className="text-xl font-bold text-white">{whoopData.hrv}</div>
                 <div className="text-[10px] text-gray-500 uppercase">HRV</div>
               </div>
@@ -217,7 +217,7 @@ const ReadinessModal: React.FC<ReadinessModalProps> = ({ onConfirm, onCancel }) 
                 <div className="text-[10px] text-gray-500">Стресс</div>
               </div>
               <div className="text-center">
-                <div className="text-lg font-bold text-rose-400">{whoopData.sorenessScore}/5</div>
+                <div className="text-lg font-bold text-violet-400">{whoopData.sorenessScore}/5</div>
                 <div className="text-[10px] text-gray-500">Мышцы</div>
               </div>
             </div>
@@ -286,7 +286,7 @@ const ReadinessModal: React.FC<ReadinessModalProps> = ({ onConfirm, onCancel }) 
           {renderQuestionBlock("Как ты спал?", <Battery size={18}/>, sleep, setSleep, 'sleep', "text-indigo-400")}
           {renderQuestionBlock("Как питание?", <Utensils size={18}/>, food, setFood, 'food', "text-green-400")}
           {renderQuestionBlock("Уровень стресса?", <Brain size={18}/>, stress, setStress, 'stress', "text-violet-400")}
-          {renderQuestionBlock("Болят мышцы?", <Activity size={18}/>, soreness, setSoreness, 'soreness', "text-rose-400")}
+          {renderQuestionBlock("Болят мышцы?", <Activity size={18}/>, soreness, setSoreness, 'soreness', "text-violet-400")}
         </div>
 
         <button

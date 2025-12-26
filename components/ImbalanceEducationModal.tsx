@@ -49,11 +49,11 @@ const ImbalanceEducationModal: React.FC<ImbalanceEducationModalProps> = ({
           </Section>
 
           {/* Why it matters */}
-          <Section title="Почему это важно?" icon={<AlertTriangle size={14} className="text-red-400" />}>
+          <Section title="Почему это важно?" icon={<AlertTriangle size={14} className="text-amber-400" />}>
             <ul className="space-y-2">
               {content.risks.map((risk, i) => (
                 <li key={i} className="flex items-start gap-2 text-sm text-gray-300">
-                  <span className="text-red-400 mt-0.5">•</span>
+                  <span className="text-amber-400 mt-0.5">•</span>
                   {risk}
                 </li>
               ))}

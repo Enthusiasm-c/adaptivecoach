@@ -659,7 +659,7 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
 
       {/* Toast Message */}
       {toastMessage && (
-        <div className="fixed top-6 left-1/2 transform -translate-x-1/2 z-50 bg-red-500/20 backdrop-blur border border-red-500/30 text-red-300 px-6 py-3 rounded-full shadow-2xl font-bold text-sm animate-slide-up flex items-center gap-2">
+        <div className="fixed top-6 left-1/2 transform -translate-x-1/2 z-50 bg-amber-500/20 backdrop-blur border border-amber-500/30 text-amber-300 px-6 py-3 rounded-full shadow-2xl font-bold text-sm animate-slide-up flex items-center gap-2">
           <AlertTriangle size={16} />
           {toastMessage}
         </div>
@@ -675,8 +675,8 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
           <button
             onClick={() => setShowPainModal(true)}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full transition ${midWorkoutPainLocation
-                ? 'bg-red-500/30 border border-red-500/50 text-red-300'
-                : 'bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20'
+                ? 'bg-amber-500/30 border border-amber-500/50 text-amber-300'
+                : 'bg-amber-500/10 border border-amber-500/20 text-amber-400 hover:bg-amber-500/20'
               }`}
             title="Сообщить о боли"
           >
@@ -702,7 +702,7 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
                   >
                     {/* Visual dot with proper touch target (padding expands tap area to ~32px) */}
                     <div className={`h-1.5 w-4 rounded-full transition-all ${isIncomplete
-                        ? 'bg-red-500 animate-pulse'
+                        ? 'bg-amber-500 animate-pulse'
                         : isCurrent
                           ? 'bg-indigo-500'
                           : isPast
@@ -719,7 +719,7 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
       </header>
 
       {readiness?.status === 'Red' && (
-        <div className="mx-4 mb-4 bg-red-500/10 border border-red-500/20 p-3 rounded-2xl flex items-start gap-3 text-sm text-red-300">
+        <div className="mx-4 mb-4 bg-amber-500/10 border border-amber-500/20 p-3 rounded-2xl flex items-start gap-3 text-sm text-amber-300">
           <AlertTriangle size={18} className="mt-0.5 shrink-0" />
           <p>Высокая усталость: Веса и подходы снижены автоматически.</p>
         </div>
@@ -867,7 +867,7 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
 
                     {exerciseNeedsWeight(currentExercise) && (
                       <div className={`flex-1 flex flex-col items-center justify-center rounded-lg py-1 px-2 ${attemptedFinish && getSetErrors(currentExercise, set).weight
-                          ? 'bg-red-500/10 border border-red-500/30'
+                          ? 'bg-amber-500/10 border border-amber-500/30'
                           : 'bg-neutral-800/50'
                         }`}>
                         <input
@@ -914,7 +914,7 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
                     )}
 
                     <div className={`flex-1 flex flex-col items-center justify-center rounded-lg py-1 px-2 ${attemptedFinish && getSetErrors(currentExercise, set).reps
-                        ? 'bg-red-500/10 border border-red-500/30'
+                        ? 'bg-amber-500/10 border border-amber-500/30'
                         : 'bg-neutral-800/50'
                       }`}>
                       <input
@@ -1113,8 +1113,8 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
             </p>
 
             <div className="space-y-2 text-sm">
-              <div className="flex items-center gap-3 bg-red-500/10 p-3 rounded-xl">
-                <span className="text-red-500 font-bold w-8">0</span>
+              <div className="flex items-center gap-3 bg-amber-500/10 p-3 rounded-xl">
+                <span className="text-amber-500 font-bold w-8">0</span>
                 <span className="text-gray-300">Отказ — не мог сделать ни одного повтора</span>
               </div>
               <div className="flex items-center gap-3 bg-orange-500/10 p-3 rounded-xl">
@@ -1144,7 +1144,7 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
           <div className="bg-neutral-900 rounded-t-3xl p-6 w-full max-w-md mx-auto border-t border-white/10 animate-slide-up" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                <AlertTriangle size={20} className="text-red-400" />
+                <AlertTriangle size={20} className="text-amber-400" />
                 Где болит?
               </h3>
               <button onClick={() => setShowPainModal(false)} className="text-gray-500 hover:text-white">
@@ -1165,7 +1165,7 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
                     key={loc}
                     onClick={() => setMidWorkoutPainLocation(loc)}
                     className={`px-3 py-1.5 rounded-full text-sm font-medium transition ${midWorkoutPainLocation === loc
-                        ? 'bg-red-500 text-white'
+                        ? 'bg-amber-500 text-white'
                         : 'bg-neutral-700 text-gray-300 hover:bg-neutral-600'
                       }`}
                   >
@@ -1200,7 +1200,7 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
                 }}
                 disabled={!midWorkoutPainLocation}
                 className={`flex-1 py-3 rounded-xl font-bold transition ${midWorkoutPainLocation
-                    ? 'bg-red-500 text-white hover:bg-red-400'
+                    ? 'bg-amber-500 text-white hover:bg-amber-400'
                     : 'bg-neutral-700 text-gray-500 cursor-not-allowed'
                   }`}
               >

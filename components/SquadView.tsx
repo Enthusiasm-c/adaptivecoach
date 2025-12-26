@@ -275,7 +275,7 @@ const SquadView: React.FC<SquadViewProps> = ({ telegramUser, logs = [], isPro = 
                     >
                         <UserPlus size={18} />
                         {friendRequests.length > 0 && (
-                            <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full text-white text-xs flex items-center justify-center font-bold">
+                            <span className="absolute -top-1 -right-1 w-5 h-5 bg-amber-500 rounded-full text-white text-xs flex items-center justify-center font-bold">
                                 {friendRequests.length}
                             </span>
                         )}
@@ -491,8 +491,8 @@ const SquadView: React.FC<SquadViewProps> = ({ telegramUser, logs = [], isPro = 
                                             disabled={!item.workoutLogId}
                                             className={`flex items-center gap-1 text-xs transition ${
                                                 item.likedByMe
-                                                    ? 'text-pink-500'
-                                                    : 'text-gray-500 hover:text-pink-500'
+                                                    ? 'text-violet-500'
+                                                    : 'text-gray-500 hover:text-violet-500'
                                             } ${!item.workoutLogId ? 'opacity-50 cursor-not-allowed' : ''}`}
                                         >
                                             <Heart

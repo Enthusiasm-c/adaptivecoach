@@ -33,13 +33,13 @@ const VolumeBar: React.FC<{ data: MuscleVolumeData }> = ({ data }) => {
 
   const getBarColor = () => {
     if (data.status === 'under') return 'bg-yellow-500';
-    if (data.status === 'over') return 'bg-red-500';
+    if (data.status === 'over') return 'bg-amber-500';
     return 'bg-green-500';
   };
 
   const getStatusIcon = () => {
     if (data.status === 'under') return <TrendingDown size={12} className="text-yellow-400" />;
-    if (data.status === 'over') return <TrendingUp size={12} className="text-red-400" />;
+    if (data.status === 'over') return <TrendingUp size={12} className="text-amber-400" />;
     return <Minus size={12} className="text-green-400" />;
   };
 
@@ -233,7 +233,7 @@ const VolumeTrackingCard: React.FC<VolumeTrackingCardProps> = ({
           Мало
         </div>
         <div className="flex items-center gap-1">
-          <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+          <div className="w-2 h-2 bg-amber-500 rounded-full"></div>
           Много
         </div>
       </div>

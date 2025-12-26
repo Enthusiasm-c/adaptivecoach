@@ -772,7 +772,7 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
                             <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-bold ${weekComparison.trend === 'up'
                                 ? 'bg-green-500/20 text-green-400'
                                 : weekComparison.trend === 'down'
-                                    ? 'bg-red-500/20 text-red-400'
+                                    ? 'bg-amber-500/20 text-amber-400'
                                     : 'bg-gray-500/20 text-gray-400'
                                 }`}>
                                 {weekComparison.trend === 'up' && <TrendingUp size={12} />}
@@ -1018,7 +1018,7 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
                                                 </span>
                                             )}
                                             {entry.trend === 'down' && (
-                                                <span className="flex items-center gap-1 text-red-400 text-xs font-medium">
+                                                <span className="flex items-center gap-1 text-amber-400 text-xs font-medium">
                                                     <TrendingDown size={12} />
                                                     {entry.changeFromPrevious.toFixed(1)}
                                                 </span>
@@ -1039,7 +1039,7 @@ const ProgressView: React.FC<ProgressViewProps> = ({ logs, program, onUpdateProg
                                             кг
                                         </span>
                                         {entry.changeFromFirst !== 0 && (
-                                            <div className={`text-[10px] mt-1 ${entry.changeFromFirst > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                            <div className={`text-[10px] mt-1 ${entry.changeFromFirst > 0 ? 'text-green-400' : 'text-amber-400'}`}>
                                                 {entry.changeFromFirst > 0 ? '+' : ''}{entry.changeFromFirst.toFixed(1)} кг с начала
                                             </div>
                                         )}

@@ -210,7 +210,7 @@ const FriendProfileModal: React.FC<FriendProfileModalProps> = ({
                                                 </div>
                                                 <div className="h-2 bg-neutral-800 rounded-full overflow-hidden">
                                                     <div
-                                                        className="h-full bg-red-500 rounded-full transition-all"
+                                                        className="h-full bg-amber-500 rounded-full transition-all"
                                                         style={{ width: `${(friendStreak / maxStreak) * 100}%` }}
                                                     />
                                                 </div>
@@ -300,7 +300,7 @@ const FriendProfileModal: React.FC<FriendProfileModalProps> = ({
                 <div className="p-4 border-t border-white/5 mt-auto">
                     <button
                         onClick={handleRemove}
-                        className="w-full py-3 rounded-xl border border-red-500/20 text-red-500 text-sm font-bold hover:bg-red-500/10 transition flex items-center justify-center gap-2"
+                        className="w-full py-3 rounded-xl border border-amber-500/20 text-amber-500 text-sm font-bold hover:bg-amber-500/10 transition flex items-center justify-center gap-2"
                     >
                         <Trash2 size={16} /> Удалить из друзей
                     </button>

@@ -577,7 +577,7 @@ const ExerciseCardTest: React.FC = () => {
               <span className="text-gray-500">
                 {new Date(cachedMedia.generatedAt).toLocaleDateString('ru-RU')}
               </span>
-              <button onClick={handleClearCache} className="ml-auto text-red-400 hover:text-red-300">
+              <button onClick={handleClearCache} className="ml-auto text-amber-400 hover:text-amber-300">
                 Очистить
               </button>
             </div>
@@ -663,7 +663,7 @@ const ExerciseCardTest: React.FC = () => {
           <button
             onClick={handleGenerateVideo}
             disabled={isGeneratingVideo || (!aiImageData && !startImageData)}
-            className="w-full flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-pink-600 to-red-600 text-white rounded-lg font-bold hover:from-pink-700 hover:to-red-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded-lg font-bold hover:from-violet-700 hover:to-indigo-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isGeneratingVideo ? (
               <>
@@ -704,7 +704,7 @@ const ExerciseCardTest: React.FC = () => {
 
           {/* Error */}
           {generationError && (
-            <p className="text-xs text-red-400 text-center">❌ {generationError}</p>
+            <p className="text-xs text-amber-400 text-center">❌ {generationError}</p>
           )}
 
           {/* Metrics */}

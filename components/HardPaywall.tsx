@@ -52,7 +52,7 @@ const HardPaywall: React.FC<HardPaywallProps> = ({
 
                 {/* Header */}
                 <div className="pt-8 pb-6 px-6 text-center">
-                    <div className="w-20 h-20 mx-auto mb-4 bg-gradient-to-br from-orange-500/20 to-red-500/20 rounded-full flex items-center justify-center border border-orange-500/30">
+                    <div className="w-20 h-20 mx-auto mb-4 bg-gradient-to-br from-orange-500/20 to-amber-500/20 rounded-full flex items-center justify-center border border-orange-500/30">
                         <Lock size={36} className="text-orange-400" />
                     </div>
 
@@ -69,7 +69,7 @@ const HardPaywall: React.FC<HardPaywallProps> = ({
                 <div className="px-6 mb-6">
                     <div className="h-2 bg-neutral-800 rounded-full overflow-hidden">
                         <div
-                            className="h-full bg-gradient-to-r from-orange-500 to-red-500 rounded-full"
+                            className="h-full bg-gradient-to-r from-orange-500 to-amber-500 rounded-full"
                             style={{ width: '100%' }}
                         />
                     </div>

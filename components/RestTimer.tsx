@@ -91,7 +91,7 @@ const RestTimer: React.FC<RestTimerProps> = ({ initialSeconds, isOpen, onClose }
                     >
                         {isActive ? <Pause size={16} fill="currentColor" /> : <Play size={16} fill="currentColor" />}
                     </button>
-                    <button onClick={onClose} className="w-10 h-10 rounded-full flex items-center justify-center bg-neutral-700 text-gray-400 hover:bg-red-500/20 hover:text-red-400 transition">
+                    <button onClick={onClose} className="w-10 h-10 rounded-full flex items-center justify-center bg-neutral-700 text-gray-400 hover:bg-amber-500/20 hover:text-amber-400 transition">
                         <X size={18} />
                     </button>
                 </div>

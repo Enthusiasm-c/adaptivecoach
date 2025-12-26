@@ -109,7 +109,7 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({ onSubmit, onClose, initia
         {/* Muscle Soreness (Autoregulation) */}
         <div className="space-y-2">
           <div className="flex items-center gap-2">
-            <span className="text-red-400">💪</span>
+            <span className="text-amber-400">💪</span>
             <label className="font-medium">Мышечная болезненность?</label>
           </div>
           <p className="text-xs text-gray-500">Как себя чувствуют мышцы с прошлой тренировки</p>
@@ -120,7 +120,7 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({ onSubmit, onClose, initia
                 onClick={() => setSoreness24h(level)}
                 className={`flex-1 py-2.5 rounded-lg text-xs font-medium transition ${
                   soreness24h === level
-                    ? 'bg-red-500 text-white'
+                    ? 'bg-amber-500 text-white'
                     : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                 }`}
               >
@@ -139,8 +139,8 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({ onSubmit, onClose, initia
         <div className="space-y-2">
             <label className="font-medium">Была боль или дискомфорт?</label>
             {initialPain?.hasPain && (
-              <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 text-sm">
-                <span className="text-red-400">Уже указано: </span>
+              <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3 text-sm">
+                <span className="text-amber-400">Уже указано: </span>
                 <span className="text-white">{initialPain.location}</span>
                 {initialPain.details && <span className="text-gray-400"> — {initialPain.details}</span>}
               </div>
@@ -161,7 +161,7 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({ onSubmit, onClose, initia
                                     onClick={() => setPainLocation(loc)}
                                     className={`px-3 py-1.5 rounded-full text-sm font-medium transition ${
                                         painLocation === loc
-                                            ? 'bg-red-500 text-white'
+                                            ? 'bg-amber-500 text-white'
                                             : 'bg-neutral-700 text-gray-300 hover:bg-neutral-600'
                                     }`}
                                 >

@@ -156,7 +156,7 @@ const StrengthAnalysisView: React.FC<StrengthAnalysisViewProps> = ({
     // Trend icon
     const TrendIcon = ({ trend }: { trend: 'improving' | 'stable' | 'declining' }) => {
         if (trend === 'improving') return <TrendingUp size={14} className="text-green-400" />;
-        if (trend === 'declining') return <TrendingDown size={14} className="text-red-400" />;
+        if (trend === 'declining') return <TrendingDown size={14} className="text-amber-400" />;
         return <Minus size={14} className="text-gray-400" />;
     };
 
@@ -394,7 +394,7 @@ const StrengthAnalysisView: React.FC<StrengthAnalysisViewProps> = ({
                                     <div
                                         key={idx}
                                         className={`border rounded-2xl p-4 ${imb.severity === 'severe'
-                                                ? 'bg-red-900/20 border-red-500/30'
+                                                ? 'bg-amber-900/20 border-amber-500/30'
                                                 : imb.severity === 'moderate'
                                                     ? 'bg-amber-900/20 border-amber-500/30'
                                                     : 'bg-neutral-900/50 border-white/5'
@@ -402,7 +402,7 @@ const StrengthAnalysisView: React.FC<StrengthAnalysisViewProps> = ({
                                     >
                                         <div className="flex items-start gap-3">
                                             <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${imb.severity === 'severe'
-                                                    ? 'bg-red-500/20'
+                                                    ? 'bg-amber-500/20'
                                                     : imb.severity === 'moderate'
                                                         ? 'bg-amber-500/20'
                                                         : 'bg-gray-500/20'
@@ -411,7 +411,7 @@ const StrengthAnalysisView: React.FC<StrengthAnalysisViewProps> = ({
                                                     size={16}
                                                     className={
                                                         imb.severity === 'severe'
-                                                            ? 'text-red-400'
+                                                            ? 'text-amber-400'
                                                             : imb.severity === 'moderate'
                                                                 ? 'text-amber-400'
                                                                 : 'text-gray-400'
@@ -477,13 +477,13 @@ const StrengthAnalysisView: React.FC<StrengthAnalysisViewProps> = ({
                                     {insights.painPatterns.map((pain, idx) => (
                                         <div
                                             key={`pain-${idx}`}
-                                            className="bg-red-900/20 border border-red-500/20 rounded-2xl p-4"
+                                            className="bg-amber-900/20 border border-amber-500/20 rounded-2xl p-4"
                                         >
                                             <div className="flex items-center gap-2 mb-2">
-                                                <span className="text-red-400 font-bold text-sm">
+                                                <span className="text-amber-400 font-bold text-sm">
                                                     Боль: {pain.location}
                                                 </span>
-                                                <span className="text-red-400/60 text-xs">
+                                                <span className="text-amber-400/60 text-xs">
                                                     ({pain.frequency}x)
                                                 </span>
                                             </div>
@@ -551,7 +551,7 @@ const StrengthAnalysisView: React.FC<StrengthAnalysisViewProps> = ({
                             </div>
                         ) : error ? (
                             <div className="text-center py-4">
-                                <p className="text-red-400 text-sm mb-3">{error}</p>
+                                <p className="text-amber-400 text-sm mb-3">{error}</p>
                                 {retryCount < MAX_RETRY_ATTEMPTS && (
                                     <button
                                         onClick={handleRetry}
@@ -594,14 +594,14 @@ const StrengthAnalysisView: React.FC<StrengthAnalysisViewProps> = ({
                     <p className="text-gray-500 text-xs uppercase font-bold mb-3">Паттерны восстановления</p>
                     <div className="grid grid-cols-3 gap-3">
                         <div className="text-center">
-                            <p className={`text-lg font-bold ${insights.readinessPatterns.chronicLowSleep ? 'text-red-400' : 'text-white'
+                            <p className={`text-lg font-bold ${insights.readinessPatterns.chronicLowSleep ? 'text-amber-400' : 'text-white'
                                 }`}>
                                 {insights.readinessPatterns.averageSleep.toFixed(1)}
                             </p>
                             <p className="text-[10px] text-gray-500">Сон</p>
                         </div>
                         <div className="text-center">
-                            <p className={`text-lg font-bold ${insights.readinessPatterns.highStress ? 'text-red-400' : 'text-white'
+                            <p className={`text-lg font-bold ${insights.readinessPatterns.highStress ? 'text-amber-400' : 'text-white'
                                 }`}>
                                 {insights.readinessPatterns.averageStress.toFixed(1)}
                             </p>

@@ -84,7 +84,7 @@ const WhoopInsightScreen: React.FC<WhoopInsightScreenProps> = ({
                 <div className="text-[10px] text-gray-500 uppercase">Сон</div>
               </div>
               <div className="bg-black/30 rounded-xl p-3 text-center">
-                <Heart size={16} className="text-red-400 mx-auto mb-1" />
+                <Heart size={16} className="text-amber-400 mx-auto mb-1" />
                 <div className="text-xl font-bold text-white">{whoopData.hrv}</div>
                 <div className="text-[10px] text-gray-500 uppercase">HRV</div>
               </div>

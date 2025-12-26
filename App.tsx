@@ -145,7 +145,7 @@ const App: React.FC = () => {
     { text: "Анализируем биомеханику...", icon: <Activity size={32} className="text-indigo-400" /> },
     { text: "Подбираем оптимальный сплит...", icon: <CalendarCheck size={32} className="text-violet-400" /> },
     { text: "Рассчитываем рабочие веса...", icon: <Dumbbell size={32} className="text-emerald-400" /> },
-    { text: "Проверяем на совместимость травм...", icon: <Activity size={32} className="text-red-400" /> },
+    { text: "Проверяем на совместимость травм...", icon: <Activity size={32} className="text-amber-400" /> },
     { text: "Финальная сборка программы...", icon: <Brain size={32} className="text-blue-400" /> }
   ];
 
@@ -751,21 +751,21 @@ const App: React.FC = () => {
   if (error && !trainingProgram) {
     return (
       <div className="min-h-[100dvh] bg-background flex flex-col items-center justify-center p-6 text-center relative overflow-hidden">
-        <div className="absolute top-0 left-0 w-full h-full bg-red-900/10 z-0 pointer-events-none"></div>
+        <div className="absolute top-0 left-0 w-full h-full bg-amber-900/10 z-0 pointer-events-none"></div>
 
-        <div className="relative z-10 bg-neutral-900 border border-red-500/30 rounded-3xl p-6 shadow-2xl max-w-md w-full animate-scale-in">
-          <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
+        <div className="relative z-10 bg-neutral-900 border border-amber-500/30 rounded-3xl p-6 shadow-2xl max-w-md w-full animate-scale-in">
+          <div className="w-16 h-16 bg-amber-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
             {error.includes('регионом') || error.includes('VPN') ? (
-              <Globe className="text-red-500" size={32} />
+              <Globe className="text-amber-500" size={32} />
             ) : (
-              <AlertTriangle className="text-red-500" size={32} />
+              <AlertTriangle className="text-amber-500" size={32} />
             )}
           </div>
 
           <h2 className="text-2xl font-black text-white mb-2">{error}</h2>
 
           <div className="bg-black/40 rounded-xl p-4 mb-6 text-left overflow-hidden border border-white/5">
-            <p className="text-xs font-mono text-red-300 whitespace-pre-wrap break-words leading-relaxed">
+            <p className="text-xs font-mono text-amber-300 whitespace-pre-wrap break-words leading-relaxed">
               {errorDetails}
             </p>
           </div>
@@ -790,7 +790,7 @@ const App: React.FC = () => {
               </button>
               <button
                 onClick={resetOnboarding}
-                className="flex-1 py-3 bg-neutral-800 text-red-400 rounded-xl text-xs font-bold flex items-center justify-center gap-2 hover:bg-neutral-700"
+                className="flex-1 py-3 bg-neutral-800 text-amber-400 rounded-xl text-xs font-bold flex items-center justify-center gap-2 hover:bg-neutral-700"
               >
                 <Settings size={14} /> Сброс
               </button>

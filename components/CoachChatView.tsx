@@ -47,8 +47,8 @@ const CoachChatView: React.FC<CoachChatViewProps> = ({
         {
             label: "Болит спина",
             text: "У меня болит спина при нагрузках. Замени опасные упражнения.",
-            icon: <ShieldAlert size={18} className="text-red-400" />,
-            gradient: "from-red-500/20 to-pink-500/20"
+            icon: <ShieldAlert size={18} className="text-amber-400" />,
+            gradient: "from-amber-500/20 to-violet-500/20"
         },
         {
             label: "Мало времени",
@@ -158,7 +158,7 @@ const CoachChatView: React.FC<CoachChatViewProps> = ({
 
                                     {/* Action Button - failed state */}
                                     {msg.action && msg.action.status === 'failed' && (
-                                        <div className="mt-4 py-3 px-4 bg-red-500/10 border border-red-500/30 rounded-xl text-sm text-red-400 text-center font-medium">
+                                        <div className="mt-4 py-3 px-4 bg-amber-500/10 border border-amber-500/30 rounded-xl text-sm text-amber-400 text-center font-medium">
                                             ❌ Ошибка. Попробуй еще раз.
                                         </div>
                                     )}
