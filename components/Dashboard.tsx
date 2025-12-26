@@ -561,13 +561,14 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
 
         if (activeView === 'coach') {
             return (
-                <div className="h-[calc(100vh-120px)] animate-fade-in">
+                <div className="fixed inset-0 z-50 bg-[#0f0f0f] animate-fade-in">
                     <CoachChatView
                         messages={chatMessages}
                         onSendMessage={onSendMessage}
                         onActionClick={onActionClick}
                         isLoading={isChatLoading}
                         executingActionId={executingActionId}
+                        onBack={() => setActiveView('today')}
                     />
                 </div>
             );

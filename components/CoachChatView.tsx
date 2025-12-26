@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ChatMessage, ChatAction } from '../types';
-import { Send, Bot, Zap, ShieldAlert, Clock, ArrowRight, MessageCircle, Sparkles } from 'lucide-react';
+import { Send, Bot, Zap, ShieldAlert, Clock, ArrowRight, ArrowLeft, Sparkles } from 'lucide-react';
 
 interface CoachChatViewProps {
     messages: ChatMessage[];
@@ -8,6 +8,7 @@ interface CoachChatViewProps {
     onActionClick: (action: ChatAction) => void;
     isLoading: boolean;
     executingActionId?: string;
+    onBack: () => void;
 }
 
 const CoachChatView: React.FC<CoachChatViewProps> = ({
@@ -15,7 +16,8 @@ const CoachChatView: React.FC<CoachChatViewProps> = ({
     onSendMessage,
     onActionClick,
     isLoading,
-    executingActionId
+    executingActionId,
+    onBack
 }) => {
     const [input, setInput] = useState('');
     const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -58,17 +60,15 @@ const CoachChatView: React.FC<CoachChatViewProps> = ({
 
     return (
         <div className="flex flex-col h-full bg-[#0f0f0f]">
-            {/* Header */}
-            <div className="px-5 pt-4 pb-3">
-                <div className="flex items-center gap-3">
-                    <div className="p-2.5 rounded-xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border border-indigo-500/30">
-                        <MessageCircle className="w-5 h-5 text-indigo-400" />
-                    </div>
-                    <div>
-                        <h1 className="text-xl font-bold text-white">AI Тренер</h1>
-                        <p className="text-xs text-gray-500">Спроси что угодно о тренировках</p>
-                    </div>
-                </div>
+            {/* Minimal Header - just back button */}
+            <div className="px-4 pt-4 pb-2 flex items-center">
+                <button
+                    onClick={onBack}
+                    className="p-2 -ml-2 rounded-xl hover:bg-white/5 active:bg-white/10 transition-colors"
+                >
+                    <ArrowLeft size={24} className="text-white" />
+                </button>
+                <span className="ml-2 text-lg font-semibold text-white">AI Тренер</span>
             </div>
 
             {/* Messages Area */}
@@ -187,7 +187,7 @@ const CoachChatView: React.FC<CoachChatViewProps> = ({
             </div>
 
             {/* Input Area - Fixed at bottom */}
-            <div className="sticky bottom-0 px-4 pb-28 pt-3 bg-gradient-to-t from-[#0f0f0f] via-[#0f0f0f] to-transparent">
+            <div className="sticky bottom-0 px-4 pb-6 pt-3 bg-gradient-to-t from-[#0f0f0f] via-[#0f0f0f] to-transparent">
                 <form onSubmit={handleSend} className="max-w-lg mx-auto">
                     <div className="flex items-center gap-2 bg-[#1c1c24] border border-white/15 rounded-2xl p-1.5">
                         <input
