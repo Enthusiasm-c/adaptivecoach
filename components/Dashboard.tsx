@@ -981,7 +981,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
                         <div className="w-full h-full rounded-[14px] bg-[#0a0a0a]" />
                     </div>
                     {/* Icon */}
-                    <Sparkles size={24} className={`relative z-10 ${
+                    <MessageCircle size={24} className={`relative z-10 ${
                         activeView === 'coach' ? 'text-indigo-400' : 'text-gray-400'
                     }`} />
                 </button>

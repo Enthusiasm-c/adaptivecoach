@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ChatMessage, ChatAction } from '../types';
-import { Send, Bot, Zap, ShieldAlert, Clock, ArrowRight, Sparkles } from 'lucide-react';
+import { Send, Bot, Zap, ShieldAlert, Clock, ArrowRight, MessageCircle, Sparkles } from 'lucide-react';
 
 interface CoachChatViewProps {
     messages: ChatMessage[];
@@ -62,7 +62,7 @@ const CoachChatView: React.FC<CoachChatViewProps> = ({
             <div className="px-5 pt-4 pb-3">
                 <div className="flex items-center gap-3">
                     <div className="p-2.5 rounded-xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border border-indigo-500/30">
-                        <Sparkles className="w-5 h-5 text-indigo-400" />
+                        <MessageCircle className="w-5 h-5 text-indigo-400" />
                     </div>
                     <div>
                         <h1 className="text-xl font-bold text-white">AI Тренер</h1>
