@@ -242,6 +242,12 @@ function attemptAutoFix(program: TrainingProgram, validation: ValidationResult):
                     exercise.weight = 0;
                     hadFixes = true;
                 }
+
+                // Fix cardio exercises: always sets = 1 (single session, no multiple sets)
+                if (exercise.exerciseType === 'cardio' && exercise.sets > 1) {
+                    exercise.sets = 1;
+                    hadFixes = true;
+                }
             }
         }
 
@@ -408,6 +414,7 @@ function buildInitialPrompt(profile: OnboardingProfile): string {
     - Указывай КОНКРЕТНЫЕ числа повторений: "10", "12", "8"
     - НЕ ИСПОЛЬЗУЙ ДИАПАЗОНЫ вроде "8-12" или "10-15"!
     - Для кардио указывай конкретное время в минутах: "10", "15", "5"
+    - Для кардио ВСЕГДА sets = 1 (одна сессия, без подходов)
 
     Сгенерируй программу в формате JSON.
     `;
