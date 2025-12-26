@@ -59,9 +59,9 @@ const CoachChatView: React.FC<CoachChatViewProps> = ({
     ];
 
     return (
-        <div className="flex flex-col h-full bg-[#0f0f0f]">
+        <div className="flex flex-col h-full bg-black">
             {/* Minimal Header - just back button */}
-            <div className="px-4 pt-4 pb-2 flex items-center">
+            <div className="flex-shrink-0 px-4 pt-4 pb-2 flex items-center">
                 <button
                     onClick={onBack}
                     className="p-2 -ml-2 rounded-xl hover:bg-white/5 active:bg-white/10 transition-colors"
@@ -72,7 +72,7 @@ const CoachChatView: React.FC<CoachChatViewProps> = ({
             </div>
 
             {/* Messages Area */}
-            <div className="flex-1 overflow-y-auto px-4 pb-4">
+            <div className="flex-1 overflow-y-auto px-4 pb-4 min-h-0">
                 {messages.length === 0 ? (
                     <div className="h-full flex flex-col justify-center items-center text-center py-8">
                         <div className="p-5 bg-gradient-to-br from-indigo-500/10 to-purple-500/10 rounded-2xl border border-indigo-500/20 mb-6">
@@ -118,7 +118,7 @@ const CoachChatView: React.FC<CoachChatViewProps> = ({
                                 <div className={`max-w-[80%] rounded-2xl p-4 ${
                                     msg.role === 'user'
                                         ? 'bg-indigo-600 rounded-br-md'
-                                        : 'bg-[#1e1e24] border border-white/10 shadow-lg shadow-indigo-500/5 rounded-bl-md'
+                                        : 'bg-surface border border-white/10 shadow-lg shadow-indigo-500/5 rounded-bl-md'
                                 }`}>
                                     <p className="text-sm whitespace-pre-wrap leading-relaxed">{msg.text}</p>
 
@@ -172,7 +172,7 @@ const CoachChatView: React.FC<CoachChatViewProps> = ({
                                 <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500/20 to-purple-500/20 flex items-center justify-center flex-shrink-0">
                                     <Bot size={16} className="text-indigo-400" />
                                 </div>
-                                <div className="bg-[#1e1e24] border border-white/10 rounded-2xl rounded-bl-md p-4">
+                                <div className="bg-surface border border-white/10 rounded-2xl rounded-bl-md p-4">
                                     <div className="flex items-center gap-1.5">
                                         <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
                                         <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
@@ -187,9 +187,9 @@ const CoachChatView: React.FC<CoachChatViewProps> = ({
             </div>
 
             {/* Input Area - Fixed at bottom */}
-            <div className="sticky bottom-0 px-4 pb-6 pt-3 bg-gradient-to-t from-[#0f0f0f] via-[#0f0f0f] to-transparent">
+            <div className="flex-shrink-0 px-4 pb-6 pt-3 bg-black">
                 <form onSubmit={handleSend} className="max-w-lg mx-auto">
-                    <div className="flex items-center gap-2 bg-[#1c1c24] border border-white/15 rounded-2xl p-1.5">
+                    <div className="flex items-center gap-2 bg-surface border border-white/15 rounded-2xl p-1.5">
                         <input
                             ref={inputRef}
                             type="text"
