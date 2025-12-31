@@ -251,11 +251,11 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
     setShowTechniqueGif(false); // Reset on exercise change
   }, [currentExerciseIndex, completedExercises.length]);
 
-  const handleValueChange = (exIndex: number, setIndex: number, field: 'reps' | 'weight' | 'rir', value: number) => {
+  const handleValueChange = (exIndex: number, setIndex: number, field: 'reps' | 'weight' | 'rir', value: number | undefined) => {
     // Update activity timestamp for timeout detection
     lastActivityRef.current = Date.now();
     const newExercises = [...completedExercises];
-    if (isNaN(value)) {
+    if (value === undefined || isNaN(value)) {
       (newExercises[exIndex].completedSets[setIndex] as any)[field] = undefined;
     } else {
       (newExercises[exIndex].completedSets[setIndex] as any)[field] = value;
@@ -963,11 +963,11 @@ const WorkoutView: React.FC<WorkoutViewProps> = ({ session, profile, readiness, 
                         <select
                           value={set.rir ?? ''}
                           onChange={(e) => handleValueChange(currentExerciseIndex, setIndex, 'rir',
-                            e.target.value === '' ? 0 : Number(e.target.value))}
+                            e.target.value === '' ? undefined : Number(e.target.value))}
                           className="w-14 h-10 rounded-lg bg-neutral-800 text-white text-xs text-center border border-white/10 appearance-none cursor-pointer px-1"
                           style={{ backgroundImage: 'none' }}
                         >
-                          <option value="">RIR</option>
+                          <option value="">—</option>
                           <option value="0">0</option>
                           <option value="1">1</option>
                           <option value="2">2</option>
