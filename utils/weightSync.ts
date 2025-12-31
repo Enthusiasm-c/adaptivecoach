@@ -85,6 +85,7 @@ export function extractLatestWeights(logs: WorkoutLog[]): Map<string, number> {
 /**
  * Sync weights from workout logs to training program
  * Updates exercise weights based on actual weights used in workouts
+ * NOW WITH RIR-BASED PROGRESSION
  */
 export function syncWeightsFromLogs(
   program: TrainingProgram,
@@ -107,26 +108,39 @@ export function syncWeightsFromLogs(
     exercises: session.exercises.map(exercise => {
       const normalizedName = normalizeExerciseName(exercise.name);
 
-      // Try to find matching weight
-      let newWeight: number | undefined;
+      // Try to find matching weight from logs
+      let latestWeight: number | undefined;
 
       // Direct match
       if (latestWeights.has(normalizedName)) {
-        newWeight = latestWeights.get(normalizedName);
+        latestWeight = latestWeights.get(normalizedName);
       } else {
         // Fuzzy match
         for (const [loggedName, weight] of latestWeights) {
           if (exerciseNamesMatch(exercise.name, loggedName)) {
-            newWeight = weight;
+            latestWeight = weight;
             break;
           }
         }
       }
 
-      // Update weight if found and different
-      if (newWeight !== undefined && newWeight !== exercise.weight) {
+      if (latestWeight === undefined) {
+        return exercise;
+      }
+
+      // NEW: Apply RIR-based progression
+      const avgRir = getAverageRirForExercise(exercise.name, logs);
+      const { suggestedWeight, reason } = suggestWeightProgression(latestWeight, avgRir);
+
+      // Log progression for debugging
+      if (suggestedWeight !== exercise.weight) {
+        console.log(`[WeightSync] ${exercise.name}: ${exercise.weight}кг → ${suggestedWeight}кг (${reason})`);
+      }
+
+      // Update weight if changed
+      if (suggestedWeight !== exercise.weight) {
         hasChanges = true;
-        return { ...exercise, weight: newWeight };
+        return { ...exercise, weight: suggestedWeight };
       }
 
       return exercise;

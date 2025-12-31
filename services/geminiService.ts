@@ -1034,6 +1034,15 @@ export const adaptPlan = async (
         console.warn('[adaptPlan] AI returned invalid program, using current program');
     }
 
+    // BUGFIX: Restore original session names (AI sometimes modifies them)
+    // e.g., adds "(Коррекция объёма)" suffix
+    currentProgram.sessions.forEach((original, i) => {
+        if (program.sessions[i] && program.sessions[i].name !== original.name) {
+            console.log(`[adaptPlan] Restoring session name: "${program.sessions[i].name}" → "${original.name}"`);
+            program.sessions[i].name = original.name;
+        }
+    });
+
     // Store valid program in orchestrator for fallback
     if (wasValid) {
         getOrchestrator().setLastValidProgram(program);
