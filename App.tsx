@@ -794,6 +794,25 @@ const App: React.FC = () => {
     setToastMessage(rotationMsg);
   }, [mesocycleState, onboardingProfile, workoutLogs, trainingProgram]);
 
+  const handleResetMesocycle = useCallback(() => {
+    if (!onboardingProfile) return;
+
+    // Generate completely new program
+    const result = generateProgram(onboardingProfile);
+    if (result.success) {
+      const newProgram = convertToLegacyFormat(result, onboardingProfile, workoutLogs);
+      setTrainingProgram(newProgram);
+      localStorage.setItem('trainingProgram', JSON.stringify(newProgram));
+    }
+
+    // Create fresh mesocycle from scratch
+    const newMesocycle = createInitialMesocycleState(onboardingProfile);
+    setMesocycleState(newMesocycle);
+    saveMesocycleState(newMesocycle);
+    setMesocycleCompletionData(null);
+    setToastMessage('Новая программа сгенерирована!');
+  }, [onboardingProfile, workoutLogs]);
+
   // Apply mesocycle volume multiplier to program for display
   // This ensures UI shows adjusted sets based on current mesocycle phase
   const displayProgram = useMemo(() => {
@@ -932,6 +951,7 @@ const App: React.FC = () => {
             onWorkoutComplete={handleWorkoutComplete}
             onUpdateProfile={handleUpdateProfile}
             onResetAccount={resetOnboarding}
+            onResetMesocycle={handleResetMesocycle}
             chatMessages={chatMessages}
             onSendMessage={handleChatbotSend}
             onActionClick={executeAction}

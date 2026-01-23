@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { OnboardingProfile, TelegramUser, Goal, Location, WhoopReadinessData } from '../types';
-import { Trash2, Save, User, LogOut, Target, Calendar, Clock, Award, Loader2, MessageCircle, MapPin, AlertTriangle, Activity, ExternalLink, Unlink, Moon, Zap, ThumbsUp, AlertCircle, Heart, Wind, Thermometer, TrendingDown, TrendingUp } from 'lucide-react';
+import { Trash2, Save, User, LogOut, Target, Calendar, Clock, Award, Loader2, MessageCircle, MapPin, AlertTriangle, Activity, ExternalLink, Unlink, Moon, Zap, ThumbsUp, AlertCircle, Heart, Wind, Thermometer, TrendingDown, TrendingUp, RefreshCw } from 'lucide-react';
 import { apiService, Badge } from '../services/apiService';
 import { generateInsight, calculateAdaptation, getInsightColors } from '../services/whoopInsights';
 
@@ -10,6 +10,7 @@ interface SettingsViewProps {
     telegramUser: TelegramUser | null;
     onUpdateProfile: (newProfile: OnboardingProfile) => void;
     onResetAccount: () => void;
+    onResetMesocycle?: () => void;
 }
 
 const tierColors: Record<string, string> = {
@@ -46,7 +47,7 @@ const SettingRow: React.FC<{ label: string; value: string; onClick?: () => void;
     </div>
 );
 
-const SettingsView: React.FC<SettingsViewProps> = ({ profile, telegramUser, onUpdateProfile, onResetAccount }) => {
+const SettingsView: React.FC<SettingsViewProps> = ({ profile, telegramUser, onUpdateProfile, onResetAccount, onResetMesocycle }) => {
     const [weight, setWeight] = useState(profile.weight);
     const [daysPerWeek, setDaysPerWeek] = useState(profile.daysPerWeek);
     const [timePerWorkout, setTimePerWorkout] = useState(profile.timePerWorkout);
@@ -56,6 +57,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({ profile, telegramUser, onUp
     const [isChangingLocation, setIsChangingLocation] = useState(false);
 
     const [isConfirmingReset, setIsConfirmingReset] = useState(false);
+    const [isConfirmingMesoReset, setIsConfirmingMesoReset] = useState(false);
 
     // Badges state
     const [allBadges, setAllBadges] = useState<Badge[]>([]);
@@ -375,6 +377,49 @@ const SettingsView: React.FC<SettingsViewProps> = ({ profile, telegramUser, onUp
                         )}
                     </div>
                 </div>
+
+                {/* Program Reset */}
+                {onResetMesocycle && (
+                    <>
+                        <SectionHeader title="Программа тренировок" />
+                        <div className="bg-surface border border-subtle rounded-xl overflow-hidden">
+                            {!isConfirmingMesoReset ? (
+                                <button
+                                    onClick={() => setIsConfirmingMesoReset(true)}
+                                    className="w-full p-4 flex items-center justify-between hover:bg-white/5 transition-colors"
+                                >
+                                    <div className="text-left">
+                                        <p className="text-gray-200 font-bold text-sm">Новая программа</p>
+                                        <p className="text-gray-500 text-xs mt-0.5">Сбросить мезоцикл и сгенерировать новые упражнения</p>
+                                    </div>
+                                    <RefreshCw size={16} className="text-gray-500" />
+                                </button>
+                            ) : (
+                                <div className="p-4 space-y-3 animate-scale-in">
+                                    <p className="text-white font-bold text-sm">Сгенерировать новую программу?</p>
+                                    <p className="text-gray-400 text-xs">Текущий мезоцикл будет завершён. Веса сохранятся на основе истории тренировок.</p>
+                                    <div className="flex gap-3">
+                                        <button
+                                            onClick={() => setIsConfirmingMesoReset(false)}
+                                            className="flex-1 py-3 bg-surface text-gray-400 rounded-lg font-bold text-xs border border-subtle hover:bg-subtle"
+                                        >
+                                            Отмена
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                onResetMesocycle();
+                                                setIsConfirmingMesoReset(false);
+                                            }}
+                                            className="flex-1 py-3 bg-indigo-600 text-white rounded-lg font-bold text-xs hover:bg-indigo-500"
+                                        >
+                                            Обновить
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </>
+                )}
 
                 {/* Account Actions */}
                 <div className="pt-8">

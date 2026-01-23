@@ -34,6 +34,7 @@ interface DashboardProps {
     onUpdateProfile: (profile: OnboardingProfile) => void;
     onWorkoutComplete: (log: WorkoutLog) => void;
     onResetAccount: () => void;
+    onResetMesocycle?: () => void;
     // Chat props
     chatMessages: ChatMessage[];
     onSendMessage: (message: string) => void;
@@ -42,7 +43,7 @@ interface DashboardProps {
     executingActionId?: string;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramUser, mesocycleState, onUpdateProgram, onUpdateProfile, onWorkoutComplete, onResetAccount, chatMessages, onSendMessage, onActionClick, isChatLoading, executingActionId }) => {
+const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramUser, mesocycleState, onUpdateProgram, onUpdateProfile, onWorkoutComplete, onResetAccount, onResetMesocycle, chatMessages, onSendMessage, onActionClick, isChatLoading, executingActionId }) => {
     const [activeView, setActiveView] = useState<'today' | 'squad' | 'progress' | 'settings' | 'coach'>('today');
     const [activeWorkout, setActiveWorkout] = useState<string | null>(null);
     const [workoutToPreview, setWorkoutToPreview] = useState<WorkoutSession | null>(null);
@@ -556,6 +557,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, program, telegramU
                         telegramUser={telegramUser}
                         onUpdateProfile={onUpdateProfile}
                         onResetAccount={onResetAccount}
+                        onResetMesocycle={onResetMesocycle}
                     />
                 </div>
             );
