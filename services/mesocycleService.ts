@@ -10,7 +10,16 @@
  * Based on RP Hypertrophy methodology and scientific periodization.
  */
 
-import { WorkoutSession, WorkoutLog, OnboardingProfile, TrainingProgram } from '../types';
+import { WorkoutSession, WorkoutLog, OnboardingProfile, TrainingProgram, PersonalRecord } from '../types';
+import {
+  calculateTotalVolume,
+  calculateWorkoutVolume,
+  calculatePersonalRecords,
+  calculateWeightProgression,
+  calculateStreaks,
+  calculateLevel,
+  WeightProgressionEntry,
+} from '../utils/progressUtils';
 import {
   Mesocycle,
   MesocyclePhase,
@@ -104,7 +113,7 @@ export function calculateCurrentWeek(startDate: string): number {
   const now = new Date();
   const diffTime = Math.abs(now.getTime() - start.getTime());
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  return Math.min(6, Math.max(1, Math.ceil(diffDays / 7)));
+  return Math.max(1, Math.ceil(diffDays / 7));
 }
 
 /**
@@ -129,7 +138,7 @@ export function calculateCurrentWeekFromLogs(logs: WorkoutLog[], startDate: stri
   const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
   const weekNumber = Math.floor(diffDays / 7) + 1;
 
-  return Math.min(6, Math.max(1, weekNumber));
+  return Math.max(1, weekNumber);
 }
 
 /**
@@ -143,6 +152,12 @@ export function syncMesocycleWithLogs(state: MesocycleState, logs: WorkoutLog[])
 
   // Calculate week based on first workout
   const calculatedWeek = calculateCurrentWeekFromLogs(logs, state.mesocycle.startDate);
+
+  // If past totalWeeks, don't update state — let App.tsx handle completion
+  if (calculatedWeek > state.mesocycle.totalWeeks) {
+    return state;
+  }
+
   const phase = getPhaseForWeek(calculatedWeek);
 
   // If week differs, update state
@@ -183,10 +198,10 @@ export function checkWeekProgression(state: MesocycleState): {
   isMesocycleComplete: boolean;
 } {
   const currentWeek = calculateCurrentWeek(state.mesocycle.startDate);
-  const shouldAdvance = currentWeek > state.mesocycle.weekNumber;
-  const newWeek = Math.min(currentWeek, 6);
+  const isMesocycleComplete = currentWeek > state.mesocycle.totalWeeks;
+  const shouldAdvance = currentWeek > state.mesocycle.weekNumber && !isMesocycleComplete;
+  const newWeek = Math.min(currentWeek, state.mesocycle.totalWeeks);
   const newPhase = getPhaseForWeek(newWeek);
-  const isMesocycleComplete = newWeek >= 6 && shouldAdvance;
 
   return {
     shouldAdvance,
@@ -493,4 +508,100 @@ export function getEventNotificationMessage(event: MesocycleEvent): string {
     default:
       return '';
   }
+}
+
+// ==========================================
+// MESOCYCLE COMPLETION DATA
+// ==========================================
+
+export interface MesocycleCompletionData {
+  totalWorkouts: number;
+  totalVolumeKg: number;
+  volumeGrowthPercent: number;
+  newPRs: PersonalRecord[];
+  weightProgression: WeightProgressionEntry[];
+  streakMaintained: number;
+  levelBefore: number;
+  levelAfter: number;
+  xpGained: number;
+  mesocycleDurationDays: number;
+}
+
+/**
+ * Calculate summary data for a completed mesocycle
+ */
+export function calculateMesocycleCompletionData(
+  state: MesocycleState,
+  logs: WorkoutLog[],
+  allLogs: WorkoutLog[]
+): MesocycleCompletionData {
+  const startDate = new Date(state.mesocycle.startDate);
+  const now = new Date();
+
+  // Filter logs within this mesocycle's date range
+  const mesoLogs = logs.filter(l => {
+    const logDate = new Date(l.date);
+    return logDate >= startDate && logDate <= now;
+  });
+
+  // Logs before this mesocycle (for baseline comparison)
+  const preMesoLogs = allLogs.filter(l => {
+    const logDate = new Date(l.date);
+    return logDate < startDate;
+  });
+
+  const totalWorkouts = mesoLogs.length;
+  const totalVolumeKg = calculateTotalVolume(mesoLogs);
+
+  // Volume growth: compare first 2 vs last 2 workouts
+  let volumeGrowthPercent = 0;
+  if (mesoLogs.length >= 4) {
+    const sortedMesoLogs = [...mesoLogs].sort(
+      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+    );
+    const firstTwo = sortedMesoLogs.slice(0, 2);
+    const lastTwo = sortedMesoLogs.slice(-2);
+    const firstVolume = firstTwo.reduce((sum, l) => sum + calculateWorkoutVolume(l), 0);
+    const lastVolume = lastTwo.reduce((sum, l) => sum + calculateWorkoutVolume(l), 0);
+    if (firstVolume > 0) {
+      volumeGrowthPercent = Math.round(((lastVolume - firstVolume) / firstVolume) * 100);
+    }
+  }
+
+  // New PRs: compare current PRs with pre-meso baseline
+  const currentPRs = calculatePersonalRecords(allLogs);
+  const baselinePRs = calculatePersonalRecords(preMesoLogs);
+  const newPRs = currentPRs.filter(pr => {
+    const baseline = baselinePRs.find(b => b.exerciseName === pr.exerciseName);
+    return !baseline || pr.e1rm > baseline.e1rm;
+  });
+
+  // Weight progression (top 3)
+  const weightProgression = calculateWeightProgression(mesoLogs).slice(0, 3);
+
+  // Streak
+  const { currentStreak } = calculateStreaks(allLogs);
+
+  // Level comparison
+  const levelBefore = calculateLevel(preMesoLogs);
+  const levelAfter = calculateLevel(allLogs);
+  const xpGained = levelAfter.xp - levelBefore.xp;
+
+  // Duration
+  const mesocycleDurationDays = Math.ceil(
+    (now.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)
+  );
+
+  return {
+    totalWorkouts,
+    totalVolumeKg,
+    volumeGrowthPercent,
+    newPRs,
+    weightProgression,
+    streakMaintained: currentStreak,
+    levelBefore: levelBefore.level,
+    levelAfter: levelAfter.level,
+    xpGained,
+    mesocycleDurationDays,
+  };
 }

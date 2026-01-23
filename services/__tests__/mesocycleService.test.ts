@@ -215,12 +215,13 @@ describe('calculateCurrentWeek', () => {
     expect(week).toBe(3);
   });
 
-  it('caps at week 6', () => {
+  it('returns actual week number beyond 6', () => {
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - 100);
     const week = calculateCurrentWeek(startDate.toISOString());
 
-    expect(week).toBeLessThanOrEqual(6);
+    // 100 days / 7 = ~14.3, ceil = 15
+    expect(week).toBeGreaterThan(6);
   });
 
   it('returns minimum week 1', () => {

@@ -11,6 +11,7 @@ import { AlertTriangle, RefreshCw, Copy, Settings, Globe, Brain, Dumbbell, Activ
 import { useSessionTracking } from './utils/useSessionTracking';
 import {
   MesocycleState,
+  MesocycleCompletionData,
   createInitialMesocycleState,
   loadMesocycleState,
   saveMesocycleState,
@@ -24,7 +25,9 @@ import {
   getEventNotificationMessage,
   getMesocycleSummary,
   syncMesocycleWithLogs,
+  calculateMesocycleCompletionData,
 } from './services/mesocycleService';
+import MesocycleCompletionScreen from './components/MesocycleCompletionScreen';
 import { runAutoMigration } from './services/migrationService';
 import { applyAutoregulationToProgram, AutoregulationRecommendation } from './services/autoregulation';
 import { syncWeightsFromLogs } from './utils/weightSync';
@@ -93,6 +96,9 @@ const App: React.FC = () => {
     }
     return savedState;
   });
+
+  // Mesocycle completion screen data
+  const [mesocycleCompletionData, setMesocycleCompletionData] = useState<MesocycleCompletionData | null>(null);
 
   // Partner/Collaboration tracking (e.g., FitCube)
   const [partnerSource, setPartnerSource] = useState<'fitcube' | null>(() => {
@@ -280,23 +286,20 @@ const App: React.FC = () => {
   // Mesocycle phase progression check (runs on app load and periodically)
   useEffect(() => {
     if (!mesocycleState || !onboardingProfile) return;
+    if (mesocycleCompletionData) return; // Don't re-trigger while summary is shown
 
     const checkProgression = () => {
       const oldState = mesocycleState;
       const progression = checkWeekProgression(oldState);
 
       if (progression.isMesocycleComplete) {
-        // Create new mesocycle with rotated exercises
-        const newState = createNewMesocycle(oldState.mesocycle, onboardingProfile);
-        setMesocycleState(newState);
-        saveMesocycleState(newState);
-
-        // Check for events and show notifications
-        const events = checkMesocycleEvents(oldState, newState);
-        events.forEach(event => {
-          const message = getEventNotificationMessage(event);
-          if (message) setToastMessage(message);
-        });
+        // Calculate summary data and show completion screen
+        const completionData = calculateMesocycleCompletionData(
+          oldState,
+          workoutLogs,
+          workoutLogs
+        );
+        setMesocycleCompletionData(completionData);
       } else if (progression.shouldAdvance) {
         // Advance to next week/phase
         const newState = advanceMesocycleWeek(oldState);
@@ -318,7 +321,7 @@ const App: React.FC = () => {
     // Check periodically (every hour)
     const interval = setInterval(checkProgression, 60 * 60 * 1000);
     return () => clearInterval(interval);
-  }, [mesocycleState, onboardingProfile]);
+  }, [mesocycleState, onboardingProfile, mesocycleCompletionData, workoutLogs]);
 
   // Track notification opens
   useEffect(() => {
@@ -741,6 +744,15 @@ const App: React.FC = () => {
     clearMesocycleState();
   };
 
+  const handleStartNewMesocycle = useCallback(() => {
+    if (!mesocycleState || !onboardingProfile) return;
+    const newState = createNewMesocycle(mesocycleState.mesocycle, onboardingProfile);
+    setMesocycleState(newState);
+    saveMesocycleState(newState);
+    setMesocycleCompletionData(null);
+    setToastMessage('Новый мезоцикл начался!');
+  }, [mesocycleState, onboardingProfile]);
+
   // Apply mesocycle volume multiplier to program for display
   // This ensures UI shows adjusted sets based on current mesocycle phase
   const displayProgram = useMemo(() => {
@@ -859,6 +871,13 @@ const App: React.FC = () => {
           <div className="bg-green-500/20 p-1 rounded-full"><RefreshCw size={14} className="animate-spin-slow" /></div>
           {toastMessage}
         </div>
+      )}
+
+      {mesocycleCompletionData && (
+        <MesocycleCompletionScreen
+          data={mesocycleCompletionData}
+          onStartNewMesocycle={handleStartNewMesocycle}
+        />
       )}
 
       <div className="relative z-10 h-full">
