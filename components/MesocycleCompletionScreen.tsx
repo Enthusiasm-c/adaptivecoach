@@ -1,21 +1,27 @@
-import React from 'react';
-import { Trophy, TrendingUp, TrendingDown, Minus, Dumbbell, Flame, Star, ChevronRight, Calendar, Zap } from 'lucide-react';
+import React, { useState } from 'react';
+import { Trophy, TrendingUp, TrendingDown, Minus, Dumbbell, Flame, Star, ChevronRight, Calendar, Zap, RefreshCw, Shuffle } from 'lucide-react';
 import { MesocycleCompletionData } from '../services/mesocycleService';
 import { formatKg } from '../utils/progressUtils';
 import { hapticFeedback } from '../utils/hapticUtils';
 
+export interface NewMesocyclePreferences {
+  exerciseRotation: 'full' | 'partial'; // full = completely new exercises, partial = 30% rotation
+}
+
 interface MesocycleCompletionScreenProps {
   data: MesocycleCompletionData;
-  onStartNewMesocycle: () => void;
+  onStartNewMesocycle: (preferences: NewMesocyclePreferences) => void;
 }
 
 const MesocycleCompletionScreen: React.FC<MesocycleCompletionScreenProps> = ({
   data,
   onStartNewMesocycle,
 }) => {
+  const [exerciseRotation, setExerciseRotation] = useState<'full' | 'partial'>('full');
+
   const handleStart = () => {
     hapticFeedback.impactOccurred('heavy');
-    onStartNewMesocycle();
+    onStartNewMesocycle({ exerciseRotation });
   };
 
   const TrendIcon = ({ trend }: { trend: 'up' | 'down' | 'stable' }) => {
@@ -27,7 +33,7 @@ const MesocycleCompletionScreen: React.FC<MesocycleCompletionScreenProps> = ({
   return (
     <div className="fixed inset-0 bg-black/95 z-50 flex flex-col animate-fade-in">
       {/* Scrollable content */}
-      <div className="flex-1 overflow-y-auto pb-32">
+      <div className="flex-1 overflow-y-auto pb-36">
         <div className="flex flex-col items-center p-6 pt-12">
           {/* Header */}
           <div className="w-20 h-20 bg-gradient-to-br from-amber-500/30 to-orange-500/30 rounded-full flex items-center justify-center mb-4">
@@ -140,6 +146,45 @@ const MesocycleCompletionScreen: React.FC<MesocycleCompletionScreenProps> = ({
               </div>
             </div>
           )}
+
+          {/* New Mesocycle Preferences */}
+          <div className="w-full max-w-sm bg-neutral-900/80 border border-indigo-500/20 rounded-2xl p-4 mb-4">
+            <p className="text-xs text-gray-500 font-bold uppercase mb-3">Следующий мезоцикл</p>
+            <div className="space-y-2">
+              <button
+                onClick={() => { setExerciseRotation('full'); hapticFeedback.selectionChanged(); }}
+                className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all ${
+                  exerciseRotation === 'full'
+                    ? 'bg-indigo-500/20 border border-indigo-500/40'
+                    : 'bg-white/5 border border-white/10'
+                }`}
+              >
+                <RefreshCw size={18} className={exerciseRotation === 'full' ? 'text-indigo-400' : 'text-gray-500'} />
+                <div className="text-left">
+                  <p className={`text-sm font-bold ${exerciseRotation === 'full' ? 'text-white' : 'text-gray-400'}`}>
+                    Новые упражнения
+                  </p>
+                  <p className="text-xs text-gray-500">Полностью обновить программу</p>
+                </div>
+              </button>
+              <button
+                onClick={() => { setExerciseRotation('partial'); hapticFeedback.selectionChanged(); }}
+                className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all ${
+                  exerciseRotation === 'partial'
+                    ? 'bg-indigo-500/20 border border-indigo-500/40'
+                    : 'bg-white/5 border border-white/10'
+                }`}
+              >
+                <Shuffle size={18} className={exerciseRotation === 'partial' ? 'text-indigo-400' : 'text-gray-500'} />
+                <div className="text-left">
+                  <p className={`text-sm font-bold ${exerciseRotation === 'partial' ? 'text-white' : 'text-gray-400'}`}>
+                    Частичная ротация
+                  </p>
+                  <p className="text-xs text-gray-500">Заменить ~30% упражнений</p>
+                </div>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 

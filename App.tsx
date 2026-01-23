@@ -28,6 +28,8 @@ import {
   calculateMesocycleCompletionData,
 } from './services/mesocycleService';
 import MesocycleCompletionScreen from './components/MesocycleCompletionScreen';
+import { NewMesocyclePreferences } from './components/MesocycleCompletionScreen';
+import { generateProgram, convertToLegacyFormat } from './services/programGenerator';
 import { runAutoMigration } from './services/migrationService';
 import { applyAutoregulationToProgram, AutoregulationRecommendation } from './services/autoregulation';
 import { syncWeightsFromLogs } from './utils/weightSync';
@@ -744,14 +746,53 @@ const App: React.FC = () => {
     clearMesocycleState();
   };
 
-  const handleStartNewMesocycle = useCallback(() => {
+  const handleStartNewMesocycle = useCallback((preferences: NewMesocyclePreferences) => {
     if (!mesocycleState || !onboardingProfile) return;
+
+    if (preferences.exerciseRotation === 'full') {
+      // Full rotation: generate completely new program
+      const result = generateProgram(onboardingProfile);
+      if (result.success) {
+        const newProgram = convertToLegacyFormat(result, onboardingProfile, workoutLogs);
+        setTrainingProgram(newProgram);
+        localStorage.setItem('trainingProgram', JSON.stringify(newProgram));
+      }
+    } else {
+      // Partial rotation: generate new program but keep ~70% of current exercises
+      const result = generateProgram(onboardingProfile);
+      if (result.success && trainingProgram) {
+        const newProgram = convertToLegacyFormat(result, onboardingProfile, workoutLogs);
+        // Merge: for each session, keep ~70% exercises from old, take ~30% from new
+        const mergedSessions = trainingProgram.sessions.map((oldSession, sIdx) => {
+          const newSession = newProgram.sessions[sIdx];
+          if (!newSession) return oldSession;
+
+          const exercises = oldSession.exercises.map((oldEx, eIdx) => {
+            // Replace ~30% of exercises (every 3rd one)
+            if ((eIdx + sIdx) % 3 === 0 && newSession.exercises[eIdx]) {
+              return newSession.exercises[eIdx];
+            }
+            return oldEx;
+          });
+          return { ...oldSession, exercises };
+        });
+        const mergedProgram = { ...trainingProgram, sessions: mergedSessions };
+        setTrainingProgram(mergedProgram);
+        localStorage.setItem('trainingProgram', JSON.stringify(mergedProgram));
+      }
+    }
+
+    // Create new mesocycle state
     const newState = createNewMesocycle(mesocycleState.mesocycle, onboardingProfile);
     setMesocycleState(newState);
     saveMesocycleState(newState);
     setMesocycleCompletionData(null);
-    setToastMessage('Новый мезоцикл начался!');
-  }, [mesocycleState, onboardingProfile]);
+
+    const rotationMsg = preferences.exerciseRotation === 'full'
+      ? 'Новый мезоцикл с новыми упражнениями!'
+      : 'Программа обновлена на 30%!';
+    setToastMessage(rotationMsg);
+  }, [mesocycleState, onboardingProfile, workoutLogs, trainingProgram]);
 
   // Apply mesocycle volume multiplier to program for display
   // This ensures UI shows adjusted sets based on current mesocycle phase
